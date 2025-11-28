@@ -1,0 +1,191 @@
+{{define "tickets/my_tickets_content"}}
+<style>
+    .filters-bar {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--radius-lg);
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--border-color);
+    }
+    
+    .filters-form {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .filter-input,
+    .filter-select {
+        padding: 0.625rem 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        transition: var(--transition);
+    }
+    
+    .filter-input:focus,
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--primary-red);
+        box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.1);
+    }
+    
+    .filter-btn {
+        padding: 0.625rem 1.5rem;
+        background: var(--primary-red);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .filter-btn:hover {
+        background: var(--primary-red-hover);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-1px);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    
+    .empty-state svg {
+        width: 5rem;
+        height: 5rem;
+        color: var(--text-light);
+        margin: 0 auto 1rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.25rem;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .empty-state p {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .filters-form {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+<!-- Filters -->
+<div class="filters-bar">
+    <form method="GET" class="filters-form">
+        <div class="filter-group">
+            <label>Cari Tiket</label>
+            <input type="text" name="search" value="{{.search_query}}" 
+                   placeholder="Cari berdasarkan judul, deskripsi, atau ID..." 
+                   class="filter-input">
+        </div>
+        
+        <div class="filter-group">
+            <label>Status</label>
+            <select name="status" class="filter-select">
+                <option value="all" {{if eq .status_filter "all"}}selected{{end}}>Semua Status</option>
+                <option value="open" {{if eq .status_filter "open"}}selected{{end}}>Open</option>
+                <option value="in_progress" {{if eq .status_filter "in_progress"}}selected{{end}}>In Progress</option>
+                <option value="closed" {{if eq .status_filter "closed"}}selected{{end}}>Closed</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>Prioritas</label>
+            <select name="priority" class="filter-select">
+                <option value="all" {{if eq .priority_filter "all"}}selected{{end}}>Semua Prioritas</option>
+                <option value="LOW" {{if eq .priority_filter "LOW"}}selected{{end}}>Low</option>
+                <option value="MEDIUM" {{if eq .priority_filter "MEDIUM"}}selected{{end}}>Medium</option>
+                <option value="HIGH" {{if eq .priority_filter "HIGH"}}selected{{end}}>High</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label>&nbsp;</label>
+            <button type="submit" class="filter-btn">Filter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Tickets List -->
+<div class="card">
+    <div class="card-header">
+        <h2>{{len .tickets}} Tiket Ditemukan</h2>
+    </div>
+    <div class="card-body">
+        {{if .tickets}}
+            <div class="ticket-list">
+                {{range .tickets}}
+                <div class="ticket-item" onclick="window.location.href='/tiket/{{.ID}}'">
+                    <div class="ticket-header">
+                        <div>
+                            <div class="ticket-id-status">
+                                <span class="ticket-id">#TKT-{{.ID}}</span>
+                                <span class="status-badge {{if eq .Status "WAITING"}}open{{else if eq .Status "IN_PROGRESS"}}in-progress{{else}}closed{{end}}">
+                                    {{.GetStatusDisplay}}
+                                </span>
+                            </div>
+                            <h3 class="ticket-title">{{.Title}}</h3>
+                            <div class="ticket-meta">
+                                <span class="ticket-meta-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    </svg>
+                                    {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
+                                </span>
+                                <span class="ticket-meta-item priority-{{if eq .Priority "HIGH"}}high{{else if eq .Priority "MEDIUM"}}medium{{else}}low{{end}}">
+                                    {{.GetPriorityDisplay}} Priority
+                                </span>
+                                <span class="ticket-meta-item">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                    </svg>
+                                    {{.GetReplyCount}} balasan
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ticket-footer">
+                        <span>Dibuat: {{date .CreatedAt}}</span>
+                        <span>Update: {{date .UpdatedAt}}</span>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        {{else}}
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                <h3>Tidak Ada Tiket</h3>
+                <p>Belum ada tiket yang sesuai dengan filter Anda</p>
+                <a href="/kirim-tiket" class="btn-primary">Buat Tiket Pertama</a>
+            </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
+
+{{define "tickets/my_tickets"}}
+{{template "base" .}}
+{{end}}

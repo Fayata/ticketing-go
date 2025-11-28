@@ -1,0 +1,262 @@
+{{define "tickets/ticket_detail_content"}}
+<link rel="stylesheet" href="/static/ticket_detail.css">
+<div class="ticket-detail-container">
+    {{if .ticket}}
+    {{$ticket := .ticket}}
+    <!-- Ticket Header Card -->
+    <div class="card ticket-header-card">
+        <div class="card-body">
+            <div class="ticket-status-header">
+                <div class="ticket-id-badge">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>Tiket #{{$ticket.ID}}</span>
+                </div>
+                <span class="status-badge {{if eq $ticket.Status "WAITING"}}open{{else if eq $ticket.Status "IN_PROGRESS"}}in-progress{{else}}closed{{end}}">
+                    {{$ticket.GetStatusDisplay}}
+                </span>
+            </div>
+            
+            <h1 class="ticket-title-large">{{$ticket.Title}}</h1>
+            
+            <div class="ticket-meta-grid">
+                <div class="meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <div>
+                        <span class="meta-label">Dibuat oleh</span>
+                        <span class="meta-value">{{if $ticket.CreatedBy}}{{getFullName $ticket.CreatedBy}}{{else}}Unknown{{end}}</span>
+                    </div>
+                </div>
+                
+                <div class="meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <div>
+                        <span class="meta-label">Departemen</span>
+                        <span class="meta-value">{{if $ticket.Department}}{{$ticket.Department.Name}}{{else}}Tidak Ditentukan{{end}}</span>
+                    </div>
+                </div>
+                
+                <div class="meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <div>
+                        <span class="meta-label">Prioritas</span>
+                        <span class="meta-value priority-{{if eq $ticket.Priority "HIGH"}}high{{else if eq $ticket.Priority "MEDIUM"}}medium{{else}}low{{end}}">
+                            {{$ticket.GetPriorityDisplay}}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <div>
+                        <span class="meta-label">Dibuat</span>
+                        <span class="meta-value">{{date $ticket.CreatedAt}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <!-- Main Content -->
+        <div class="main-content-area">
+            <!-- Original Message -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Deskripsi Masalah</h2>
+                </div>
+                <div class="card-body">
+                    <div class="message-content">
+                        <div class="message-header">
+                            <div class="message-author">
+                                <div class="author-avatar">
+                                    {{if $ticket.CreatedBy}}{{slice $ticket.CreatedBy.Username 0 2 | upper}}{{else}}??{{end}}
+                                </div>
+                                <div>
+                                    <div class="author-name">{{if $ticket.CreatedBy}}{{getFullName $ticket.CreatedBy}}{{else}}Unknown{{end}}</div>
+                                    <div class="message-time">{{date $ticket.CreatedAt}}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="message-body">
+                            {{linebreaks $ticket.Description}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Replies -->
+            {{if .replies}}
+            <div class="card">
+                <div class="card-header">
+                    <h2>Balasan ({{len .replies}})</h2>
+                </div>
+                <div class="card-body">
+                    {{range $index, $reply := .replies}}
+                    <div class="message-content">
+                        <div class="message-header">
+                            <div class="message-author">
+                                <div class="author-avatar {{if and .User .User.IsStaff}}staff{{end}}">
+                                    {{if .User}}{{slice .User.Username 0 2 | upper}}{{else}}??{{end}}
+                                </div>
+                                <div>
+                                    <div class="author-name">
+                                        {{if .User}}{{getFullName .User}}{{else}}Unknown{{end}}
+                                        {{if and .User .User.IsStaff}}
+                                        <span class="staff-badge">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                            </svg>
+                                            Staff
+                                        </span>
+                                        {{end}}
+                                    </div>
+                                    <div class="message-time">{{date .CreatedAt}}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="message-body">
+                            {{linebreaks .Message}}
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+
+            <!-- Reply Form -->
+            {{if ne .ticket.Status "CLOSED"}}
+            <div class="card">
+                <div class="card-header">
+                    <h2>Tambah Balasan</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/tiket/{{$ticket.ID}}" class="reply-form">
+                        <div class="form-group">
+                            <label for="message">Pesan Anda</label>
+                            <textarea name="message" id="message" rows="5" placeholder="Tulis balasan Anda di sini..." required></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-submit">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 2L11 13"></path>
+                                    <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+                                </svg>
+                                Kirim Balasan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {{else}}
+            <div class="card info-card">
+                <div class="card-body">
+                    <div class="info-message">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                        <p>Tiket ini sudah ditutup. Anda tidak dapat menambahkan balasan lagi.</p>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar-area">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Aksi</h2>
+                </div>
+                <div class="card-body">
+                    <div class="action-buttons">
+                        <a href="/tiket" class="action-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                            Kembali ke Daftar Tiket
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Informasi Tiket</h2>
+                </div>
+                <div class="card-body">
+                    <div class="info-list">
+                        <div class="info-item">
+                            <span class="info-label">ID Tiket</span>
+                            <span class="info-value">#{{$ticket.ID}}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Status</span>
+                            <span class="status-badge {{if eq $ticket.Status "WAITING"}}open{{else if eq $ticket.Status "IN_PROGRESS"}}in-progress{{else}}closed{{end}}">
+                                {{$ticket.GetStatusDisplay}}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Prioritas</span>
+                            <span class="info-value priority-{{if eq $ticket.Priority "HIGH"}}high{{else if eq $ticket.Priority "MEDIUM"}}medium{{else}}low{{end}}">
+                                {{$ticket.GetPriorityDisplay}}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Dibuat</span>
+                            <span class="info-value">{{dateShort $ticket.CreatedAt}}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Terakhir Update</span>
+                            <span class="info-value">{{dateShort $ticket.UpdatedAt}}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Total Balasan</span>
+                            <span class="info-value">{{len .replies}}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{else}}
+    <div class="card">
+        <div class="card-body">
+            <div class="info-message">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <p>Data tiket tidak tersedia.</p>
+            </div>
+        </div>
+    </div>
+    {{end}}
+</div>
+{{end}}
+
+{{define "tickets/ticket_detail"}}
+{{template "base" .}}
+{{end}}

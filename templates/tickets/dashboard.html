@@ -1,0 +1,306 @@
+{{define "tickets/dashboard_content"}}
+<div class="welcome-banner">
+    <div class="banner-content">
+        <div class="banner-text">
+            <h2>Butuh Bantuan?</h2>
+            <p>Tim support kami siap membantu Anda 24/7. Buat tiket sekarang atau cari jawaban di Knowledge Base.</p>
+            <div class="banner-actions">
+                <a href="/kirim-tiket" class="btn-white">Buat Tiket Baru</a>
+                <a href="#" class="btn-outline">Lihat Knowledge Base</a>
+            </div>
+        </div>
+        <div class="banner-icon">
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" opacity="0.2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-content">
+            <div class="stat-info">
+                <p>Menunggu Balasan</p>
+                <h3>{{.waiting_tickets}}</h3>
+            </div>
+            <div class="stat-icon orange">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-content">
+            <div class="stat-info">
+                <p>Dalam Progress</p>
+                <h3>{{.in_progress_tickets}}</h3>
+            </div>
+            <div class="stat-icon red">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-content">
+            <div class="stat-info">
+                <p>Tiket Selesai</p>
+                <h3>{{.closed_tickets}}</h3>
+            </div>
+            <div class="stat-icon green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-content">
+            <div class="stat-info">
+                <p>Total Tiket</p>
+                <h3>{{.total_tickets}}</h3>
+            </div>
+            <div class="stat-icon red">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="main-grid">
+    <div class="card">
+        <div class="card-header">
+            <h2>Tiket Saya</h2>
+            <a href="/tiket" class="view-all-link">
+                Lihat Semua
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="ticket-list">
+                {{if .recent_tickets}}
+                    {{range .recent_tickets}}
+                    <div class="ticket-item" onclick="window.location.href='/tiket/{{.ID}}'">
+                        <div class="ticket-header">
+                            <div>
+                                <div class="ticket-id-status">
+                                    <span class="ticket-id">#TKT-{{.ID}}</span>
+                                    <span class="status-badge {{getStatusClass .Status}}">
+                                        {{.GetStatusDisplay}}
+                                    </span>
+                                </div>
+                                <h3 class="ticket-title">{{.Title}}</h3>
+                                <div class="ticket-meta">
+                                    <span class="ticket-meta-item">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        </svg>
+                                        {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
+                                    </span>
+                                    <span class="ticket-meta-item priority-{{getPriorityClass .Priority}}">
+                                        {{.GetPriorityDisplay}} Priority
+                                    </span>
+                                    <span class="ticket-meta-item">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                        </svg>
+                                        {{.GetReplyCount}} balasan
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ticket-footer">
+                            <span>Dibuat: {{date .CreatedAt}}</span>
+                            <span>Update terakhir: {{timeSince .UpdatedAt}} lalu</span>
+                        </div>
+                    </div>
+                    {{end}}
+                {{else}}
+                    <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 1rem;">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem;">Belum ada tiket</p>
+                        <p style="font-size: 0.875rem;">Buat tiket pertama Anda untuk mendapatkan bantuan</p>
+                    </div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <a href="/kirim-tiket" class="quick-action-btn">
+                <div class="quick-action-icon red">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </div>
+                <p>Buat Tiket Baru</p>
+            </a>
+            <a href="/tiket" class="quick-action-btn">
+                <div class="quick-action-icon green">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    </svg>
+                </div>
+                <p>Lihat Semua Tiket</p>
+            </a>
+            <a href="#" class="quick-action-btn">
+                <div class="quick-action-icon red">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                    </svg>
+                </div>
+                <p>Knowledge Base</p>
+            </a>
+            <a href="#" class="quick-action-btn">
+                <div class="quick-action-icon orange">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                </div>
+                <p>Video Tutorial</p>
+            </a>
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <div class="card">
+            <div class="card-header">
+                <h2>Pengumuman</h2>
+            </div>
+            <div class="card-body">
+                {{if .announcements}}
+                    {{range .announcements}}
+                    <div class="announcement-item">
+                        <div class="announcement-content">
+                            <svg class="announcement-icon {{if eq .type "WARNING"}}warning{{else}}info{{end}}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <div class="announcement-text">
+                                <h4>{{.title}}</h4>
+                                <p>{{.description}}</p>
+                                <span>{{timeSince .created_at}} lalu</span>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                {{else}}
+                    <div class="announcement-item">
+                        <div class="announcement-content">
+                            <svg class="announcement-icon info" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <div class="announcement-text">
+                                <h4>Selamat Datang!</h4>
+                                <p>Selamat datang di sistem ticketing kami. Tim support siap membantu Anda 24/7.</p>
+                                <span>Baru saja</span>
+                            </div>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header">
+                <h2>Artikel Populer</h2>
+            </div>
+            <div class="card-body">
+                {{if .popular_articles}}
+                    {{range .popular_articles}}
+                    <div class="kb-item">
+                        <div class="kb-content">
+                            <div class="kb-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                </svg>
+                            </div>
+                            <div class="kb-text">
+                                <h4>{{.title}}</h4>
+                                <div class="kb-meta">
+                                    <span>{{.category}}</span>
+                                    <span>•</span>
+                                    <span>{{.views}} views</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+                {{else}}
+                    <div class="kb-item">
+                        <div class="kb-content">
+                            <div class="kb-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                </svg>
+                            </div>
+                            <div class="kb-text">
+                                <h4>Cara Membuat Tiket Baru</h4>
+                                <div class="kb-meta">
+                                    <span>Getting Started</span>
+                                    <span>•</span>
+                                    <span>0 views</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kb-item">
+                        <div class="kb-content">
+                            <div class="kb-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                </svg>
+                            </div>
+                            <div class="kb-text">
+                                <h4>FAQ - Pertanyaan Umum</h4>
+                                <div class="kb-meta">
+                                    <span>Account</span>
+                                    <span>•</span>
+                                    <span>0 views</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+            <div class="card-header" style="border-top: 1px solid var(--border-color); border-bottom: none;">
+                <a href="#" class="view-all-link" style="margin: 0 auto;">
+                    Lihat Semua Artikel
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "tickets/dashboard"}}
+{{template "base" .}}
+{{end}}

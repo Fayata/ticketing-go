@@ -1,0 +1,163 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .title}}{{.title}}{{else}}Portal Ticketing{{end}}</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+    <link rel="stylesheet" href="/static/pages.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <a href="/dashboard" class="logo">
+                    <span class="logo-text">Ticketing</span>
+                </a>
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <!-- Navigation -->
+            <nav class="sidebar-nav">
+                <a href="/dashboard" class="nav-item {{if eq .nav_active "dashboard"}}active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+                
+                <a href="/tiket" class="nav-item {{if eq .nav_active "tickets"}}active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>Tiket Saya</span>
+                    {{if .active_tickets_count}}
+                    <span class="nav-badge">{{.active_tickets_count}}</span>
+                    {{end}}
+                </a>
+                
+                <a href="/kirim-tiket" class="nav-item {{if eq .nav_active "create"}}active{{end}}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Buat Tiket</span>
+                </a>
+                
+                <a href="#" class="nav-item {{if eq .nav_active "kb"}}active{{end}}" onclick="alert('Fitur Knowledge Base akan segera hadir!'); return false;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                    </svg>
+                    <span>Knowledge Base</span>
+                </a>
+            </nav>
+            <!-- User Profile -->
+            <div class="sidebar-user">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        {{if .user}}{{slice .user.Username 0 2 | upper}}{{end}}
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">{{if .user}}{{getFullName .user}}{{end}}</div>
+                        <div class="user-email">{{if .user}}{{.user.Email}}{{end}}</div>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <a href="/settings" class="user-action-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m-2 2l-4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m-2-2l-4.2-4.2"></path>
+                        </svg>
+                        <span>Settings</span>
+                    </a>
+                    <a href="/logout" class="user-action-btn logout">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <h1>{{if .page_title}}{{.page_title}}{{else}}Dashboard{{end}}</h1>
+                    <p>{{if .page_subtitle}}{{.page_subtitle}}{{else}}Selamat datang kembali!{{end}}</p>
+                </div>
+                <div class="header-actions">
+                    <button class="notification-btn" id="notificationBtn" aria-label="Notifications">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        {{if .unread_count}}
+                        <span class="notification-badge"></span>
+                        {{end}}
+                    </button>
+                    <a href="/kirim-tiket" class="btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Buat Tiket
+                    </a>
+                </div>
+            </header>
+            <!-- Content -->
+            <div class="content">
+                {{if .messages}}
+                    <div class="messages-container">
+                        {{range .messages}}
+                            <div class="alert alert-{{.tags}}">
+                                <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 8V12"/>
+                                    <path d="M12 16H12.01"/>
+                                </svg>
+                                <span>{{.}}</span>
+                            </div>
+                        {{end}}
+                    </div>
+                {{end}}
+
+                {{if eq .template_name "tickets/dashboard"}}
+                    {{template "tickets/dashboard_content" .}}
+                {{else if eq .template_name "tickets/my_tickets"}}
+                    {{template "tickets/my_tickets_content" .}}
+                {{else if eq .template_name "tickets/create_ticket"}}
+                    {{template "tickets/create_ticket_content" .}}
+                {{else if eq .template_name "tickets/settings"}}
+                    {{template "tickets/settings_content" .}}
+                {{else if eq .template_name "tickets/ticket_detail"}}
+                    {{template "tickets/ticket_detail_content" .}}
+                {{else}}
+                    {{block "content" .}}{{end}}
+                {{end}}
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/common.js"></script>
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
+{{end}}
