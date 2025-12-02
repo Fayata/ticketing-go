@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"ticketing/config"
+	"ticketing/controllers"
 	"ticketing/handlers"
 	"ticketing/middleware"
 	"ticketing/models"
+	"ticketing/services"
 	"ticketing/utils"
 )
 
@@ -25,6 +27,24 @@ func main() {
 	if err := config.InitDatabase(cfg); err != nil {
 		log.Fatal(err)
 	}
+	config.InitDatabase(cfg)
+	config.InitSession(cfg.SessionSecret)
+	utils.InitTemplates()
+
+	// Init Utils
+	jwtService := utils.NewJWTService(cfg)
+	emailService := utils.NewEmailService(cfg)
+
+	// Init Services (Dependency Injection)
+	authService := services.NewAuthService(cfg, emailService, jwtService)
+	// ticketService := services.NewTicketService(...) // Lakukan hal sama utk tiket
+
+	// Init Controllers
+	authController := controllers.NewAuthController(authService)
+	// ticketController := controllers.NewTicketController(...)
+
+	mux := http.NewServeMux()
+	// mux := http.NewServeMux()
 
 	// Auto migrate models
 	if err := config.AutoMigrate(
@@ -44,14 +64,14 @@ func main() {
 	templates = loadTemplates()
 
 	// Initialize handlers
-	emailService := utils.NewEmailService(cfg)
-	authHandler := handlers.NewAuthHandler(cfg)
+	// emailService := utils.NewEmailService(cfg)
+	// authHandler := handlers.NewAuthHandler(cfg)
 	dashboardHandler := handlers.NewDashboardHandler(cfg)
 	ticketHandler := handlers.NewTicketHandler(cfg, emailService)
 	settingsHandler := handlers.NewSettingsHandler(cfg)
 
 	// Routes
-	mux := http.NewServeMux()
+	// mux := http.NewServeMux()
 
 	// Static files
 	fs := http.FileServer(http.Dir("./static"))
@@ -66,11 +86,15 @@ func main() {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	})
 
-	mux.HandleFunc("/login", middleware.GuestOnly(authHandler.ShowLogin))
-	mux.HandleFunc("/login-post", authHandler.Login)
-	mux.HandleFunc("/register", middleware.GuestOnly(authHandler.ShowRegister))
-	mux.HandleFunc("/register-post", authHandler.Register)
-	mux.HandleFunc("/logout", authHandler.Logout)
+	// mux.HandleFunc("/login", middleware.GuestOnly(authHandler.ShowLogin))
+	// mux.HandleFunc("/login-post", authHandler.Login)
+	// mux.HandleFunc("/register", middleware.GuestOnly(authHandler.ShowRegister))
+	// mux.HandleFunc("/register-post", authHandler.Register)
+	// mux.HandleFunc("/logout", authHandler.Logout)
+	mux.HandleFunc("/login", middleware.GuestOnly(authController.Login))
+	mux.HandleFunc("/register", middleware.GuestOnly(authController.Register))
+	mux.HandleFunc("/verify-email", authController.VerifyEmail)
+	mux.HandleFunc("/logout", authController.Logout)
 
 	// Protected routes
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard)))

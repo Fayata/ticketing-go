@@ -58,7 +58,6 @@ func (h *SettingsHandler) ShowSettings(w http.ResponseWriter, r *http.Request) {
 	if errorMsg != "" {
 		data["error"] = errorMsg
 	}
-
 	h.renderSettingsPage(w, r, data)
 }
 

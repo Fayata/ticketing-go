@@ -16,17 +16,26 @@ func NewEmailService(cfg *config.Config) *EmailService {
 	return &EmailService{cfg: cfg}
 }
 
-// SendMail mengirim email menggunakan SMTP Plain Auth
+// SendMail mengirim email menggunakan style sederhana sesuai request
 func (e *EmailService) SendMail(to, subject, body string) error {
+	// Konfigurasi Auth
 	auth := smtp.PlainAuth("", e.cfg.EmailUsername, e.cfg.EmailPassword, e.cfg.EmailHost)
 
-	msg := []byte("From: " + e.cfg.EmailFrom + " (cloudtech.id)\r\n" +
+	// Format alamat server (host:port)
+	addr := fmt.Sprintf("%s:%d", e.cfg.EmailHost, e.cfg.EmailPort)
+
+	// Header dan Body Email
+	// Kita gunakan text/plain agar format baris baru (\n) di body tetap terbaca rapi
+	// Jika ingin HTML, ganti Content-Type jadi text/html dan ganti \n di body jadi <br>
+	msg := []byte("From: " + e.cfg.EmailFrom + "\r\n" +
 		"To: " + to + "\r\n" +
 		"Subject: " + subject + "\r\n" +
-		"MIME-version: 1.0;\r\nContent-Type: text/plain; charset=\"UTF-8\";\r\n\r\n" +
+		"MIME-version: 1.0;\r\n" +
+		"Content-Type: text/plain; charset=\"UTF-8\";\r\n\r\n" +
 		body + "\r\n")
 
-	addr := fmt.Sprintf("%s:%d", e.cfg.EmailHost, e.cfg.EmailPort)
+	// Kirim Email
+	// Disini 'to' diambil dinamis dari parameter fungsi, bukan hardcoded
 	err := smtp.SendMail(addr, auth, e.cfg.EmailFrom, []string{to}, msg)
 
 	if err != nil {
@@ -65,6 +74,7 @@ Tim Support`, username, ticketID, title, department, priority, status, descripti
 	return e.SendMail(to, subject, body)
 }
 
+// SendTicketReply mengirim notifikasi balasan tiket
 func (e *EmailService) SendTicketReply(to, username, title string, ticketID uint, status, replyMessage, replierName string) error {
 	subject := fmt.Sprintf("RE: [Ticket ID: %d] %s", ticketID, title)
 
@@ -77,7 +87,6 @@ Tim support kami (%s) telah membalas tiket Anda:
 ---
 
 Detail Tiket:
-
 ID Tiket    : %d
 Judul       : %s
 Status      : %s
