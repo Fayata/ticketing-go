@@ -69,5 +69,5 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 		"unread_count":         0,
 	})
 
-	RenderTemplate(w, "tickets/dashboard.html", data)
+	RenderTemplate(w, "tickets/dashboard", data)
 }

@@ -37,7 +37,8 @@ func (h *AuthHandler) ShowLogin(w http.ResponseWriter, r *http.Request) {
 		data["success"] = "Akun berhasil dibuat. Silakan login untuk melanjutkan."
 	}
 
-	RenderTemplate(w, "tickets/login.html", data)
+	// CHANGED: Use "login.html" instead of "tickets/login.html"
+	RenderTemplate(w, "login.html", data)
 }
 
 // Login proses login user
@@ -61,7 +62,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Where("username = ? OR email = ?", username, username).
 		First(&user).Error; err != nil {
 		log.Printf("User not found: %s", username)
-		RenderTemplate(w, "tickets/login.html", map[string]interface{}{
+		// CHANGED: Use "login.html"
+		RenderTemplate(w, "login.html", map[string]interface{}{
 			"error":            "Username atau password salah. Silakan coba lagi.",
 			"title":            "Login - Portal Ticketing",
 			"query_next":       nextParam,
@@ -73,7 +75,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Cek password
 	if !utils.CheckPasswordHash(password, user.Password) {
 		log.Printf("Invalid password for user: %s", username)
-		RenderTemplate(w, "tickets/login.html", map[string]interface{}{
+		// CHANGED: Use "login.html"
+		RenderTemplate(w, "login.html", map[string]interface{}{
 			"error":            "Username atau password salah. Silakan coba lagi.",
 			"title":            "Login - Portal Ticketing",
 			"query_next":       nextParam,
@@ -85,7 +88,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Cek akses portal
 	if !user.HasPortalAccess() {
 		log.Printf("User %s doesn't have portal access", username)
-		RenderTemplate(w, "tickets/login.html", map[string]interface{}{
+		// CHANGED: Use "login.html"
+		RenderTemplate(w, "login.html", map[string]interface{}{
 			"error":            "Akun ini tidak memiliki akses ke dashboard pengguna.",
 			"title":            "Login - Portal Ticketing",
 			"query_next":       nextParam,
@@ -146,7 +150,8 @@ func (h *AuthHandler) ShowRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, "tickets/register.html", map[string]interface{}{
+	// CHANGED: Use "register.html"
+	RenderTemplate(w, "register.html", map[string]interface{}{
 		"title": "Registrasi - Portal Ticketing",
 	})
 }
@@ -192,7 +197,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errors) > 0 {
-		RenderTemplate(w, "tickets/register.html", map[string]interface{}{
+		// CHANGED: Use "register.html"
+		RenderTemplate(w, "register.html", map[string]interface{}{
 			"errors":   errors,
 			"username": username,
 			"email":    email,
