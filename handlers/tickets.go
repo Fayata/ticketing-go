@@ -64,7 +64,8 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 		"user":          user,
 	})
 
-	RenderTemplate(w, "tickets/create_ticket.html", data)
+	// PERBAIKAN: Hapus .html
+	RenderTemplate(w, "tickets/create_ticket", data)
 }
 
 // CreateTicket proses pembuatan ticket baru
@@ -159,7 +160,7 @@ func (h *TicketHandler) ShowTicketSuccess(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	RenderTemplate(w, "tickets/ticket_success.html", map[string]interface{}{
+	RenderTemplate(w, "ticket_success.html", map[string]interface{}{
 		"title":  "Tiket Berhasil Dibuat",
 		"ticket": &ticket,
 	})
@@ -233,10 +234,9 @@ func (h *TicketHandler) ShowMyTickets(w http.ResponseWriter, r *http.Request) {
 		"priority_filter": priorityFilter,
 	})
 
-	RenderTemplate(w, "tickets/my_tickets.html", data)
+	RenderTemplate(w, "tickets/my_tickets", data)
 }
 
-// HandleTicketDetail handles both GET (view) and POST (add reply) for ticket detail
 func (h *TicketHandler) HandleTicketDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		h.ShowTicketDetail(w, r)
@@ -281,7 +281,8 @@ func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request)
 		"replies":       ticket.Replies,
 	})
 
-	RenderTemplate(w, "tickets/ticket_detail.html", data)
+	// PERBAIKAN: Hapus .html
+	RenderTemplate(w, "tickets/ticket_detail", data)
 }
 
 // AddReply menambahkan reply ke tiket dan mengirim email

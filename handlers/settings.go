@@ -241,5 +241,5 @@ func (h *SettingsHandler) renderSettingsPage(w http.ResponseWriter, r *http.Requ
 		data["template_name"] = "tickets/settings"
 	}
 
-	RenderTemplate(w, "tickets/settings.html", data)
+	RenderTemplate(w, "tickets/settings", data)
 }

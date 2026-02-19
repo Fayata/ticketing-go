@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/smtp"
@@ -16,86 +17,119 @@ func NewEmailService(cfg *config.Config) *EmailService {
 	return &EmailService{cfg: cfg}
 }
 
-// SendMail mengirim email menggunakan style sederhana sesuai request
+// SendMail dengan support dual mode (465 SSL & 587 STARTTLS)
 func (e *EmailService) SendMail(to, subject, body string) error {
-	// Konfigurasi Auth
-	auth := smtp.PlainAuth("", e.cfg.EmailUsername, e.cfg.EmailPassword, e.cfg.EmailHost)
+	// 1. Setup Headers
+	headers := make(map[string]string)
+	headers["From"] = e.cfg.EmailFrom
+	headers["To"] = to
+	headers["Subject"] = subject
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "text/plain; charset=\"UTF-8\""
 
-	// Format alamat server (host:port)
+	message := ""
+	for k, v := range headers {
+		message += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+	message += "\r\n" + body
+
 	addr := fmt.Sprintf("%s:%d", e.cfg.EmailHost, e.cfg.EmailPort)
+	host := e.cfg.EmailHost
 
-	// Header dan Body Email
-	// Kita gunakan text/plain agar format baris baru (\n) di body tetap terbaca rapi
-	// Jika ingin HTML, ganti Content-Type jadi text/html dan ganti \n di body jadi <br>
-	msg := []byte("From: " + e.cfg.EmailFrom + "\r\n" +
-		"To: " + to + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"MIME-version: 1.0;\r\n" +
-		"Content-Type: text/plain; charset=\"UTF-8\";\r\n\r\n" +
-		body + "\r\n")
+	var client *smtp.Client
+	var err error
 
-	// Kirim Email
-	// Disini 'to' diambil dinamis dari parameter fungsi, bukan hardcoded
-	err := smtp.SendMail(addr, auth, e.cfg.EmailFrom, []string{to}, msg)
+	// KONFIGURASI TLS: InsecureSkipVerify true agar tidak rewel sertifikat
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         host,
+	}
 
-	if err != nil {
-		log.Printf("❌ Error sending email to %s: %v", to, err)
+	// LOGIKA UTAMA: Pilih metode koneksi berdasarkan Port
+	if e.cfg.EmailPort == 465 {
+		// --- METODE PORT 465 (SMTPS / Implicit SSL) ---
+		// Langsung connect pakai TLS, bypass STARTTLS handshake yang sering error
+		conn, err := tls.Dial("tcp", addr, tlsConfig)
+		if err != nil {
+			log.Printf("❌ Gagal connect SSL (Port 465): %v", err)
+			return err
+		}
+
+		client, err = smtp.NewClient(conn, host)
+		if err != nil {
+			log.Printf("❌ Gagal membuat client SMTP: %v", err)
+			return err
+		}
+		defer client.Close()
+
+		log.Println("✅ Terhubung via SMTPS (Port 465)")
+
+	} else {
+		// --- METODE PORT 587 (STARTTLS) ---
+		// Fallback untuk port 587/25
+		client, err = smtp.Dial(addr)
+		if err != nil {
+			log.Printf("❌ Gagal dial (Port %d): %v", e.cfg.EmailPort, err)
+			return err
+		}
+		defer client.Close()
+
+		// Coba STARTTLS jika didukung
+		if ok, _ := client.Extension("STARTTLS"); ok {
+			if err = client.StartTLS(tlsConfig); err != nil {
+				log.Printf("❌ Gagal STARTTLS: %v", err)
+				return err
+			}
+		}
+	}
+
+	// 2. Authenticate
+	// Menggunakan PlainAuth. Jika server butuh LOGIN auth, bisa ditambahkan nanti.
+	auth := smtp.PlainAuth("", e.cfg.EmailUsername, e.cfg.EmailPassword, host)
+	if err = client.Auth(auth); err != nil {
+		log.Printf("❌ Gagal Auth: %v", err)
 		return err
 	}
 
-	log.Printf("✅ Email sent to %s successfully", to)
+	// 3. Kirim Email
+	if err = client.Mail(e.cfg.EmailFrom); err != nil {
+		return err
+	}
+	if err = client.Rcpt(to); err != nil {
+		return err
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write([]byte(message))
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	if err = client.Quit(); err != nil {
+		// Error saat quit bisa diabaikan kadang-kadang
+		log.Printf("⚠️ Note: Quit error (biasanya aman): %v", err)
+	}
+
+	log.Printf("✅ Email SUKSES terkirim ke %s", to)
 	return nil
 }
 
-// SendTicketConfirmation mengirim email konfirmasi pembuatan tiket
+// Helper functions wrapper (tidak berubah)
 func (e *EmailService) SendTicketConfirmation(to, username, title string, ticketID uint, department, priority, status, description string) error {
 	subject := fmt.Sprintf("[Ticket ID: %d] %s", ticketID, title)
-
-	body := fmt.Sprintf(`Halo %s,
-
-Terima kasih telah menghubungi kami. Tiket Anda telah berhasil dibuat dengan rincian berikut:
-
-ID Tiket  : %d
-Judul     : %s
-Departemen: %s
-Prioritas : %s
-Status    : %s
-
-Deskripsi:
-%s
-
----
-Tim support kami akan segera meninjau tiket Anda.
-Mohon menunggu balasan dari tim support melalui email ini.
-
-Salam,
-Tim Support`, username, ticketID, title, department, priority, status, description)
-
+	body := fmt.Sprintf("Halo %s,\n\nTiket #%d berhasil dibuat.\nJudul: %s\n\nDeskripsi:\n%s\n\nSalam,\nTim Support", username, ticketID, title, description)
 	return e.SendMail(to, subject, body)
 }
 
-// SendTicketReply mengirim notifikasi balasan tiket
 func (e *EmailService) SendTicketReply(to, username, title string, ticketID uint, status, replyMessage, replierName string) error {
 	subject := fmt.Sprintf("RE: [Ticket ID: %d] %s", ticketID, title)
-
-	body := fmt.Sprintf(`Halo %s,
-
-Tim support kami (%s) telah membalas tiket Anda:
-
----
-%s
----
-
-Detail Tiket:
-ID Tiket    : %d
-Judul       : %s
-Status      : %s
-
-Silakan balas email ini jika ada pertanyaan tambahan.
-
-Salam,
-%s
-Tim Support`, username, replierName, replyMessage, ticketID, title, status, replierName)
-
+	body := fmt.Sprintf("Halo %s,\n\nAda balasan baru dari %s:\n\n%s\n\nSalam,\nTim Support", username, replierName, replyMessage)
 	return e.SendMail(to, subject, body)
 }

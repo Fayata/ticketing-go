@@ -7,13 +7,16 @@ import (
 )
 
 type User struct {
-	ID         uint           `gorm:"primarykey" json:"id"`
-	Username   string         `gorm:"uniqueIndex;not null" json:"username"`
-	Email      string         `gorm:"uniqueIndex;not null" json:"email"`
-	Password   string         `gorm:"not null" json:"-"`
-	FirstName  string         `json:"first_name"`
-	LastName   string         `json:"last_name"`
-	IsStaff    bool           `gorm:"default:false" json:"is_staff"`
+	ID        uint   `gorm:"primarykey" json:"id"`
+	Username  string `gorm:"uniqueIndex;not null" json:"username"`
+	Email     string `gorm:"uniqueIndex;not null" json:"email"`
+	Password  string `gorm:"not null" json:"-"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+
+	IsStaff      bool `gorm:"default:false" json:"is_staff"`
+	IsSuperAdmin bool `gorm:"default:false" json:"is_super_admin"`
+
 	IsActive   bool           `gorm:"default:true" json:"is_active"`
 	LastLogin  *time.Time     `json:"last_login"`
 	CreatedAt  time.Time      `json:"created_at"`
@@ -27,6 +30,7 @@ type User struct {
 	Groups  []Group       `gorm:"many2many:user_groups;" json:"-"`
 }
 
+// ... (Sisa fungsi Group struct dan helper GetFullName tetap sama)
 type Group struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	Name      string    `gorm:"uniqueIndex;not null" json:"name"`
@@ -42,7 +46,7 @@ func (u *User) GetFullName() string {
 }
 
 func (u *User) HasPortalAccess() bool {
-	if u.IsStaff {
+	if u.IsStaff || u.IsSuperAdmin { // Admin juga punya akses portal
 		return true
 	}
 	for _, group := range u.Groups {

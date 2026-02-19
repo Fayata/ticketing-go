@@ -1,0 +1,39 @@
+{{define "content"}}
+<div class="form-container">
+    <div class="form-header">
+        <h2>Buat User Baru</h2>
+        <p>User ini akan otomatis aktif dan terverifikasi.</p>
+    </div>
+    
+    <form method="POST" action="/admin/users/create">
+        <div class="form-group full-width">
+            <label>Username</label>
+            <input type="text" name="username" class="form-input" required>
+        </div>
+        
+        <div class="form-group full-width">
+            <label>Email</label>
+            <input type="email" name="email" class="form-input" required>
+        </div>
+
+        <div class="form-group full-width">
+            <label>Password</label>
+            <input type="password" name="password" class="form-input" required>
+        </div>
+
+        <div class="form-group full-width">
+            <label>Role / Peran</label>
+            <select name="role" class="form-input">
+                <option value="user">User Biasa (Pembuat Tiket)</option>
+                <option value="staff">Staff Departemen (Penjawab Tiket)</option>
+                <option value="admin">Super Admin (Dewa)</option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <a href="/admin/users" class="btn-cancel">Batal</a>
+            <button type="submit" class="btn-submit">Simpan User</button>
+        </div>
+    </form>
+</div>
+{{end}}

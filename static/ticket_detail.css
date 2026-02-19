@@ -313,3 +313,57 @@
         padding: 1rem;
     }
 }
+
+
+/* Departemen*/
+.ticket-header-card.department-theme {
+    border-left: 5px solid #4f46e5;
+}
+
+.ticket-id-badge.department-theme {
+    color: #4f46e5;
+}
+
+.message-content.department-reply {
+    background-color: #f0fdf4;
+    border-left: 3px solid #10b981;
+}
+
+.staff-badge.department-label {
+    background-color: #10b981; 
+    color: white;
+}
+
+.card.department-response-card {
+    border: 2px solid #4f46e5;
+}
+
+.card-header.department-response-header {
+    background-color: #eef2ff;
+}
+
+.card-header.department-response-header h2 {
+    color: #312e81;
+}
+
+.department-textarea {
+    border-color: #c7d2fe !important;
+}
+
+.btn-submit.department-btn {
+    background-color: #4f46e5;
+}
+
+.btn-submit.department-btn:hover {
+    background-color: #4338ca;
+}
+
+.back-link {
+    display: inline-flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+    text-decoration: none; 
+    color: #4b5563; 
+    font-weight: 500;
+    margin-bottom: 1rem;
+}

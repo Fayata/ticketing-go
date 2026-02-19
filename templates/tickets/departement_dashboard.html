@@ -1,0 +1,98 @@
+{{define "tickets/department_dashboard_content"}}
+<div class="welcome-banner departement-banner" style="background: linear-gradient(135deg, #4f46e5, #312e81);">
+    <div class="banner-content">
+        <div class="banner-text">
+            <h2>Area Departemen: {{.user.GetFullName}}</h2>
+            <p>Halo Admin/Departemen, berikut adalah antrian tiket yang perlu ditangani.</p>
+        </div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-content">
+            <div class="stat-info"><p>Perlu Respon</p><h3>{{.waiting_count}}</h3></div>
+            <div class="stat-icon orange">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-content">
+            <div class="stat-info"><p>Sedang Proses</p><h3>{{.progress_count}}</h3></div>
+            <div class="stat-icon blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-content">
+            <div class="stat-info"><p>Selesai</p><h3>{{.closed_count}}</h3></div>
+            <div class="stat-icon green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Pool Tiket Masuk</h2>
+    </div>
+    <div class="card-body">
+        {{if .ticket_pool}}
+        <div class="ticket-list">
+            {{range .ticket_pool}}
+            <div class="ticket-item" onclick="window.location.href='/department/tiket/{{.ID}}'">
+                <div class="ticket-header">
+                    <div style="width: 100%;">
+                        <div class="ticket-id-status" style="justify-content: space-between;">
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <span class="ticket-id">#{{.ID}}</span>
+                                <span class="status-badge {{getStatusClass .Status}}">{{.GetStatusDisplay}}</span>
+                            </div>
+                            <span style="font-size: 0.8rem; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 4px;">
+                                User: <strong>{{.CreatedBy.Username}}</strong>
+                            </span>
+                        </div>
+                        
+                        <h3 class="ticket-title" style="margin-top: 0.5rem;">{{.Title}}</h3>
+                        
+                        <div class="ticket-meta">
+                            <span class="ticket-meta-item">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path></svg>
+                                {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
+                            </span>
+                            <span class="ticket-meta-item priority-{{getPriorityClass .Priority}}">
+                                {{.GetPriorityDisplay}} Priority
+                            </span>
+                            <span class="ticket-meta-item">
+                                {{.GetReplyCount}} balasan
+                            </span>
+                             <span class="ticket-meta-item" style="margin-left: auto;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                {{timeSince .CreatedAt}} lalu
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px; color: #9ca3af; margin: 0 auto;">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <h3 style="margin-top: 1rem;">Tidak Ada Tiket Pending</h3>
+            <p>Semua tiket sudah tertangani atau belum ada tiket baru.</p>
+        </div>
+        {{end}}
+    </div>
+</div>
+{{end}}
+
+{{define "tickets/department_dashboard"}}
+{{template "base" .}}
+{{end}}

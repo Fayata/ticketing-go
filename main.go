@@ -42,6 +42,7 @@ func main() {
 	// Init Controllers
 	authController := controllers.NewAuthController(authService)
 	// ticketController := controllers.NewTicketController(...)
+	adminHandler := handlers.NewAdminHandler(cfg)
 
 	mux := http.NewServeMux()
 	// mux := http.NewServeMux()
@@ -69,6 +70,7 @@ func main() {
 	dashboardHandler := handlers.NewDashboardHandler(cfg)
 	ticketHandler := handlers.NewTicketHandler(cfg, emailService)
 	settingsHandler := handlers.NewSettingsHandler(cfg)
+	departementHandler := handlers.NewDepartmentHandler(cfg, emailService)
 
 	// Routes
 	// mux := http.NewServeMux()
@@ -95,6 +97,13 @@ func main() {
 	mux.HandleFunc("/register", middleware.GuestOnly(authController.Register))
 	mux.HandleFunc("/verify-email", authController.VerifyEmail)
 	mux.HandleFunc("/logout", authController.Logout)
+	mux.HandleFunc("/forgot-password", middleware.GuestOnly(authController.ForgotPassword))
+	mux.HandleFunc("/reset-password", middleware.GuestOnly(authController.ResetPassword))
+	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard)))
+	mux.HandleFunc("/admin/users", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListUsers)))
+	mux.HandleFunc("/admin/users/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateUserForm)))
+	mux.HandleFunc("/admin/users/toggle/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleUserStatus)))
+	mux.HandleFunc("/admin/users/staff/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleStaffRole)))
 
 	// Protected routes
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard)))

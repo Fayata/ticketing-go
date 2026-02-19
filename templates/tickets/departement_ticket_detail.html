@@ -1,0 +1,134 @@
+{{define "tickets/department_ticket_detail_content"}}
+<link rel="stylesheet" href="/static/ticket_detail.css">
+
+<div>
+    <a href="/department/dashboard" class="back-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Kembali ke Pool
+    </a>
+</div>
+
+<div class="ticket-detail-container">
+    {{if .ticket}}
+    {{$ticket := .ticket}}
+    
+    <div class="card ticket-header-card department-theme">
+        <div class="card-body">
+            <div class="ticket-status-header">
+                <div class="ticket-id-badge department-theme">
+                    <span>Tiket #{{$ticket.ID}}</span>
+                </div>
+                <span class="status-badge {{getStatusClass $ticket.Status}}">
+                    {{$ticket.GetStatusDisplay}}
+                </span>
+            </div>
+            
+            <h1 class="ticket-title-large">{{$ticket.Title}}</h1>
+            
+            <div class="ticket-meta-grid">
+                <div class="meta-item">
+                    <span class="meta-label">User</span>
+                    <span class="meta-value">{{if $ticket.CreatedBy}}{{$ticket.CreatedBy.Username}}{{else}}Unknown{{end}}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Departemen</span>
+                    <span class="meta-value">{{if $ticket.Department}}{{$ticket.Department.Name}}{{else}}-{{end}}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Prioritas</span>
+                    <span class="meta-value priority-{{getPriorityClass $ticket.Priority}}">{{$ticket.GetPriorityDisplay}}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <div class="main-content-area">
+            <div class="card">
+                <div class="card-header"><h2>Deskripsi Masalah</h2></div>
+                <div class="card-body">
+                    <div class="message-content">
+                        <div class="message-body">{{linebreaks $ticket.Description}}</div>
+                    </div>
+                </div>
+            </div>
+
+            {{if .replies}}
+            <div class="card">
+                <div class="card-header"><h2>Riwayat Percakapan</h2></div>
+                <div class="card-body">
+                    {{range .replies}}
+                    <div class="message-content {{if .User.IsStaff}}department-reply{{end}}">
+                        <div class="message-header">
+                            <div class="message-author">
+                                <div class="author-avatar {{if .User.IsStaff}}staff{{end}}">
+                                    {{slice .User.Username 0 2 | upper}}
+                                </div>
+                                <div>
+                                    <div class="author-name">
+                                        {{getFullName .User}}
+                                        {{if .User.IsStaff}}
+                                        <span class="staff-badge department-label">Departemen</span>
+                                        {{end}}
+                                    </div>
+                                    <div class="message-time">{{date .CreatedAt}}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="message-body">{{linebreaks .Message}}</div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+
+            <div class="card department-response-card">
+                <div class="card-header department-response-header">
+                    <h2>Respon Sebagai Departemen</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/department/tiket/{{$ticket.ID}}">
+                        <div class="form-group">
+                            <label for="message">Pesan Balasan</label>
+                            <textarea name="message" rows="5" placeholder="Halo, ini dari tim support..." required class="department-textarea"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="status">Update Status Tiket</label>
+                            <select name="status" id="status" class="form-input">
+                                <option value="" selected>-- Jangan Ubah Status --</option>
+                                <option value="IN_PROGRESS">Set to: In Progress (Sedang Dikerjakan)</option>
+                                <option value="WAITING">Set to: Waiting (Menunggu User)</option>
+                                <option value="CLOSED">Set to: Closed (Selesai)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-submit department-btn">
+                                Kirim & Update
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-area">
+             <div class="card">
+                <div class="card-header"><h2>Info User</h2></div>
+                <div class="card-body">
+                    <div class="info-list">
+                        <div class="info-item"><span class="info-label">Nama</span><span class="info-value">{{$ticket.CreatedBy.GetFullName}}</span></div>
+                        <div class="info-item"><span class="info-label">Email</span><span class="info-value">{{$ticket.CreatedBy.Email}}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{end}}
+</div>
+{{end}}
+
+{{define "tickets/department_ticket_detail"}}
+{{template "base" .}}
+{{end}}

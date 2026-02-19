@@ -64,6 +64,22 @@
                     </svg>
                     <span>Knowledge Base</span>
                 </a>
+            {{if .user.IsSuperAdmin}}
+                <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
+                    <p style="padding: 0 1rem; font-size: 0.7rem; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; font-weight: bold;">
+                        Super Admin
+                    </p>
+                    <a href="/admin/users" class="nav-item {{if eq .nav_active "admin_users"}}active{{end}}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <span>Kelola Akun</span>
+                    </a>
+                </div>
+                {{end}}
             </nav>
             <!-- User Profile -->
             <div class="sidebar-user">

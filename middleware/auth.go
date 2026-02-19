@@ -124,5 +124,37 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 		next.ServeHTTP(w, r)
 		log.Printf("%s %s %s", r.Method, r.RequestURI, time.Since(start))
+		
 	})
+	
+}
+
+func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := r.Context().Value(UserKey).(*models.User)
+
+		if !user.IsStaff {
+			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
+}
+
+func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := r.Context().Value(UserKey).(*models.User)
+
+		if !user.IsSuperAdmin {
+			if user.IsStaff {
+				http.Redirect(w, r, "/departement/dashboard", http.StatusSeeOther)
+			} else {
+				http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			}
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	}
 }

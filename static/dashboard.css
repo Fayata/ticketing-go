@@ -1030,3 +1030,7 @@ body {
     white-space: nowrap;
     border-width: 0;
 }
+
+.welcome-banner.department-banner {
+    background: linear-gradient(135deg, #4f46e5, #312e81);
+}

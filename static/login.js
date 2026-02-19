@@ -53,14 +53,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Forgot Password Link (placeholder functionality)
-    const forgotPasswordLink = document.getElementById('forgotPassword');
-    if (forgotPasswordLink) {
-        forgotPasswordLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            // You can implement forgot password functionality here
-            alert('Fitur lupa password belum tersedia. Silakan hubungi administrator untuk reset password.');
-        });
-    }
+    // const forgotPasswordLink = document.getElementById('forgotPassword');
+    // if (forgotPasswordLink) {
+    //     forgotPasswordLink.addEventListener('click', function(e) {
+    //         e.preventDefault();
+    //         // You can implement forgot password functionality here
+    //         alert('Fitur lupa password belum tersedia. Silakan hubungi administrator untuk reset password.');
+    //     });
+    // }
 
     // Auto-focus on username field if empty
     const usernameInput = document.getElementById('id_username');
