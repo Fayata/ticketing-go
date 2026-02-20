@@ -163,6 +163,13 @@ func InitTemplates() {
 			}
 			return "User"
 		},
+		"seq": func(start, end int) []int {
+			var result []int
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
 	}
 
 	// Load templates
@@ -171,6 +178,7 @@ func InitTemplates() {
 	// Pastikan folder templates ada di root project saat menjalankan main.go
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "*.html")))
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "tickets", "*.html")))
+	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "admin", "*.html")))
 
 	templates = tmpl
 	log.Println("Templates loaded successfully with helper functions")
@@ -190,6 +198,7 @@ func RenderTemplate(w http.ResponseWriter, tmplName string, data interface{}) {
 		log.Printf("Template error (%s): %v", tmplName, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
+
 }
 
 // Helper functions for context

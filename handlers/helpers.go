@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"log"
@@ -152,23 +153,35 @@ func init() {
 			}
 			return "User"
 		},
+		"seq": func(start, end int) []int {
+			var result []int
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
 	}
 
 	// Load templates with functions
 	tmpl := template.New("").Funcs(funcMap)
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "*.html")))
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "tickets", "*.html")))
+	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "admin", "*.html")))
 
 	templates = tmpl
 }
 
 // RenderTemplate renders HTML template
 func RenderTemplate(w http.ResponseWriter, tmpl string, data interface{}) {
-	err := templates.ExecuteTemplate(w, tmpl, data)
-	if err != nil {
+	var buf bytes.Buffer
+	if err := templates.ExecuteTemplate(&buf, tmpl, data); err != nil {
 		log.Printf("Template error: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
+	// Only write to ResponseWriter after template renders successfully to avoid
+	// double WriteHeader on partial renders.
+	_, _ = buf.WriteTo(w)
 }
 
 // GetUserFromContext gets user from request context

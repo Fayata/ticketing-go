@@ -1,11 +1,15 @@
-{{define "content"}}
+{{define "admin/user_form"}}
+{{template "base" .}}
+{{end}}
+
+{{define "admin/user_form_content"}}
 <div class="form-container">
     <div class="form-header">
-        <h2>Buat User Baru</h2>
-        <p>User ini akan otomatis aktif dan terverifikasi.</p>
+        <h2>Buat Akun Baru</h2>
+        <p>Set akun sebagai <strong>User</strong>, <strong>Staff</strong>, atau <strong>Admin</strong> sesuai kebutuhan.</p>
     </div>
     
-    <form method="POST" action="/admin/users/create">
+    <form method="POST" action="admin/users/create">
         <div class="form-group full-width">
             <label>Username</label>
             <input type="text" name="username" class="form-input" required>
@@ -22,18 +26,43 @@
         </div>
 
         <div class="form-group full-width">
-            <label>Role / Peran</label>
-            <select name="role" class="form-input">
-                <option value="user">User Biasa (Pembuat Tiket)</option>
-                <option value="staff">Staff Departemen (Penjawab Tiket)</option>
-                <option value="admin">Super Admin (Dewa)</option>
+            <label>Role</label>
+            <select name="role" id="roleSelect" class="form-input" onchange="toggleDepartment()">
+                <option value="user">User</option>
+                <option value="staff">Staff</option>
+                <option value="admin">Admin</option>
+            </select>
+            <small style="color:#6b7280; font-size:0.85rem; margin-top:0.25rem; display:block;">
+                User: hanya buat & lihat tiket sendiri. Staff: menjawab tiket per departemen. Admin: kelola user & departemen.
+            </small>
+        </div>
+
+        <div class="form-group full-width" id="deptContainer" style="display:none;">
+            <label>Pilih Departemen (Wajib untuk Staff)</label>
+            <select name="department_id" class="form-input">
+                <option value="">-- Pilih Departemen --</option>
+                {{range .departments}}
+                <option value="{{.ID}}">{{.Name}}</option>
+                {{end}}
             </select>
         </div>
 
         <div class="form-actions">
-            <a href="/admin/users" class="btn-cancel">Batal</a>
+            <a href="admin/users" class="btn-cancel">Batal</a>
             <button type="submit" class="btn-submit">Simpan User</button>
         </div>
     </form>
 </div>
+
+<script>
+function toggleDepartment() {
+    const role = document.getElementById('roleSelect').value;
+    const deptDiv = document.getElementById('deptContainer');
+    if (role === 'staff') {
+        deptDiv.style.display = 'block';
+    } else {
+        deptDiv.style.display = 'none';
+    }
+}
+</script>
 {{end}}

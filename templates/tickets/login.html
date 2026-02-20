@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
+    <base href="/Ticketing/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Portal Ticketing</title>
-    
-    <link rel="stylesheet" href="/static/login.css">
-    
-    <link rel="stylesheet" href="/static/pages.css">
+
+    <link rel="stylesheet" href="static/login.css">
+
+    <link rel="stylesheet" href="static/pages.css">
 </head>
+
 <body>
 
     <div class="login-container">
@@ -16,9 +19,12 @@
             <div class="login-header">
                 <div class="logo-container">
                     <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
                     </svg>
                 </div>
                 <h1 class="login-title">Selamat Datang</h1>
@@ -28,9 +34,11 @@
             {{if .success}}
             <div class="alert-container">
                 <div class="alert alert-success">
-                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; flex-shrink: 0;">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        style="width: 1.25rem; height: 1.25rem; flex-shrink: 0;">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" />
                     </svg>
                     <span>{{.success}}</span>
                 </div>
@@ -39,68 +47,71 @@
 
             {{if .error}}
             <div class="alert-container">
-                <div class="alert alert-error"> 
-                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 1.25rem; height: 1.25rem; flex-shrink: 0;">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                        <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <div class="alert alert-error">
+                    <svg class="alert-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        style="width: 1.25rem; height: 1.25rem; flex-shrink: 0;">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                     </svg>
                     <span>{{.error}}</span>
                 </div>
             </div>
             {{end}}
 
-            <form method="post" action="/login" class="login-form" id="loginForm">
+            <form method="post" action="login" class="login-form" id="loginForm">
                 {{if .query_next}}
                 <input type="hidden" name="next" value="{{.query_next}}">
                 {{end}}
-                
+
                 <div class="form-group">
                     <label for="id_username" class="form-label">
-                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
                         </svg>
                         Username atau Email
                     </label>
-                    <input 
-                        type="text" 
-                        name="username" 
-                        id="id_username" 
-                        class="form-input" 
+                    <input type="text" name="username" id="id_username" class="form-input"
                         placeholder="Masukkan username atau email"
-                        value="{{if .entered_username}}{{.entered_username}}{{end}}"
-                        required 
-                        autocomplete="username"
-                        autofocus
-                    >
+                        value="{{if .entered_username}}{{.entered_username}}{{end}}" required autocomplete="username"
+                        autofocus>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="id_password" class="form-label">
-                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2"/>
-                            <path d="M7 11V7C7 5.67392 7.52678 4.40215 8.46447 3.46447C9.40215 2.52678 10.6739 2 12 2C13.3261 2 14.5979 2.52678 15.5355 3.46447C16.4732 4.40215 17 5.67392 17 7V11" stroke="currentColor" stroke-width="2"/>
+                        <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor"
+                                stroke-width="2" />
+                            <path
+                                d="M7 11V7C7 5.67392 7.52678 4.40215 8.46447 3.46447C9.40215 2.52678 10.6739 2 12 2C13.3261 2 14.5979 2.52678 15.5355 3.46447C16.4732 4.40215 17 5.67392 17 7V11"
+                                stroke="currentColor" stroke-width="2" />
                         </svg>
                         Password
                     </label>
                     <div class="password-input-wrapper">
-                        <input 
-                            type="password" 
-                            name="password" 
-                            id="id_password" 
-                            class="form-input password-input" 
-                            placeholder="Masukkan password"
-                            required
-                            autocomplete="current-password"
-                        >
-                        <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
-                            <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <input type="password" name="password" id="id_password" class="form-input password-input"
+                            placeholder="Masukkan password" required autocomplete="current-password">
+                        <button type="button" class="password-toggle" id="togglePassword"
+                            aria-label="Toggle password visibility">
+                            <svg class="eye-icon eye-open" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
-                            <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: none;">
-                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C7 20 2.73 16.39 1 12C2.73 7.61 7 4 12 4C16.39 4 20.61 7.61 22 12C21.39 13.61 20.39 15.06 19.11 16.22M9 9H9.01M15 15H15.01M3 3L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <svg class="eye-icon eye-closed" viewBox="0 0 24 24" fill="none"
+                                xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20C7 20 2.73 16.39 1 12C2.73 7.61 7 4 12 4C16.39 4 20.61 7.61 22 12C21.39 13.61 20.39 15.06 19.11 16.22M9 9H9.01M15 15H15.01M3 3L21 21"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
                             </svg>
                         </button>
                     </div>
@@ -113,15 +124,19 @@
                         <span class="checkbox-label">Ingat saya</span>
                     </label>
                     <!-- <a href="#" class="forgot-password-link" id="forgotPassword">Lupa password?</a> -->
-                    <a href="/forgot-password" class="forgot-password-link" id="forgotPassword">Lupa password?</a>
+                    <a href="forgot-password" class="forgot-password-link" id="forgotPassword">Lupa password?</a>
                 </div>
-                
+
                 <button type="submit" class="login-button" id="loginButton">
                     <span class="button-text">Masuk</span>
-                    <svg class="button-loader" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: none;">
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="31.416" stroke-dashoffset="31.416">
-                            <animate attributeName="stroke-dasharray" dur="2s" values="0 31.416;15.708 15.708;0 31.416;0 31.416" repeatCount="indefinite"/>
-                            <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416;-31.416" repeatCount="indefinite"/>
+                    <svg class="button-loader" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        style="display: none;">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-dasharray="31.416" stroke-dashoffset="31.416">
+                            <animate attributeName="stroke-dasharray" dur="2s"
+                                values="0 31.416;15.708 15.708;0 31.416;0 31.416" repeatCount="indefinite" />
+                            <animate attributeName="stroke-dashoffset" dur="2s" values="0;-15.708;-31.416;-31.416"
+                                repeatCount="indefinite" />
                         </circle>
                     </svg>
                 </button>
@@ -129,14 +144,15 @@
 
             <div class="login-footer">
                 <p class="footer-text">
-                    Belum punya akun? 
-                    <a href="/register" class="footer-link">Daftar sekarang</a>
+                    Belum punya akun?
+                    <a href="register" class="footer-link">Daftar sekarang</a>
                 </p>
             </div>
         </div>
     </div>
-    
-    <script src="/static/login.js"></script>
+
+    <script src="static/login.js"></script>
 
 </body>
+
 </html>

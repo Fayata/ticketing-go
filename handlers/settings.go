@@ -135,7 +135,7 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 
 	log.Printf("Profile updated for user: %s", username)
 
-	http.Redirect(w, r, "/settings?success=Profil+berhasil+diperbarui", http.StatusSeeOther)
+	http.Redirect(w, r, config.Path("/settings")+"?success=Profil+berhasil+diperbarui", http.StatusSeeOther)
 }
 
 // ChangePassword mengubah password user
@@ -200,7 +200,7 @@ func (h *SettingsHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 	hashedPassword, err := utils.HashPassword(newPassword1)
 	if err != nil {
 		log.Printf("Failed to hash password: %v", err)
-		http.Redirect(w, r, "/settings?error=Gagal+mengubah+password", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/settings")+"?error=Gagal+mengubah+password", http.StatusSeeOther)
 		return
 	}
 
@@ -218,7 +218,7 @@ func (h *SettingsHandler) ChangePassword(w http.ResponseWriter, r *http.Request)
 
 	log.Printf("Password changed for user: %s", user.Username)
 
-	http.Redirect(w, r, "/settings?success=Password+berhasil+diubah", http.StatusSeeOther)
+	http.Redirect(w, r, config.Path("/settings")+"?success=Password+berhasil+diubah", http.StatusSeeOther)
 }
 
 func (h *SettingsHandler) renderSettingsPage(w http.ResponseWriter, r *http.Request, data map[string]interface{}) {

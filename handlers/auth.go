@@ -44,7 +44,7 @@ func (h *AuthHandler) ShowLogin(w http.ResponseWriter, r *http.Request) {
 // Login proses login user
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, "Ticketing/login", http.StatusSeeOther)
 		return
 	}
 
@@ -140,7 +140,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+	http.Redirect(w, r, "Ticketing/dashboard", http.StatusSeeOther)
 }
 
 // ShowRegister menampilkan halaman registrasi

@@ -1,0 +1,86 @@
+{{define "admin/users_list"}}
+{{template "base" .}}
+{{end}}
+
+{{define "admin/users_list_content"}}
+<div class="card">
+    <div class="card-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <div>
+                <h2>Daftar Pengguna Sistem</h2>
+                <p style="margin-top:0.25rem; font-size:0.85rem; color:#6b7280;">Role sederhana: <strong>User</strong>, <strong>Staff</strong>, <strong>Admin</strong>.</p>
+            </div>
+            <a href="admin/users/create" class="btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Tambah User
+            </a>
+        </div>
+    </div>
+    
+    <div style="padding: 1rem; border-bottom: 1px solid #e5e7eb; display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="admin/users" class="status-badge {{if eq .filter ""}}in-progress{{else}}closed{{end}}" style="text-decoration:none;">Semua</a>
+        <a href="admin/users?role=staff" class="status-badge {{if eq .filter "staff"}}in-progress{{else}}closed{{end}}" style="text-decoration:none;">Staff</a>
+        <a href="admin/users?role=user" class="status-badge {{if eq .filter "user"}}in-progress{{else}}closed{{end}}" style="text-decoration:none;">User</a>
+    </div>
+
+    <div class="card-body">
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead style="background-color: #f9fafb; text-align: left;">
+                    <tr>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">User</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Email</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Role</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Departemen</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Status</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .users}}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 1rem;"><strong>{{.Username}}</strong></td>
+                        <td style="padding: 1rem;">{{.Email}}</td>
+                        <td style="padding: 1rem;">
+                            {{if .IsSuperAdmin}}
+                                <span class="status-badge open" style="background:#1d4ed8; color:white; border:none;">Admin</span>
+                            {{else if .IsStaff}}
+                                <span class="status-badge resolved">Staff</span>
+                            {{else}}
+                                <span class="status-badge closed">User</span>
+                            {{end}}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {{if .Department}}
+                                <span style="background:#eff6ff; color:#1e40af; padding:4px 12px; border-radius:6px; font-size:0.875rem; font-weight:600; border:1px solid #dbeafe;">
+                                    {{.Department.Name}}
+                                </span>
+                            {{else}}
+                                <span style="color: #9ca3af; font-style: italic;">-</span>
+                            {{end}}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {{if .IsActive}}
+                                <span class="status-badge in-progress" style="background:#ecfdf3; color:#15803d; border-color:#bbf7d0;">Aktif</span>
+                            {{else}}
+                                <span class="status-badge closed" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">Non-Aktif</span>
+                            {{end}}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {{if not .IsSuperAdmin}} 
+                                <a href="admin/users/staff/{{.ID}}" style="font-size:0.8rem; margin-right:10px; color:#2563eb; text-decoration:underline;">
+                                    {{if .IsStaff}}Hapus Staff{{else}}Jadikan Staff{{end}}
+                                </a>
+                                <a href="admin/users/toggle/{{.ID}}" style="font-size:0.8rem; color:#b91c1c; text-decoration:underline;">
+                                    {{if .IsActive}}Nonaktifkan{{else}}Aktifkan{{end}}
+                                </a>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{{end}}

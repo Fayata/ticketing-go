@@ -23,22 +23,22 @@ func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sess, err := config.Store.Get(r, "session")
 		if err != nil {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/login"), http.StatusSeeOther)
 			return
 		}
 
 		userID := sess.Values["user_id"]
 		if userID == nil {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/login"), http.StatusSeeOther)
 			return
 		}
 
 		// Load user dari database
 		var user models.User
-		if err := config.DB.Preload("Groups").First(&user, userID).Error; err != nil {
+		if err := config.DB.Preload("Groups").Preload("Department").First(&user, userID).Error; err != nil {
 			sess.Options.MaxAge = -1
 			sess.Save(r, w)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/login"), http.StatusSeeOther)
 			return
 		}
 
@@ -78,7 +78,7 @@ func GuestOnly(next http.HandlerFunc) http.HandlerFunc {
 		if err == nil {
 			userID := sess.Values["user_id"]
 			if userID != nil {
-				http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+				http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 				return
 			}
 		}
@@ -134,7 +134,7 @@ func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
 		user := r.Context().Value(UserKey).(*models.User)
 
 		if !user.IsStaff {
-			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 			return
 		}
 
@@ -148,9 +148,9 @@ func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 
 		if !user.IsSuperAdmin {
 			if user.IsStaff {
-				http.Redirect(w, r, "/departement/dashboard", http.StatusSeeOther)
+				http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
 			} else {
-				http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+				http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 			}
 			return
 		}

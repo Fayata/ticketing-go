@@ -7,6 +7,7 @@ type Department struct {
 	Name      string    `gorm:"not null" json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	
 
 	// Relations
 	Tickets []Ticket `gorm:"foreignKey:DepartmentID" json:"-"`

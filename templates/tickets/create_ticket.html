@@ -1,5 +1,5 @@
 {{define "tickets/create_ticket_content"}}
-<link rel="stylesheet" href="/static/create_ticket.css">
+<link rel="stylesheet" href="static/create_ticket.css">
 <div class="form-container">
     <div class="form-header">
         <h2>Buat Tiket Support Baru</h2>
@@ -13,11 +13,12 @@
             <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
         <p>
-            <strong>Tips:</strong> Berikan informasi yang detail dan lengkap agar tim support dapat membantu Anda dengan lebih cepat dan efektif.
+            <strong>Tips:</strong> Berikan informasi yang detail dan lengkap agar tim support dapat membantu Anda dengan
+            lebih cepat dan efektif.
         </p>
     </div>
 
-    <form method="POST" action="/kirim-tiket">
+    <form method="POST" action="kirim-tiket">
         <div class="form-group full-width">
             <label for="nama">
                 <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -26,7 +27,9 @@
                 </svg>
                 Nama Lengkap <span class="required-mark">*</span>
             </label>
-            <input type="text" id="nama" value="{{if .user}}{{if .user.GetFullName}}{{.user.GetFullName}}{{else}}{{.user.Username}}{{end}}{{end}}" readonly>
+            <input type="text" id="nama"
+                value="{{if .user}}{{if .user.GetFullName}}{{.user.GetFullName}}{{else}}{{.user.Username}}{{end}}{{end}}"
+                readonly>
             <small>Nama akan otomatis diambil dari akun Anda</small>
         </div>
 
@@ -38,7 +41,8 @@
                 </svg>
                 Alamat Email untuk Balasan <span class="required-mark">*</span>
             </label>
-            <input type="email" name="reply_to_email" id="reply_to_email" class="form-input" required value="{{if .user}}{{.user.Email}}{{end}}">
+            <input type="email" name="reply_to_email" id="reply_to_email" class="form-input" required
+                value="{{if .user}}{{.user.Email}}{{end}}">
             <small>Notifikasi dan balasan dari tim support akan dikirim ke email ini</small>
         </div>
 
@@ -75,7 +79,7 @@
                 </select>
                 <small>Pilih departemen yang sesuai dengan masalah Anda</small>
             </div>
-            
+
             <div class="form-group">
                 <label for="priority">
                     <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -106,11 +110,12 @@
                 Deskripsi Masalah <span class="required-mark">*</span>
             </label>
             <textarea name="description" id="description" rows="8" class="form-input" required></textarea>
-            <small>Jelaskan masalah Anda secara detail. Semakin lengkap informasi yang Anda berikan, semakin cepat kami dapat membantu</small>
+            <small>Jelaskan masalah Anda secara detail. Semakin lengkap informasi yang Anda berikan, semakin cepat kami
+                dapat membantu</small>
         </div>
 
         <div class="form-actions">
-            <a href="/dashboard" class="btn-cancel">
+            <a href="dashboard" class="btn-cancel">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>

@@ -1,11 +1,11 @@
 {{define "tickets/settings_content"}}
-<link rel="stylesheet" href="/static/settings.css">
+<link rel="stylesheet" href="static/settings.css">
 <div class="settings-container">
     {{if .success}}
     <div class="alert alert-success">
         <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M22 4L12 14.01L9 11.01"/>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M22 4L12 14.01L9 11.01" />
         </svg>
         <span>{{.success}}</span>
     </div>
@@ -14,9 +14,9 @@
     {{if .error}}
     <div class="alert alert-error">
         <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 8V12"/>
-            <path d="M12 16H12.01"/>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8V12" />
+            <path d="M12 16H12.01" />
         </svg>
         <span>{{.error}}</span>
     </div>
@@ -25,15 +25,15 @@
     {{if .errors}}
     <div class="alert alert-error">
         <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 8V12"/>
-            <path d="M12 16H12.01"/>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8V12" />
+            <path d="M12 16H12.01" />
         </svg>
         <span>
             {{if .errors.__all__}}
-                {{.errors.__all__}}
+            {{.errors.__all__}}
             {{else}}
-                Terjadi kesalahan. Silakan periksa kembali form Anda.
+            Terjadi kesalahan. Silakan periksa kembali form Anda.
             {{end}}
         </span>
     </div>
@@ -42,38 +42,42 @@
     <!-- Profile Settings -->
     <div class="settings-card">
         <h2>Informasi Profil</h2>
-        <form method="post" action="/settings">
+        <form method="post" action="settings">
             <input type="hidden" name="update_profile" value="1">
-            
+
             <div class="form-group">
                 <label for="username" class="form-label">Username</label>
-                <input type="text" name="username" id="username" class="form-input" value="{{if .form_username}}{{.form_username}}{{else if .user}}{{.user.Username}}{{end}}" required>
+                <input type="text" name="username" id="username" class="form-input"
+                    value="{{if .form_username}}{{.form_username}}{{else if .user}}{{.user.Username}}{{end}}" required>
                 {{if .errors.username}}
-                    <div class="form-error">{{.errors.username}}</div>
+                <div class="form-error">{{.errors.username}}</div>
                 {{end}}
             </div>
 
             <div class="form-group">
                 <label for="email" class="form-label">Email</label>
-                <input type="email" name="email" id="email" class="form-input" value="{{if .form_email}}{{.form_email}}{{else if .user}}{{.user.Email}}{{end}}" required>
+                <input type="email" name="email" id="email" class="form-input"
+                    value="{{if .form_email}}{{.form_email}}{{else if .user}}{{.user.Email}}{{end}}" required>
                 {{if .errors.email}}
-                    <div class="form-error">{{.errors.email}}</div>
+                <div class="form-error">{{.errors.email}}</div>
                 {{end}}
             </div>
 
             <div class="form-group">
                 <label for="first_name" class="form-label">Nama Depan</label>
-                <input type="text" name="first_name" id="first_name" class="form-input" value="{{if .form_first}}{{.form_first}}{{else if .user}}{{.user.FirstName}}{{end}}">
+                <input type="text" name="first_name" id="first_name" class="form-input"
+                    value="{{if .form_first}}{{.form_first}}{{else if .user}}{{.user.FirstName}}{{end}}">
                 {{if .errors.first_name}}
-                    <div class="form-error">{{.errors.first_name}}</div>
+                <div class="form-error">{{.errors.first_name}}</div>
                 {{end}}
             </div>
 
             <div class="form-group">
                 <label for="last_name" class="form-label">Nama Belakang</label>
-                <input type="text" name="last_name" id="last_name" class="form-input" value="{{if .form_last}}{{.form_last}}{{else if .user}}{{.user.LastName}}{{end}}">
+                <input type="text" name="last_name" id="last_name" class="form-input"
+                    value="{{if .form_last}}{{.form_last}}{{else if .user}}{{.user.LastName}}{{end}}">
                 {{if .errors.last_name}}
-                    <div class="form-error">{{.errors.last_name}}</div>
+                <div class="form-error">{{.errors.last_name}}</div>
                 {{end}}
             </div>
 
@@ -84,14 +88,14 @@
     <!-- Password Change -->
     <div class="settings-card">
         <h2>Ubah Password</h2>
-        <form method="post" action="/settings">
+        <form method="post" action="settings">
             <input type="hidden" name="change_password" value="1">
-            
+
             <div class="form-group">
                 <label for="old_password" class="form-label">Password Lama</label>
                 <input type="password" name="old_password" id="old_password" class="form-input" required>
                 {{if .errors.old_password}}
-                    <div class="form-error">{{.errors.old_password}}</div>
+                <div class="form-error">{{.errors.old_password}}</div>
                 {{end}}
             </div>
 
@@ -99,7 +103,7 @@
                 <label for="new_password1" class="form-label">Password Baru</label>
                 <input type="password" name="new_password1" id="new_password1" class="form-input" required>
                 {{if .errors.new_password1}}
-                    <div class="form-error">{{.errors.new_password1}}</div>
+                <div class="form-error">{{.errors.new_password1}}</div>
                 {{end}}
             </div>
 
@@ -107,7 +111,7 @@
                 <label for="new_password2" class="form-label">Konfirmasi Password Baru</label>
                 <input type="password" name="new_password2" id="new_password2" class="form-input" required>
                 {{if .errors.new_password2}}
-                    <div class="form-error">{{.errors.new_password2}}</div>
+                <div class="form-error">{{.errors.new_password2}}</div>
                 {{end}}
             </div>
 

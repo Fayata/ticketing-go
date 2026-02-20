@@ -1,0 +1,30 @@
+{{define "admin/staff_assign_form"}}
+{{template "base" .}}
+{{end}}
+
+{{define "admin/staff_assign_form_content"}}
+<div class="form-container">
+    <div class="form-header">
+        <h2>Jadikan Staff</h2>
+        <p>Pilih departemen untuk user <strong>{{.target_user.Username}}</strong>.</p>
+    </div>
+    
+    <form method="POST" action="admin/users/staff/{{.target_user.ID}}">
+        <div class="form-group full-width">
+            <label>Departemen</label>
+            <select name="department_id" class="form-input" required>
+                <option value="">-- Pilih Departemen --</option>
+                {{range .departments}}
+                <option value="{{.ID}}">{{.Name}}</option>
+                {{end}}
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <a href="admin/users" class="btn-cancel">Batal</a>
+            <button type="submit" class="btn-submit">Simpan Sebagai Staff</button>
+        </div>
+    </form>
+</div>
+{{end}}
+

@@ -25,7 +25,6 @@ func NewTicketHandler(cfg *config.Config, emailService *utils.EmailService) *Tic
 	}
 }
 
-// HandleCreateTicket handles both GET and POST for create ticket
 func (h *TicketHandler) HandleCreateTicket(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		h.ShowCreateTicket(w, r)
@@ -41,7 +40,6 @@ func (h *TicketHandler) HandleCreateTicket(w http.ResponseWriter, r *http.Reques
 // ShowCreateTicket menampilkan form create ticket
 func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-
 	var departmentCount int64
 	config.DB.Model(&models.Department{}).Count(&departmentCount)
 	if departmentCount == 0 {
@@ -63,8 +61,6 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 		"departments":   departments,
 		"user":          user,
 	})
-
-	// PERBAIKAN: Hapus .html
 	RenderTemplate(w, "tickets/create_ticket", data)
 }
 
@@ -136,7 +132,7 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Ticket #%d created by user %s", ticket.ID, user.Username)
 
-	http.Redirect(w, r, fmt.Sprintf("/tiket/sukses/%d", ticket.ID), http.StatusSeeOther)
+	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/sukses/%d", ticket.ID)), http.StatusSeeOther)
 }
 
 // ShowTicketSuccess menampilkan halaman sukses
@@ -145,21 +141,18 @@ func (h *TicketHandler) ShowTicketSuccess(w http.ResponseWriter, r *http.Request
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	// Extract ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/sukses/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 		return
 	}
-
 	var ticket models.Ticket
 	if err := config.DB.First(&ticket, ticketID).Error; err != nil {
-		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 		return
 	}
-
 	RenderTemplate(w, "ticket_success.html", map[string]interface{}{
 		"title":  "Tiket Berhasil Dibuat",
 		"ticket": &ticket,
@@ -190,15 +183,31 @@ func (h *TicketHandler) ShowMyTickets(w http.ResponseWriter, r *http.Request) {
 		Where("created_by_id = ?", user.ID)
 
 	if searchQuery != "" {
-		if ticketID, err := strconv.Atoi(searchQuery); err == nil {
+		cleanSearch := strings.TrimPrefix(strings.ToUpper(searchQuery), "T")
+		if ticketID, err := strconv.Atoi(cleanSearch); err == nil {
 			query = query.Where("id = ? OR title LIKE ? OR description LIKE ?",
 				ticketID,
 				"%"+searchQuery+"%",
 				"%"+searchQuery+"%")
 		} else {
-			query = query.Where("title LIKE ? OR description LIKE ?",
-				"%"+searchQuery+"%",
-				"%"+searchQuery+"%")
+			if len(cleanSearch) > 2 {
+				potentialIDStr := cleanSearch[2:]
+				if potentialID, err := strconv.Atoi(potentialIDStr); err == nil {
+					query = query.Where("id = ? OR title LIKE ? OR description LIKE ?",
+						potentialID,
+						"%"+searchQuery+"%",
+						"%"+searchQuery+"%")
+				} else {
+					// Fallback search biasa
+					query = query.Where("title LIKE ? OR description LIKE ?",
+						"%"+searchQuery+"%",
+						"%"+searchQuery+"%")
+				}
+			} else {
+				query = query.Where("title LIKE ? OR description LIKE ?",
+					"%"+searchQuery+"%",
+					"%"+searchQuery+"%")
+			}
 		}
 	}
 
@@ -257,7 +266,7 @@ func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request)
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
-		http.Redirect(w, r, "/tiket", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/tiket"), http.StatusSeeOther)
 		return
 	}
 
@@ -271,6 +280,33 @@ func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Load rating if ticket is closed (ignore record not found without logging error)
+	var rating models.TicketRating
+	hasRating := false
+	var ratingToken string
+	if ticket.Status == models.StatusClosed {
+		var result models.TicketRating
+		dbResult := config.DB.Where("ticket_id = ?", ticketID).Limit(1).Find(&result)
+		if dbResult.Error == nil && dbResult.RowsAffected > 0 {
+			rating = result
+			hasRating = true
+		} else {
+			// Only generate token if user is the ticket owner and not already rated
+			if ticket.CreatedByID == user.ID {
+				// Generate rating token for user to rate (valid for 30 days)
+				jwtService := utils.NewJWTService(h.cfg)
+				token, err := jwtService.GenerateToken(user.ID, "rate_ticket", 30*24*time.Hour)
+				if err == nil {
+					ratingToken = token
+				}
+			}
+		}
+	}
+
+	// Get success/error message from query parameter
+	successMsg := r.URL.Query().Get("success")
+	errorMsg := r.URL.Query().Get("error")
+
 	data := AddBaseData(r, map[string]interface{}{
 		"title":         fmt.Sprintf("Tiket #%d - %s", ticket.ID, ticket.Title),
 		"page_title":    fmt.Sprintf("Detail Tiket #%d", ticket.ID),
@@ -279,6 +315,11 @@ func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request)
 		"template_name": "tickets/ticket_detail",
 		"ticket":        &ticket,
 		"replies":       ticket.Replies,
+		"has_rating":    hasRating,
+		"rating":        rating,
+		"rating_token":  ratingToken,
+		"success":       successMsg,
+		"error":         errorMsg,
 	})
 
 	// PERBAIKAN: Hapus .html
@@ -293,14 +334,14 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
-		http.Redirect(w, r, "/tiket", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/tiket"), http.StatusSeeOther)
 		return
 	}
 
 	r.ParseForm()
 	message := r.FormValue("message")
 	if message == "" {
-		http.Redirect(w, r, fmt.Sprintf("/tiket/%d", ticketID), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
 		return
 	}
 
@@ -320,7 +361,7 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 
 	if err := config.DB.Create(&reply).Error; err != nil {
 		log.Printf("Failed to create reply: %v", err)
-		http.Redirect(w, r, fmt.Sprintf("/tiket/%d", ticketID), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
 		return
 	}
 
@@ -350,5 +391,148 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/tiket/%d", ticketID), http.StatusSeeOther)
+	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
+}
+
+// ShowRatingForm displays the rating form for a closed ticket
+func (h *TicketHandler) ShowRatingForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract ticket ID from URL
+	path := strings.TrimPrefix(r.URL.Path, "/rating/")
+	ticketID, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ticket ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get token from query parameter
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "Rating token required", http.StatusBadRequest)
+		return
+	}
+
+	// Validate token
+	jwtService := utils.NewJWTService(h.cfg)
+	claims, err := jwtService.ValidateToken(token)
+	if err != nil || claims.Purpose != "rate_ticket" {
+		http.Error(w, "Invalid or expired rating token", http.StatusBadRequest)
+		return
+	}
+
+	// Get ticket
+	var ticket models.Ticket
+	if err := config.DB.Preload("CreatedBy").Preload("Department").
+		Where("id = ? AND created_by_id = ? AND status = ?", ticketID, claims.UserID, models.StatusClosed).
+		First(&ticket).Error; err != nil {
+		http.Error(w, "Ticket not found or not eligible for rating", http.StatusNotFound)
+		return
+	}
+
+	// Check if already rated
+	var existingRating models.TicketRating
+	hasRated := config.DB.Where("ticket_id = ?", ticketID).First(&existingRating).Error == nil
+
+	// Get success message from query
+	successMsg := r.URL.Query().Get("success")
+
+	data := map[string]interface{}{
+		"title":      "Rating Pengalaman - Portal Ticketing",
+		"ticket":     &ticket,
+		"token":      token,
+		"has_rated":  hasRated,
+		"rating":     existingRating,
+		"success":    successMsg,
+	}
+
+	RenderTemplate(w, "tickets/rating", data)
+}
+
+// SubmitRating saves the user's rating for a closed ticket
+func (h *TicketHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	r.ParseForm()
+
+	// Extract ticket ID from URL
+	path := strings.TrimPrefix(r.URL.Path, "/rating/")
+	ticketID, err := strconv.Atoi(path)
+	if err != nil {
+		http.Error(w, "Invalid ticket ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get token and validate
+	token := r.FormValue("token")
+	if token == "" {
+		http.Error(w, "Rating token required", http.StatusBadRequest)
+		return
+	}
+
+	jwtService := utils.NewJWTService(h.cfg)
+	claims, err := jwtService.ValidateToken(token)
+	if err != nil || claims.Purpose != "rate_ticket" {
+		http.Error(w, "Invalid or expired rating token", http.StatusBadRequest)
+		return
+	}
+
+	// Get rating and comment
+	ratingStr := r.FormValue("rating")
+	comment := r.FormValue("comment")
+
+	rating, err := strconv.Atoi(ratingStr)
+	if err != nil || rating < 1 || rating > 5 {
+		http.Error(w, "Invalid rating. Please select 1-5 stars", http.StatusBadRequest)
+		return
+	}
+
+	// Verify ticket exists and belongs to user
+	var ticket models.Ticket
+	if err := config.DB.Where("id = ? AND created_by_id = ? AND status = ?", ticketID, claims.UserID, models.StatusClosed).
+		First(&ticket).Error; err != nil {
+		http.Error(w, "Ticket not found or not eligible for rating", http.StatusNotFound)
+		return
+	}
+
+	// Check if already rated - rating cannot be edited once submitted
+	var existingRating models.TicketRating
+	if config.DB.Where("ticket_id = ?", ticketID).First(&existingRating).Error == nil {
+		// Rating already exists, cannot be edited
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error=Rating+sudah+diberikan+dan+tidak+bisa+diubah", http.StatusSeeOther)
+		return
+	}
+
+	// Create new rating
+	newRating := models.TicketRating{
+		TicketID:  uint(ticketID),
+		Rating:    rating,
+		Comment:   comment,
+		RatedByID: claims.UserID,
+		RatedAt:   time.Now(),
+	}
+	if err := config.DB.Create(&newRating).Error; err != nil {
+		http.Error(w, "Failed to save rating", http.StatusInternalServerError)
+		return
+	}
+
+	// Redirect back to ticket detail page
+	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?success=Rating+berhasil+disimpan", http.StatusSeeOther)
+}
+
+// HandleRating routes rating requests (GET for form, POST for submission)
+func (h *TicketHandler) HandleRating(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		h.ShowRatingForm(w, r)
+	} else if r.Method == http.MethodPost {
+		h.SubmitRating(w, r)
+	} else {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }

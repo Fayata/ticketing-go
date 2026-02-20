@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <base href="/Ticketing/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.title}}</title>
+    <link rel="stylesheet" href="static/login.css">
+    <style>
+        .rating-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .ticket-info {
+            background: #f3f4f6;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .ticket-info h2 {
+            margin: 0 0 0.5rem 0;
+            color: #1f2937;
+        }
+
+        .ticket-info p {
+            margin: 0.25rem 0;
+            color: #6b7280;
+        }
+
+        .rating-stars {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 2rem 0;
+            flex-direction: row-reverse;
+        }
+
+        .star-input {
+            display: none;
+        }
+
+        .star-label {
+            font-size: 3rem;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .star-label:hover,
+        .star-label:hover~.star-label {
+            color: #fbbf24;
+        }
+
+        .star-input:checked~.star-label,
+        .star-input:checked~.star-label~.star-label {
+            color: #fbbf24;
+        }
+
+        .star-input:checked~.star-label {
+            color: #f59e0b;
+        }
+
+        .comment-box {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 1.5rem;
+        }
+
+        .comment-box:focus {
+            outline: none;
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 60, 0.1);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #b91c1c;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .already-rated {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .rating-display {
+            display: flex;
+            justify-content: center;
+            gap: 0.25rem;
+            margin: 1rem 0;
+        }
+
+        .rating-display .star {
+            font-size: 2rem;
+            color: #fbbf24;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="rating-container">
+            <h1 style="text-align: center; margin-bottom: 2rem; color: #1f2937;">Rating Pengalaman</h1>
+
+            <div class="ticket-info">
+                <h2>{{.ticket.GetTicketNumber}} - {{.ticket.Title}}</h2>
+                <p><strong>Status:</strong> {{.ticket.GetStatusDisplay}}</p>
+                {{if .ticket.Department}}
+                <p><strong>Departemen:</strong> {{.ticket.Department.Name}}</p>
+                {{end}}
+            </div>
+
+            {{if .success}}
+            <div class="success-message">
+                <strong>✓ Terima kasih!</strong> Rating Anda telah tersimpan dan sangat membantu kami meningkatkan
+                kualitas layanan.
+            </div>
+            {{end}}
+
+            {{if .has_rated}}
+            <div class="already-rated">
+                <strong>Anda sudah memberikan rating untuk tiket ini.</strong>
+                <div class="rating-display">
+                    {{$rating := .rating.Rating}}
+                    {{range $i := seq 1 5}}
+                    {{if le $i $rating}}
+                    <span class="star">★</span>
+                    {{else}}
+                    <span class="star" style="color: #d1d5db;">☆</span>
+                    {{end}}
+                    {{end}}
+                </div>
+                {{if .rating.Comment}}
+                <p style="margin-top: 0.5rem; font-style: italic;">"{{.rating.Comment}}"</p>
+                {{end}}
+            </div>
+            {{end}}
+
+            <form method="POST" action="rating/{{.ticket.ID}}">
+                <input type="hidden" name="token" value="{{.token}}">
+
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <label style="font-size: 1.1rem; font-weight: 600; color: #374151;">
+                        Bagaimana pengalaman Anda?
+                    </label>
+                </div>
+
+                <div class="rating-stars">
+                    <input type="radio" id="star5" name="rating" value="5" class="star-input" {{if and .has_rated (eq
+                        .rating.Rating 5)}}checked{{end}} required>
+                    <label for="star5" class="star-label">★</label>
+
+                    <input type="radio" id="star4" name="rating" value="4" class="star-input" {{if and .has_rated (eq
+                        .rating.Rating 4)}}checked{{end}}>
+                    <label for="star4" class="star-label">★</label>
+
+                    <input type="radio" id="star3" name="rating" value="3" class="star-input" {{if and .has_rated (eq
+                        .rating.Rating 3)}}checked{{end}}>
+                    <label for="star3" class="star-label">★</label>
+
+                    <input type="radio" id="star2" name="rating" value="2" class="star-input" {{if and .has_rated (eq
+                        .rating.Rating 2)}}checked{{end}}>
+                    <label for="star2" class="star-label">★</label>
+
+                    <input type="radio" id="star1" name="rating" value="1" class="star-input" {{if and .has_rated (eq
+                        .rating.Rating 1)}}checked{{end}}>
+                    <label for="star1" class="star-label">★</label>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label for="comment"
+                        style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                        Komentar (Opsional)
+                    </label>
+                    <textarea id="comment" name="comment" class="comment-box"
+                        placeholder="Bagikan pengalaman Anda dengan layanan support kami...">{{if .has_rated}}{{.rating.Comment}}{{end}}</textarea>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    {{if .has_rated}}Update Rating{{else}}Kirim Rating{{end}}
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

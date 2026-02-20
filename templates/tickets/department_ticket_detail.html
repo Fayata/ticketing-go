@@ -2,8 +2,10 @@
     {{template "department_base" .}}
 {{end}}
 
-{{define "content"}} {{if .ticket}}
+{{define "tickets/department_ticket_detail_content"}} 
+{{if .ticket}}
     {{$ticket := .ticket}}
+    {{$currentUser := .user}}
     
     {{if .error}}
     <div class="card" style="background-color: #fef2f2; border-color: #fecaca; margin-bottom: 1rem;">
@@ -144,6 +146,37 @@
                     </div>
                 </div>
             </div>
+            {{if .has_rating}}
+            <div class="card" style="margin-top: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #fbbf24;">
+                <div class="card-header"><h2>Rating Pengalaman</h2></div>
+                <div class="card-body">
+                    <div style="text-align: center;">
+                        <div style="display: flex; justify-content: center; gap: 0.25rem; margin-bottom: 0.75rem;">
+                            {{$rating := .rating.Rating}}
+                            {{range $i := seq 1 5}}
+                                {{if le $i $rating}}
+                                    <span style="font-size: 1.75rem; color: #f59e0b;">★</span>
+                                {{else}}
+                                    <span style="font-size: 1.75rem; color: #d1d5db;">☆</span>
+                                {{end}}
+                            {{end}}
+                        </div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #92400e; margin-bottom: 0.5rem;">
+                            {{.rating.Rating}}/5
+                        </div>
+                        {{if .rating.Comment}}
+                        <div style="background: white; padding: 0.75rem; border-radius: 6px; margin-top: 0.75rem; text-align: left; font-size: 0.875rem; font-style: italic; color: #78350f;">
+                            "{{.rating.Comment}}"
+                        </div>
+                        {{end}}
+                        <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #92400e;">
+                            Dari: {{getFullName .rating.RatedBy}}<br>
+                            {{date .rating.RatedAt}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
             {{if .assignment_history}}
             <div class="card" style="margin-top: 1rem;">
                 <div class="card-header"><h2>Riwayat Staff</h2></div>
@@ -154,9 +187,9 @@
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
                                 <strong style="color:#1f2937;">{{getFullName .Staff}}</strong>
                                 {{if .IsCompleted}}
-                                    <span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">✓ Selesai</span>
+                                    <span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">Selesai</span>
                                 {{else if .ReleasedAt}}
-                                    <span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">↩ Dilepas</span>
+                                    <span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">Dilepas</span>
                                 {{else}}
                                     <span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">Aktif</span>
                                 {{end}}

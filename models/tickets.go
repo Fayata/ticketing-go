@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -31,6 +32,9 @@ type Ticket struct {
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+
+	AssignedToID *uint `json:"assigned_to_id"`
+	AssignedTo   *User `gorm:"foreignKey:AssignedToID" json:"assigned_to"`
 
 	// Relations
 	CreatedBy  User          `gorm:"foreignKey:CreatedByID" json:"created_by"`
@@ -66,4 +70,45 @@ func (t *Ticket) GetPriorityDisplay() string {
 
 func (t *Ticket) GetReplyCount() int {
 	return len(t.Replies)
+}
+
+func (t *Ticket) GetTicketNumber() string {
+	year := t.CreatedAt.Format("06")
+	if t.CreatedAt.IsZero() {
+		year = time.Now().Format("06")
+	}
+
+	return fmt.Sprintf("T%s-%04d ", year, t.ID)
+}
+
+// TicketAssignmentHistory tracks which staff members have worked on a ticket
+type TicketAssignmentHistory struct {
+	ID           uint      `gorm:"primarykey" json:"id"`
+	TicketID     uint      `gorm:"not null;index" json:"ticket_id"`
+	StaffID      uint      `gorm:"not null;index" json:"staff_id"`
+	AssignedAt   time.Time `gorm:"not null" json:"assigned_at"`
+	ReleasedAt   *time.Time `json:"released_at"`
+	IsCompleted  bool      `gorm:"default:false" json:"is_completed"` // True if ticket was closed while this staff had it
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+
+	// Relations
+	Ticket Ticket `gorm:"foreignKey:TicketID" json:"ticket"`
+	Staff  User   `gorm:"foreignKey:StaffID" json:"staff"`
+}
+
+// TicketRating stores user ratings for closed tickets
+type TicketRating struct {
+	ID          uint      `gorm:"primarykey" json:"id"`
+	TicketID    uint      `gorm:"not null;uniqueIndex" json:"ticket_id"` // One rating per ticket
+	Rating      int       `gorm:"not null;check:rating >= 1 AND rating <= 5" json:"rating"` // 1-5 stars
+	Comment     string    `gorm:"type:text" json:"comment"`
+	RatedByID   uint      `gorm:"not null" json:"rated_by_id"` // User who created the ticket
+	RatedAt     time.Time `gorm:"not null" json:"rated_at"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+
+	// Relations
+	Ticket Ticket `gorm:"foreignKey:TicketID" json:"ticket"`
+	RatedBy User  `gorm:"foreignKey:RatedByID" json:"rated_by"`
 }

@@ -135,11 +135,12 @@
         {{if .tickets}}
             <div class="ticket-list">
                 {{range .tickets}}
-                <div class="ticket-item" onclick="window.location.href='/tiket/{{.ID}}'">
+                <div class="ticket-item" onclick="window.location.href='tiket/{{.ID}}'">
                     <div class="ticket-header">
                         <div>
                             <div class="ticket-id-status">
-                                <span class="ticket-id">#TKT-{{.ID}}</span>
+                                <!-- <span class="ticket-id">#TKT-{{.ID}}</span> -->
+                                <span class="ticket-id">{{.GetTicketNumber}}</span>
                                 <span class="status-badge {{if eq .Status "WAITING"}}open{{else if eq .Status "IN_PROGRESS"}}in-progress{{else}}closed{{end}}">
                                     {{.GetStatusDisplay}}
                                 </span>
@@ -179,7 +180,7 @@
                 </svg>
                 <h3>Tidak Ada Tiket</h3>
                 <p>Belum ada tiket yang sesuai dengan filter Anda</p>
-                <a href="/kirim-tiket" class="btn-primary">Buat Tiket Pertama</a>
+                <a href="kirim-tiket" class="btn-primary">Buat Tiket Pertama</a>
             </div>
         {{end}}
     </div>

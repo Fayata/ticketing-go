@@ -1,6 +1,20 @@
 {{define "tickets/ticket_detail_content"}}
-<link rel="stylesheet" href="/static/ticket_detail.css">
+<link rel="stylesheet" href="static/ticket_detail.css">
 <div class="ticket-detail-container">
+    {{if .success}}
+    <div class="card" style="background-color: #d1fae5; border-color: #10b981; margin-bottom: 1rem;">
+        <div class="card-body" style="color: #065f46; padding: 1rem;">
+            <strong>✓ {{.success}}</strong>
+        </div>
+    </div>
+    {{end}}
+    {{if .error}}
+    <div class="card" style="background-color: #fef2f2; border-color: #fecaca; margin-bottom: 1rem;">
+        <div class="card-body" style="color: #991b1b; padding: 1rem;">
+            <strong>⚠️ {{.error}}</strong>
+        </div>
+    </div>
+    {{end}}
     {{if .ticket}}
     {{$ticket := .ticket}}
     <!-- Ticket Header Card -->
@@ -12,15 +26,17 @@
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
                     </svg>
-                    <span>Tiket #{{$ticket.ID}}</span>
+                    <!-- <span>Tiket #{{$ticket.ID}}</span> -->
+                    <span>{{$ticket.GetTicketNumber}}</span>
                 </div>
-                <span class="status-badge {{if eq $ticket.Status "WAITING"}}open{{else if eq $ticket.Status "IN_PROGRESS"}}in-progress{{else}}closed{{end}}">
+                <span class="status-badge {{if eq $ticket.Status " WAITING"}}open{{else if eq
+                    $ticket.Status "IN_PROGRESS" }}in-progress{{else}}closed{{end}}">
                     {{$ticket.GetStatusDisplay}}
                 </span>
             </div>
-            
+
             <h1 class="ticket-title-large">{{$ticket.Title}}</h1>
-            
+
             <div class="ticket-meta-grid">
                 <div class="meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -29,10 +45,11 @@
                     </svg>
                     <div>
                         <span class="meta-label">Dibuat oleh</span>
-                        <span class="meta-value">{{if $ticket.CreatedBy}}{{getFullName $ticket.CreatedBy}}{{else}}Unknown{{end}}</span>
+                        <span class="meta-value">{{if $ticket.CreatedBy}}{{getFullName
+                            $ticket.CreatedBy}}{{else}}Unknown{{end}}</span>
                     </div>
                 </div>
-                
+
                 <div class="meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -42,10 +59,11 @@
                     </svg>
                     <div>
                         <span class="meta-label">Departemen</span>
-                        <span class="meta-value">{{if $ticket.Department}}{{$ticket.Department.Name}}{{else}}Tidak Ditentukan{{end}}</span>
+                        <span class="meta-value">{{if $ticket.Department}}{{$ticket.Department.Name}}{{else}}Tidak
+                            Ditentukan{{end}}</span>
                     </div>
                 </div>
-                
+
                 <div class="meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -54,12 +72,13 @@
                     </svg>
                     <div>
                         <span class="meta-label">Prioritas</span>
-                        <span class="meta-value priority-{{if eq $ticket.Priority "HIGH"}}high{{else if eq $ticket.Priority "MEDIUM"}}medium{{else}}low{{end}}">
+                        <span class="meta-value priority-{{if eq $ticket.Priority " HIGH"}}high{{else if eq
+                            $ticket.Priority "MEDIUM" }}medium{{else}}low{{end}}">
                             {{$ticket.GetPriorityDisplay}}
                         </span>
                     </div>
                 </div>
-                
+
                 <div class="meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -87,10 +106,12 @@
                         <div class="message-header">
                             <div class="message-author">
                                 <div class="author-avatar">
-                                    {{if $ticket.CreatedBy}}{{slice $ticket.CreatedBy.Username 0 2 | upper}}{{else}}??{{end}}
+                                    {{if $ticket.CreatedBy}}{{slice $ticket.CreatedBy.Username 0 2 |
+                                    upper}}{{else}}??{{end}}
                                 </div>
                                 <div>
-                                    <div class="author-name">{{if $ticket.CreatedBy}}{{getFullName $ticket.CreatedBy}}{{else}}Unknown{{end}}</div>
+                                    <div class="author-name">{{if $ticket.CreatedBy}}{{getFullName
+                                        $ticket.CreatedBy}}{{else}}Unknown{{end}}</div>
                                     <div class="message-time">{{date $ticket.CreatedAt}}</div>
                                 </div>
                             </div>
@@ -121,7 +142,8 @@
                                         {{if .User}}{{getFullName .User}}{{else}}Unknown{{end}}
                                         {{if and .User .User.IsStaff}}
                                         <span class="staff-badge">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
                                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                                                 <polyline points="22 4 12 14.01 9 11.01"></polyline>
                                             </svg>
@@ -149,14 +171,16 @@
                     <h2>Tambah Balasan</h2>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="/tiket/{{$ticket.ID}}" class="reply-form">
+                    <form method="POST" action="tiket/{{$ticket.ID}}" class="reply-form">
                         <div class="form-group">
                             <label for="message">Pesan Anda</label>
-                            <textarea name="message" id="message" rows="5" placeholder="Tulis balasan Anda di sini..." required></textarea>
+                            <textarea name="message" id="message" rows="5" placeholder="Tulis balasan Anda di sini..."
+                                required></textarea>
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn-submit">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M22 2L11 13"></path>
                                     <path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
                                 </svg>
@@ -170,7 +194,8 @@
             <div class="card info-card">
                 <div class="card-body">
                     <div class="info-message">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
@@ -179,6 +204,184 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Rating Display or Form -->
+            {{if .has_rating}}
+            <div class="card"
+                style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #fbbf24;">
+                <div class="card-header">
+                    <h2 style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        Rating Pengalaman
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div style="text-align: center; padding: 1rem 0;">
+                        <div style="display: flex; justify-content: center; gap: 0.25rem; margin-bottom: 1rem;">
+                            {{$rating := .rating.Rating}}
+                            {{range $i := seq 1 5}}
+                            {{if le $i $rating}}
+                            <span style="font-size: 2.5rem; color: #f59e0b;">★</span>
+                            {{else}}
+                            <span style="font-size: 2.5rem; color: #d1d5db;">☆</span>
+                            {{end}}
+                            {{end}}
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #92400e; margin-bottom: 0.5rem;">
+                            {{.rating.Rating}} dari 5 Bintang
+                        </div>
+                        {{if .rating.Comment}}
+                        <div
+                            style="background: white; padding: 1rem; border-radius: 8px; margin-top: 1rem; text-align: left; font-style: italic; color: #78350f;">
+                            "{{.rating.Comment}}"
+                        </div>
+                        {{end}}
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: #92400e;">
+                            Diberikan pada {{date .rating.RatedAt}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{else if .rating_token}}
+            <!-- Rating Form for Closed Ticket -->
+            <div class="card"
+                style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #fbbf24;">
+                <div class="card-header">
+                    <h2 style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        Berikan Rating Pengalaman Anda
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="rating/{{$ticket.ID}}" style="padding: 1rem 0;">
+                        <input type="hidden" name="token" value="{{.rating_token}}">
+
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <label
+                                style="font-size: 1.1rem; font-weight: 600; color: #374151; display: block; margin-bottom: 1rem;">
+                                Bagaimana pengalaman Anda?
+                            </label>
+
+                            <div
+                                style="display: flex; justify-content: center; gap: 0.5rem; flex-direction: row-reverse; margin-bottom: 1rem;">
+                                <input type="radio" id="star5" name="rating" value="5" class="star-input" required
+                                    style="display: none;">
+                                <label for="star5"
+                                    style="font-size: 3rem; color: #d1d5db; cursor: pointer; transition: color 0.2s;">★</label>
+
+                                <input type="radio" id="star4" name="rating" value="4" class="star-input"
+                                    style="display: none;">
+                                <label for="star4"
+                                    style="font-size: 3rem; color: #d1d5db; cursor: pointer; transition: color 0.2s;">★</label>
+
+                                <input type="radio" id="star3" name="rating" value="3" class="star-input"
+                                    style="display: none;">
+                                <label for="star3"
+                                    style="font-size: 3rem; color: #d1d5db; cursor: pointer; transition: color 0.2s;">★</label>
+
+                                <input type="radio" id="star2" name="rating" value="2" class="star-input"
+                                    style="display: none;">
+                                <label for="star2"
+                                    style="font-size: 3rem; color: #d1d5db; cursor: pointer; transition: color 0.2s;">★</label>
+
+                                <input type="radio" id="star1" name="rating" value="1" class="star-input"
+                                    style="display: none;">
+                                <label for="star1"
+                                    style="font-size: 3rem; color: #d1d5db; cursor: pointer; transition: color 0.2s;">★</label>
+                            </div>
+
+                            <script>
+                                // Star rating interaction
+                                (function () {
+                                    const form = document.querySelector('form[action*="/rating/"]');
+                                    if (!form) return;
+
+                                    const stars = form.querySelectorAll('input[name="rating"]');
+                                    const labels = form.querySelectorAll('label[for^="star"]');
+
+                                    labels.forEach((label) => {
+                                        label.addEventListener('click', function (e) {
+                                            e.preventDefault();
+                                            const starId = label.getAttribute('for');
+                                            const starInput = document.getElementById(starId);
+                                            if (starInput) {
+                                                starInput.checked = true;
+                                                updateStarColors();
+                                            }
+                                        });
+
+                                        label.addEventListener('mouseenter', function () {
+                                            const starId = label.getAttribute('for');
+                                            const starValue = parseInt(starId.replace('star', ''));
+                                            highlightStars(starValue);
+                                        });
+                                    });
+
+                                    form.addEventListener('mouseleave', function () {
+                                        updateStarColors();
+                                    });
+
+                                    stars.forEach(star => {
+                                        star.addEventListener('change', function () {
+                                            updateStarColors();
+                                        });
+                                    });
+
+                                    function highlightStars(upTo) {
+                                        labels.forEach((label) => {
+                                            const starId = label.getAttribute('for');
+                                            const starValue = parseInt(starId.replace('star', ''));
+                                            if (starValue <= upTo) {
+                                                label.style.color = '#fbbf24';
+                                            } else {
+                                                label.style.color = '#d1d5db';
+                                            }
+                                        });
+                                    }
+
+                                    function updateStarColors() {
+                                        const checked = form.querySelector('input[name="rating"]:checked');
+                                        if (checked) {
+                                            const value = parseInt(checked.value);
+                                            highlightStars(value);
+                                        } else {
+                                            labels.forEach(label => {
+                                                label.style.color = '#d1d5db';
+                                            });
+                                        }
+                                    }
+                                })();
+                            </script>
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label for="comment"
+                                style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;">
+                                Komentar (Opsional)
+                            </label>
+                            <textarea id="comment" name="comment" rows="4"
+                                placeholder="Bagikan pengalaman Anda dengan layanan support kami..."
+                                style="width: 100%; padding: 1rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical;"></textarea>
+                        </div>
+
+                        <button type="submit"
+                            style="width: 100%; padding: 1rem; background: #dc2626; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                            Kirim Rating
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {{end}}
             {{end}}
         </div>
 
@@ -190,8 +393,9 @@
                 </div>
                 <div class="card-body">
                     <div class="action-buttons">
-                        <a href="/tiket" class="action-btn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <a href="tiket" class="action-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
                                 <line x1="19" y1="12" x2="5" y2="12"></line>
                                 <polyline points="12 19 5 12 12 5"></polyline>
                             </svg>
@@ -209,17 +413,20 @@
                     <div class="info-list">
                         <div class="info-item">
                             <span class="info-label">ID Tiket</span>
-                            <span class="info-value">#{{$ticket.ID}}</span>
+                            <!-- <span class="info-value">#{{$ticket.ID}}</span> -->
+                            <span class="info-value">{{$ticket.GetTicketNumber}}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Status</span>
-                            <span class="status-badge {{if eq $ticket.Status "WAITING"}}open{{else if eq $ticket.Status "IN_PROGRESS"}}in-progress{{else}}closed{{end}}">
+                            <span class="status-badge {{if eq $ticket.Status " WAITING"}}open{{else if eq
+                                $ticket.Status "IN_PROGRESS" }}in-progress{{else}}closed{{end}}">
                                 {{$ticket.GetStatusDisplay}}
                             </span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Prioritas</span>
-                            <span class="info-value priority-{{if eq $ticket.Priority "HIGH"}}high{{else if eq $ticket.Priority "MEDIUM"}}medium{{else}}low{{end}}">
+                            <span class="info-value priority-{{if eq $ticket.Priority " HIGH"}}high{{else if eq
+                                $ticket.Priority "MEDIUM" }}medium{{else}}low{{end}}">
                                 {{$ticket.GetPriorityDisplay}}
                             </span>
                         </div>

@@ -28,7 +28,7 @@ func main() {
 		log.Fatal(err)
 	}
 	config.InitDatabase(cfg)
-	config.InitSession(cfg.SessionSecret)
+	config.InitSession(cfg.SessionSecret, cfg.SessionSecure)
 	utils.InitTemplates()
 
 	// Init Utils
@@ -54,12 +54,14 @@ func main() {
 		&models.Department{},
 		&models.Ticket{},
 		&models.TicketReply{},
+		&models.TicketAssignmentHistory{},
+		&models.TicketRating{},
 	); err != nil {
 		log.Fatal(err)
 	}
 
 	// Initialize session store
-	config.InitSession(cfg.SessionSecret)
+	config.InitSession(cfg.SessionSecret, cfg.SessionSecure)
 
 	// Load templates
 	templates = loadTemplates()
@@ -85,7 +87,7 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/login"), http.StatusSeeOther)
 	})
 
 	// mux.HandleFunc("/login", middleware.GuestOnly(authHandler.ShowLogin))
@@ -104,6 +106,14 @@ func main() {
 	mux.HandleFunc("/admin/users/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateUserForm)))
 	mux.HandleFunc("/admin/users/toggle/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleUserStatus)))
 	mux.HandleFunc("/admin/users/staff/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleStaffRole)))
+	mux.HandleFunc("/admin/departments", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListDepartments)))
+	mux.HandleFunc("/admin/departments/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateDepartmentForm)))
+	mux.HandleFunc("/department/tiket/claim/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ClaimTicket)))
+	mux.HandleFunc("/department/tiket/release/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ReleaseTicket)))
+	mux.HandleFunc("/department/tiket/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.HandleTicketDetail)))
+	mux.HandleFunc("/department/tiket/close/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.CloseTicket)))
+	mux.HandleFunc("/department/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
+	mux.HandleFunc("/department/all-tickets", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets)))
 
 	// Protected routes
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard)))
@@ -111,6 +121,7 @@ func main() {
 	mux.HandleFunc("/tiket/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleTicketDetail)))
 	mux.HandleFunc("/kirim-tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleCreateTicket)))
 	mux.HandleFunc("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowTicketSuccess)))
+	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // Public route (uses token auth)
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
 
 	// Seed Data
@@ -239,11 +250,19 @@ func loadTemplates() *template.Template {
 			}
 			return "User"
 		},
+		"seq": func(start, end int) []int {
+			var result []int
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
 	}
 
 	tmpl := template.New("").Funcs(funcMap)
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "*.html")))
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "tickets", "*.html")))
+	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "admin", "*.html")))
 
 	return tmpl
 }
@@ -254,5 +273,49 @@ func seedDefaultData() {
 	for _, deptName := range departments {
 		var dept models.Department
 		config.DB.FirstOrCreate(&dept, models.Department{Name: deptName})
+	}
+
+	// Seed default Super Admin (only if not exists)
+	// NOTE: Change this password immediately after first login.
+	const defaultAdminUsername = "admin"
+	const defaultAdminEmail = "admin@local.test"
+	const defaultAdminPassword = "admin12345"
+
+	// Guarantee this default admin exists (without blocking on other existing super admins)
+	var existing models.User
+	err := config.DB.Where("email = ?", defaultAdminEmail).First(&existing).Error
+	if err == nil {
+		// Ensure flags are correct (idempotent)
+		updates := map[string]interface{}{
+			"is_active":      true,
+			"is_verified":    true,
+			"is_staff":       true,
+			"is_super_admin": true,
+			"department_id":  nil,
+		}
+		_ = config.DB.Model(&models.User{}).Where("id = ?", existing.ID).Updates(updates).Error
+		return
+	}
+
+	hashed, herr := utils.HashPassword(defaultAdminPassword)
+	if herr != nil {
+		log.Printf("failed to hash default admin password: %v", herr)
+		return
+	}
+
+	admin := models.User{
+		Username:     defaultAdminUsername,
+		Email:        defaultAdminEmail,
+		Password:     hashed,
+		IsActive:     true,
+		IsVerified:   true,
+		IsStaff:      true,
+		IsSuperAdmin: true,
+		DepartmentID: nil,
+	}
+
+	if cerr := config.DB.Create(&admin).Error; cerr != nil {
+		log.Printf("failed to create default admin: %v", cerr)
+		return
 	}
 }

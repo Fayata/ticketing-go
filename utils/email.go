@@ -133,3 +133,23 @@ func (e *EmailService) SendTicketReply(to, username, title string, ticketID uint
 	body := fmt.Sprintf("Halo %s,\n\nAda balasan baru dari %s:\n\n%s\n\nSalam,\nTim Support", username, replierName, replyMessage)
 	return e.SendMail(to, subject, body)
 }
+
+func (e *EmailService) SendRatingRequest(to, username, title string, ticketID uint, ratingToken string) error {
+	subject := fmt.Sprintf("Rating Pengalaman - Tiket #%d", ticketID)
+	ratingURL := fmt.Sprintf("%s/rating/%d?token=%s", e.cfg.BaseURL, ticketID, ratingToken)
+	body := fmt.Sprintf(`Halo %s,
+
+Terima kasih telah menggunakan layanan support kami!
+
+Tiket Anda #%d dengan judul "%s" telah ditutup.
+
+Kami sangat menghargai feedback Anda. Mohon luangkan waktu sejenak untuk memberikan rating pengalaman Anda:
+
+%s
+
+Rating Anda sangat membantu kami untuk meningkatkan kualitas layanan.
+
+Terima kasih,
+Tim Support`, username, ticketID, title, ratingURL)
+	return e.SendMail(to, subject, body)
+}

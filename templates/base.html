@@ -2,11 +2,12 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+    <base href="/Ticketing/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{if .title}}{{.title}}{{else}}Portal Ticketing{{end}}</title>
-    <link rel="stylesheet" href="/static/dashboard.css">
-    <link rel="stylesheet" href="/static/pages.css">
+    <link rel="stylesheet" href="static/dashboard.css">
+    <link rel="stylesheet" href="static/pages.css">
 </head>
 <body>
     <div class="dashboard-container">
@@ -14,7 +15,7 @@
         <aside class="sidebar" id="sidebar">
             <!-- Sidebar Header -->
             <div class="sidebar-header">
-                <a href="/dashboard" class="logo">
+                <a href="dashboard" class="logo">
                     <span class="logo-text">Ticketing</span>
                 </a>
                 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
@@ -27,7 +28,7 @@
             </div>
             <!-- Navigation -->
             <nav class="sidebar-nav">
-                <a href="/dashboard" class="nav-item {{if eq .nav_active "dashboard"}}active{{end}}">
+                <a href="dashboard" class="nav-item {{if eq .nav_active "dashboard"}}active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                         <polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -35,7 +36,7 @@
                     <span>Dashboard</span>
                 </a>
                 
-                <a href="/tiket" class="nav-item {{if eq .nav_active "tickets"}}active{{end}}">
+                <a href="tiket" class="nav-item {{if eq .nav_active "tickets"}}active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -49,7 +50,7 @@
                     {{end}}
                 </a>
                 
-                <a href="/kirim-tiket" class="nav-item {{if eq .nav_active "create"}}active{{end}}">
+                <a href="kirim-tiket" class="nav-item {{if eq .nav_active "create"}}active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -64,23 +65,31 @@
                     </svg>
                     <span>Knowledge Base</span>
                 </a>
-            {{if .user.IsSuperAdmin}}
-                <div style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem;">
-                    <p style="padding: 0 1rem; font-size: 0.7rem; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; font-weight: bold;">
-                        Super Admin
-                    </p>
-                    <a href="/admin/users" class="nav-item {{if eq .nav_active "admin_users"}}active{{end}}">
+                
+                {{if and .user .user.IsSuperAdmin}}
+                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 1rem 0.5rem;">Admin</div>
+                    <a href="admin/users" class="nav-item {{if eq .nav_active "admin_users"}}active{{end}}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                             <circle cx="9" cy="7" r="4"></circle>
                             <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                             <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                         </svg>
-                        <span>Kelola Akun</span>
+                        <span>Manajemen User</span>
+                    </a>
+                    <a href="admin/departments" class="nav-item {{if eq .nav_active "admin_departments"}}active{{end}}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        <span>Manajemen Departemen</span>
                     </a>
                 </div>
                 {{end}}
             </nav>
+            
             <!-- User Profile -->
             <div class="sidebar-user">
                 <div class="user-info">
@@ -93,14 +102,14 @@
                     </div>
                 </div>
                 <div class="user-actions">
-                    <a href="/settings" class="user-action-btn">
+                    <a href="settings" class="user-action-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m-2 2l-4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m-2-2l-4.2-4.2"></path>
                         </svg>
                         <span>Settings</span>
                     </a>
-                    <a href="/logout" class="user-action-btn logout">
+                    <a href="logout" class="user-action-btn logout">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                             <polyline points="16 17 21 12 16 7"></polyline>
@@ -129,7 +138,7 @@
                         <span class="notification-badge"></span>
                         {{end}}
                     </button>
-                    <a href="/kirim-tiket" class="btn-primary">
+                    <a href="kirim-tiket" class="btn-primary">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -165,6 +174,20 @@
                     {{template "tickets/settings_content" .}}
                 {{else if eq .template_name "tickets/ticket_detail"}}
                     {{template "tickets/ticket_detail_content" .}}
+                {{else if eq .template_name "tickets/department_dashboard"}}
+                    {{template "tickets/department_dashboard_content" .}}
+                {{else if eq .template_name "tickets/department_ticket_detail"}}
+                    {{template "tickets/department_ticket_detail_content" .}}
+                {{else if eq .template_name "admin/users_list"}}
+                    {{template "admin/users_list_content" .}}
+                {{else if eq .template_name "admin/user_form"}}
+                    {{template "admin/user_form_content" .}}
+                {{else if eq .template_name "admin/departments_list"}}
+                    {{template "admin/departments_list_content" .}}
+                {{else if eq .template_name "admin/department_form"}}
+                    {{template "admin/department_form_content" .}}
+                {{else if eq .template_name "admin/staff_assign_form"}}
+                    {{template "admin/staff_assign_form_content" .}}
                 {{else}}
                     {{block "content" .}}{{end}}
                 {{end}}
@@ -172,8 +195,8 @@
         </main>
     </div>
 
-    <script src="/static/common.js"></script>
-    <script src="/static/dashboard.js"></script>
+    <script src="static/common.js"></script>
+    <script src="static/dashboard.js"></script>
 </body>
 </html>
 {{end}}

@@ -5,7 +5,7 @@
             <h2>Butuh Bantuan?</h2>
             <p>Tim support kami siap membantu Anda 24/7. Buat tiket sekarang atau cari jawaban di Knowledge Base.</p>
             <div class="banner-actions">
-                <a href="/kirim-tiket" class="btn-white">Buat Tiket Baru</a>
+                <a href="kirim-tiket" class="btn-white">Buat Tiket Baru</a>
                 <a href="#" class="btn-outline">Lihat Knowledge Base</a>
             </div>
         </div>
@@ -86,7 +86,7 @@
     <div class="card">
         <div class="card-header">
             <h2>Tiket Saya</h2>
-            <a href="/tiket" class="view-all-link">
+            <a href="tiket" class="view-all-link">
                 Lihat Semua
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="9 18 15 12 9 6"></polyline>
@@ -97,11 +97,11 @@
             <div class="ticket-list">
                 {{if .recent_tickets}}
                     {{range .recent_tickets}}
-                    <div class="ticket-item" onclick="window.location.href='/tiket/{{.ID}}'">
+                    <div class="ticket-item" onclick="window.location.href='tiket/{{.ID}}'">
                         <div class="ticket-header">
                             <div>
                                 <div class="ticket-id-status">
-                                    <span class="ticket-id">#TKT-{{.ID}}</span>
+                                    <span class="ticket-id">{{.GetTicketNumber}}</span>
                                     <span class="status-badge {{getStatusClass .Status}}">
                                         {{.GetStatusDisplay}}
                                     </span>
@@ -146,7 +146,7 @@
         </div>
 
         <div class="quick-actions">
-            <a href="/kirim-tiket" class="quick-action-btn">
+            <a href="kirim-tiket" class="quick-action-btn">
                 <div class="quick-action-icon red">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -155,7 +155,7 @@
                 </div>
                 <p>Buat Tiket Baru</p>
             </a>
-            <a href="/tiket" class="quick-action-btn">
+            <a href="tiket" class="quick-action-btn">
                 <div class="quick-action-icon green">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>

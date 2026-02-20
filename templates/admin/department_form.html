@@ -1,0 +1,27 @@
+{{define "admin/department_form"}}
+{{template "base" .}}
+{{end}}
+
+{{define "admin/department_form_content"}}
+<div class="form-container">
+    <div class="form-header">
+        <h2>Buat Departemen Baru</h2>
+        <p>Departemen digunakan untuk mengkategorikan tiket dan mengassign staff.</p>
+    </div>
+    
+    <form method="POST" action="admin/departments/create">
+        <div class="form-group full-width">
+            <label>Nama Departemen</label>
+            <input type="text" name="name" class="form-input" placeholder="Contoh: Technical Support, Customer Service, Billing" required>
+            <small style="color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem; display: block;">
+                Nama departemen harus unik dan jelas.
+            </small>
+        </div>
+
+        <div class="form-actions">
+            <a href="admin/departments" class="btn-cancel">Batal</a>
+            <button type="submit" class="btn-submit">Simpan Departemen</button>
+        </div>
+    </form>
+</div>
+{{end}}

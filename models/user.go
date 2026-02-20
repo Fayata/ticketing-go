@@ -24,13 +24,14 @@ type User struct {
 	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
 	IsVerified bool           `gorm:"default:false" json:"is_verified"`
 
+	DepartmentID *uint       `json:"department_id"`
+	Department   *Department `gorm:"foreignKey:DepartmentID" json:"department"`
+
 	// Relations
 	Tickets []Ticket      `gorm:"foreignKey:CreatedByID" json:"-"`
 	Replies []TicketReply `gorm:"foreignKey:UserID" json:"-"`
 	Groups  []Group       `gorm:"many2many:user_groups;" json:"-"`
 }
-
-// ... (Sisa fungsi Group struct dan helper GetFullName tetap sama)
 type Group struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	Name      string    `gorm:"uniqueIndex;not null" json:"name"`
@@ -46,7 +47,7 @@ func (u *User) GetFullName() string {
 }
 
 func (u *User) HasPortalAccess() bool {
-	if u.IsStaff || u.IsSuperAdmin { // Admin juga punya akses portal
+	if u.IsStaff || u.IsSuperAdmin {
 		return true
 	}
 	for _, group := range u.Groups {
