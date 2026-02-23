@@ -132,6 +132,29 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Ticket #%d created by user %s", ticket.ID, user.Username)
 
+	// Create notification for staff in the department (if assigned)
+	if ticket.DepartmentID != nil {
+		go func() {
+			// Load ticket with CreatedBy for GetFullName
+			var ticketWithUser models.Ticket
+			config.DB.Preload("CreatedBy").First(&ticketWithUser, ticket.ID)
+			
+			var staffUsers []models.User
+			config.DB.Where("department_id = ? AND is_staff = ? AND is_active = ?", ticket.DepartmentID, true, true).
+				Find(&staffUsers)
+			for _, staff := range staffUsers {
+				models.CreateNotification(
+					config.DB,
+					staff.ID,
+					models.NotificationTypeTicket,
+					"Tiket baru masuk",
+					ticketWithUser.GetTicketNumber()+" dari \""+ticketWithUser.CreatedBy.Username+"\" membutuhkan penanganan segera.",
+					&ticket.ID,
+				)
+			}
+		}()
+	}
+
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/sukses/%d", ticket.ID)), http.StatusSeeOther)
 }
 
@@ -366,8 +389,25 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config.DB.Model(&ticket).Update("updated_at", time.Now())
+	
+	// Load reply with user
+	config.DB.Preload("User").First(&reply, reply.ID)
 
 	log.Printf("Reply added to ticket #%d by user %s", ticketID, user.Username)
+
+	// Create notification for staff if reply is from ticket owner
+	if !user.IsStaff && ticket.AssignedToID != nil {
+		go func() {
+			models.CreateNotification(
+				config.DB,
+				*ticket.AssignedToID,
+				models.NotificationTypeReply,
+				"Balasan dari pengguna",
+				user.GetFullName()+" membalas tiket "+ticket.GetTicketNumber()+": "+utils.TruncateString(reply.Message, 80),
+				&ticket.ID,
+			)
+		}()
+	}
 
 	if reply.UserID != ticket.CreatedByID {
 		targetEmail := ticket.ReplyToEmail

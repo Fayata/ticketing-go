@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"ticketing/config"
 	"ticketing/middleware"
 	"ticketing/models"
 )
@@ -216,6 +217,16 @@ func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interf
 		data["active_tickets_count"] = count
 	} else {
 		data["active_tickets_count"] = 0
+	}
+
+	// Get unread notification count if user exists
+	if user := GetUserFromContext(r); user != nil {
+		if u, ok := user.(*models.User); ok {
+			unreadCount, _ := models.GetUnreadCount(config.DB, u.ID)
+			data["unread_count"] = unreadCount
+		}
+	} else {
+		data["unread_count"] = 0
 	}
 
 	return data

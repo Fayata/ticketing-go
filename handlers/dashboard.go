@@ -51,6 +51,9 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 		Limit(5).
 		Find(&recentTickets)
 
+	// Get unread notification count
+	unreadCount, _ := models.GetUnreadCount(config.DB, user.ID)
+
 	data := AddBaseData(r, map[string]interface{}{
 		"title":                "Dashboard - Portal Ticketing",
 		"page_title":           "Dashboard",
@@ -66,7 +69,7 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 		"recent_tickets":       recentTickets,
 		"announcements":        []interface{}{},
 		"popular_articles":     []interface{}{},
-		"unread_count":         0,
+		"unread_count":         unreadCount,
 	})
 
 	RenderTemplate(w, "tickets/dashboard", data)

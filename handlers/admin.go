@@ -40,13 +40,12 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		"page_title":    "Manajemen User",
 		"page_subtitle": "Kelola akun User dan Departemen",
 		"nav_active":    "admin_users",
-		"template_name": "admin/users_list", // PENTING UNTUK BASE.HTML
+		"template_name": "admin/users_list",
 		"users":         users,
 		"filter":        filter,
 		"user":          user,
 	})
 
-	// FIXED: Hapus .html
 	RenderTemplate(w, "admin/users_list", data)
 }
 
@@ -73,7 +72,6 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 		password := r.FormValue("password")
 		role := r.FormValue("role")
 
-		// Ambil Department ID dari form
 		deptIDStr := r.FormValue("department_id")
 		var departmentID *uint
 		if deptIDStr != "" {
@@ -103,7 +101,7 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 		} else if role == "admin" {
 			newUser.IsStaff = true
 			newUser.IsSuperAdmin = true
-			newUser.DepartmentID = nil // Admin tidak punya department
+			newUser.DepartmentID = nil // Admin tidak punya departmentgo run
 		}
 
 		if err := config.DB.Create(&newUser).Error; err != nil {

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"ticketing/config"
 	"ticketing/middleware"
 	"ticketing/models"
 )
@@ -184,6 +185,17 @@ func InitTemplates() {
 	log.Println("Templates loaded successfully with helper functions")
 }
 
+// TruncateString truncates a string to max length
+func TruncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
 // RenderTemplate: Fungsi utama untuk merender HTML
 func RenderTemplate(w http.ResponseWriter, tmplName string, data interface{}) {
 	if templates == nil {
@@ -223,6 +235,16 @@ func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interf
 		data["active_tickets_count"] = count
 	} else {
 		data["active_tickets_count"] = 0
+	}
+
+	// Get unread notification count if user exists
+	if user := GetUserFromContext(r); user != nil {
+		if u, ok := user.(*models.User); ok {
+			unreadCount, _ := models.GetUnreadCount(config.DB, u.ID)
+			data["unread_count"] = unreadCount
+		}
+	} else {
+		data["unread_count"] = 0
 	}
 
 	return data

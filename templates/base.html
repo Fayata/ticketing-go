@@ -58,7 +58,7 @@
                     <span>Buat Tiket</span>
                 </a>
                 
-                <a href="#" class="nav-item {{if eq .nav_active "kb"}}active{{end}}" onclick="alert('Fitur Knowledge Base akan segera hadir!'); return false;">
+                <a href="#" class="nav-item {{if eq .nav_active "kb"}}active{{end}}" onclick="showCustomAlert('Fitur Knowledge Base akan segera hadir!'); return false;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
@@ -129,15 +129,53 @@
                     <p>{{if .page_subtitle}}{{.page_subtitle}}{{else}}Selamat datang kembali!{{end}}</p>
                 </div>
                 <div class="header-actions">
-                    <button class="notification-btn" id="notificationBtn" aria-label="Notifications">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                        {{if .unread_count}}
-                        <span class="notification-badge"></span>
-                        {{end}}
-                    </button>
+                    <div class="notif-wrap">
+                        <button class="notif-btn {{if gt .unread_count 0}}active{{end}}" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                            {{if gt .unread_count 0}}
+                            <span class="notif-count" id="notifCount">{{.unread_count}}</span>
+                            {{end}}
+                        </button>
+                        
+                        <!-- Notification Popover -->
+                        <div class="notif-panel" id="notifPanel" role="dialog" aria-label="Panel Notifikasi">
+                            <div class="np-header">
+                                <div class="np-title">
+                                    Notifikasi
+                                    <span class="np-badge" id="badgeLabel">{{if gt .unread_count 0}}{{.unread_count}} baru{{else}}semua dibaca{{end}}</span>
+                                </div>
+                                <div class="np-actions">
+                                    <button class="np-read-all" id="readAllBtn">Tandai semua dibaca</button>
+                                    <button class="np-close" id="closePanel" aria-label="Tutup">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="np-tabs">
+                                <button class="np-tab active" data-tab="semua">Semua <span class="tc" id="tcSemua">0</span></button>
+                                <button class="np-tab" data-tab="belum">Belum dibaca <span class="tc" id="tcBelum">0</span></button>
+                                <button class="np-tab" data-tab="tiket">Tiket <span class="tc" id="tcTiket">0</span></button>
+                            </div>
+                            
+                            <div class="np-list" id="npList"></div>
+                            
+                            <div class="np-footer">
+                                <a class="np-see-all" href="tiket">
+                                    Lihat semua notifikasi
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="9 18 15 12 9 6"/>
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                     <a href="kirim-tiket" class="btn-primary">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -197,6 +235,658 @@
 
     <script src="static/common.js"></script>
     <script src="static/dashboard.js"></script>
+    <style>
+    /* Custom Alert Modal */
+    .custom-alert-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.2s ease;
+    }
+    
+    .custom-alert-box {
+        background: #FFFFFF;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+        padding: 24px;
+        max-width: 420px;
+        width: 90%;
+        animation: slideUp 0.3s ease;
+        border: 1px solid #E4E6EB;
+    }
+    
+    .custom-alert-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+        border: 2px solid #FBBF24;
+    }
+    
+    .custom-alert-icon svg {
+        width: 24px;
+        height: 24px;
+        color: #B45309;
+    }
+    
+    .custom-alert-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #111318;
+        text-align: center;
+        margin-bottom: 8px;
+        letter-spacing: -0.3px;
+    }
+    
+    .custom-alert-message {
+        font-size: 14px;
+        color: #5A6070;
+        text-align: center;
+        line-height: 1.6;
+        margin-bottom: 20px;
+    }
+    
+    .custom-alert-button {
+        width: 100%;
+        padding: 10px 20px;
+        background: #C0392B;
+        color: #FFFFFF;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        font-family: inherit;
+    }
+    
+    .custom-alert-button:hover {
+        background: #96281B;
+        box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
+    }
+    
+    .custom-alert-button:active {
+        transform: scale(0.98);
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    </style>
+    <script>
+    function showCustomAlert(message) {
+        // Remove existing alert if any
+        const existing = document.getElementById('custom-alert-overlay');
+        if (existing) existing.remove();
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'custom-alert-overlay';
+        overlay.className = 'custom-alert-overlay';
+        overlay.innerHTML = `
+            <div class="custom-alert-box">
+                <div class="custom-alert-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                        <path d="M2 17L12 22L22 17"/>
+                        <path d="M2 12L12 17L22 12"/>
+                    </svg>
+                </div>
+                <div class="custom-alert-title">Informasi</div>
+                <div class="custom-alert-message">${message}</div>
+                <button class="custom-alert-button" onclick="this.closest('.custom-alert-overlay').remove()">Mengerti</button>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        // Close on overlay click
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.remove();
+            }
+        });
+        
+        // Close on Escape key
+        const handleEscape = function(e) {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    }
+    </script>
+    
+    <!-- Notification Popover Styles -->
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+    :root {
+      --notif-red:       #C0392B;
+      --notif-red-dim:   #96281B;
+      --notif-red-xlight:#FDF0EE;
+      --notif-surface:   #FFFFFF;
+      --notif-surface-2: #F7F8FA;
+      --notif-border:    #E4E6EB;
+      --notif-border-2:  #EFF0F3;
+      --notif-txt-1:     #111318;
+      --notif-txt-2:     #5A6070;
+      --notif-txt-3:     #9EA7B5;
+      --notif-green:     #1A9E5C;
+      --notif-green-bg:  #EDFAF4;
+      --notif-green-bdr: #9FDCC0;
+      --notif-amber:     #B45309;
+      --notif-amber-bg:  #FEF8EC;
+      --notif-amber-bdr: #F5D796;
+      --notif-blue:      #1D6FA4;
+      --notif-blue-bg:   #EBF4FB;
+      --notif-blue-bdr:  #9DCDE8;
+      --notif-r:    12px;
+      --notif-r-sm:  8px;
+      --notif-r-xs:  5px;
+    }
+
+    /* ── BELL BUTTON ───────────────────────── */
+    .notif-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .notif-btn {
+      width: 38px;
+      height: 38px;
+      background: var(--notif-surface);
+      border: 1px solid var(--notif-border);
+      border-radius: var(--notif-r-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all .15s;
+      position: relative;
+    }
+    .notif-btn:hover          { background: var(--notif-surface-2); border-color: #D0D3DA; }
+    .notif-btn.active         { background: var(--notif-red-xlight); border-color: #F0C0BB; }
+    .notif-btn svg            { width: 17px; height: 17px; color: var(--notif-txt-2); transition: color .15s; }
+    .notif-btn.active svg     { color: var(--notif-red); }
+
+    /* badge count */
+    .notif-count {
+      position: absolute;
+      top: -6px; right: -6px;
+      min-width: 18px; height: 18px;
+      background: var(--notif-red);
+      color: #fff;
+      font-size: 10px; font-weight: 800;
+      border-radius: 10px;
+      padding: 0 4px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid #ECEEF2;
+      animation: pop .25s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    @keyframes pop {
+      from { transform: scale(0); }
+      to   { transform: scale(1); }
+    }
+
+    /* ── POPOVER PANEL ─────────────────────── */
+    .notif-panel {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: 360px;
+      background: var(--notif-surface);
+      border: 1px solid var(--notif-border);
+      border-radius: var(--notif-r);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.07);
+      z-index: 999;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(-6px) scale(.98);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+
+    .notif-panel.open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .notif-panel::before {
+      content: '';
+      position: absolute;
+      top: -6px; right: 10px;
+      width: 11px; height: 11px;
+      background: var(--notif-surface);
+      border-left: 1px solid var(--notif-border);
+      border-top: 1px solid var(--notif-border);
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+
+    /* ── HEADER ────────────────────────────── */
+    .np-header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--notif-border-2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .np-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--notif-txt-1);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'Geist', sans-serif;
+    }
+
+    .np-badge {
+      font-size: 10px;
+      font-weight: 800;
+      background: var(--notif-red);
+      color: #fff;
+      padding: 1.5px 6px;
+      border-radius: 10px;
+      transition: background .3s;
+    }
+
+    .np-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .np-read-all {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--notif-blue);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0;
+      transition: color .15s;
+    }
+    .np-read-all:hover { color: #155D8A; }
+
+    .np-close {
+      width: 22px; height: 22px;
+      border-radius: 5px;
+      background: none; border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--notif-txt-3);
+      transition: all .15s;
+    }
+    .np-close:hover { background: var(--notif-surface-2); color: var(--notif-txt-1); }
+    .np-close svg { width: 13px; height: 13px; }
+
+    /* ── TABS ──────────────────────────────── */
+    .np-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--notif-border-2);
+      padding: 0 16px;
+    }
+
+    .np-tab {
+      padding: 9px 12px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--notif-txt-3);
+      cursor: pointer;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: none;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: -1px;
+      transition: all .15s;
+    }
+    .np-tab:hover { color: var(--notif-txt-2); }
+    .np-tab.active { color: var(--notif-txt-1); border-bottom-color: var(--notif-red); }
+
+    .np-tab .tc {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 8px;
+      background: var(--notif-surface-2);
+      color: var(--notif-txt-3);
+      transition: all .15s;
+    }
+    .np-tab.active .tc { background: var(--notif-red-xlight); color: var(--notif-red); }
+
+    /* ── LIST ──────────────────────────────── */
+    .np-list {
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .np-list::-webkit-scrollbar { width: 3px; }
+    .np-list::-webkit-scrollbar-track { background: transparent; }
+    .np-list::-webkit-scrollbar-thumb { background: var(--notif-border); border-radius: 4px; }
+
+    /* ── ITEM ──────────────────────────────── */
+    .np-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--notif-border-2);
+      cursor: pointer;
+      transition: background .15s;
+      position: relative;
+    }
+    .np-item:last-child { border-bottom: none; }
+    .np-item:hover      { background: var(--notif-surface-2); }
+    .np-item.unread     { background: #FAFBFF; }
+    .np-item.unread:hover { background: #F3F5FC; }
+
+    .unread-dot {
+      position: absolute;
+      top: 16px; right: 14px;
+      width: 7px; height: 7px;
+      background: var(--notif-red);
+      border-radius: 50%;
+    }
+
+    .np-icon {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .np-icon svg { width: 15px; height: 15px; }
+
+    .ic-red   { background: var(--notif-red-xlight); color: var(--notif-red);   }
+    .ic-green { background: var(--notif-green-bg);   color: var(--notif-green); }
+    .ic-amber { background: var(--notif-amber-bg);   color: var(--notif-amber); }
+    .ic-blue  { background: var(--notif-blue-bg);    color: var(--notif-blue);  }
+
+    .np-body { flex: 1; min-width: 0; }
+
+    .np-notif-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--notif-txt-1);
+      margin-bottom: 2px;
+      line-height: 1.35;
+      padding-right: 14px;
+      font-family: 'Geist', sans-serif;
+    }
+
+    .np-notif-desc {
+      font-size: 11.5px;
+      color: var(--notif-txt-2);
+      line-height: 1.5;
+      margin-bottom: 4px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .np-notif-time {
+      font-size: 10.5px;
+      color: var(--notif-txt-3);
+      font-weight: 500;
+      font-family: 'Geist Mono', monospace;
+    }
+
+    /* ── EMPTY STATE ───────────────────────── */
+    .np-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 8px;
+    }
+    .np-empty svg { width: 36px; height: 36px; color: var(--notif-border); }
+    .np-empty p   { font-size: 12.5px; color: var(--notif-txt-3); font-weight: 500; }
+
+    /* ── FOOTER ────────────────────────────── */
+    .np-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--notif-border-2);
+      text-align: center;
+    }
+
+    .np-see-all {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--notif-txt-2);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: color .15s;
+    }
+    .np-see-all:hover { color: var(--notif-txt-1); }
+    .np-see-all svg { width: 11px; height: 11px; }
+
+    /* ── BACKDROP ──────────────────────────── */
+    .notif-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+    }
+    .notif-backdrop.show { display: block; }
+    </style>
+    
+    <script>
+    // Notification Popover System
+    (function() {
+      const icons = {
+        ticket: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+        reply:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+        check:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+        alert:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+        info:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+      };
+      
+      let currentTab = 'semua';
+      let notifications = [];
+      
+      const panel = document.getElementById('notifPanel');
+      const btn = document.getElementById('notificationBtn');
+      const backdrop = document.createElement('div');
+      backdrop.className = 'notif-backdrop';
+      document.body.appendChild(backdrop);
+      
+      function openPanel() {
+        panel.classList.add('open');
+        backdrop.classList.add('show');
+        btn.setAttribute('aria-expanded', 'true');
+        loadNotifications();
+      }
+      
+      function closePanel() {
+        panel.classList.remove('open');
+        backdrop.classList.remove('show');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+      
+      function filtered() {
+        if (currentTab === 'belum') return notifications.filter(n => n.unread);
+        if (currentTab === 'tiket') return notifications.filter(n => ['tiket', 'reply', 'status'].includes(n.type));
+        return notifications;
+      }
+      
+      function renderList() {
+        const list = document.getElementById('npList');
+        const items = filtered();
+        
+        if (!items.length) {
+          list.innerHTML = `
+            <div class="np-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <p>Tidak ada notifikasi</p>
+            </div>`;
+          return;
+        }
+        
+        list.innerHTML = items.map(n => `
+          <div class="np-item ${n.unread ? 'unread' : ''}" data-id="${n.id}" ${n.ticket_id ? `onclick="window.location.href='tiket/${n.ticket_id}'"` : ''}>
+            <div class="np-icon ${n.color}">${icons[n.icon] || icons.info}</div>
+            <div class="np-body">
+              <div class="np-notif-title">${n.title}</div>
+              <div class="np-notif-desc">${n.desc}</div>
+              <div class="np-notif-time">${n.time}</div>
+            </div>
+            ${n.unread ? '<div class="unread-dot"></div>' : ''}
+          </div>
+        `).join('');
+        
+        list.querySelectorAll('.np-item').forEach(el => {
+          el.addEventListener('click', async (e) => {
+            const notif = notifications.find(n => n.id === +el.dataset.id);
+            if (notif?.unread) {
+              await markAsRead(notif.id);
+              notif.unread = false;
+              updateBadges();
+              renderList();
+            }
+          });
+        });
+      }
+      
+      async function loadNotifications() {
+        try {
+          const res = await fetch('api/notifications?filter=' + currentTab);
+          const data = await res.json();
+          notifications = data.notifications || [];
+          updateBadges(data.counts);
+          renderList();
+        } catch (err) {
+          console.error('Failed to load notifications:', err);
+          document.getElementById('npList').innerHTML = `
+            <div class="np-empty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <p>Gagal memuat notifikasi</p>
+            </div>`;
+        }
+      }
+      
+      function updateBadges(counts) {
+        const uc = counts?.unread || notifications.filter(n => n.unread).length;
+        const countEl = document.getElementById('notifCount');
+        const badgeEl = document.getElementById('badgeLabel');
+        
+        if (countEl) {
+          countEl.textContent = uc;
+          countEl.style.display = uc > 0 ? 'flex' : 'none';
+        }
+        
+        if (badgeEl) {
+          badgeEl.textContent = uc > 0 ? `${uc} baru` : 'semua dibaca';
+          badgeEl.style.background = uc > 0 ? 'var(--notif-red)' : 'var(--notif-green)';
+        }
+        
+        const tcBelum = document.getElementById('tcBelum');
+        const tcSemua = document.getElementById('tcSemua');
+        const tcTiket = document.getElementById('tcTiket');
+        
+        if (tcBelum) tcBelum.textContent = counts?.unread || uc;
+        if (tcSemua) tcSemua.textContent = counts?.all || notifications.length;
+        if (tcTiket) tcTiket.textContent = counts?.ticket || notifications.filter(n => ['tiket', 'reply', 'status'].includes(n.type)).length;
+        
+        btn.classList.toggle('active', uc > 0);
+      }
+      
+      async function markAsRead(id) {
+        try {
+          const formData = new FormData();
+          formData.append('id', id);
+          await fetch('api/notifications/read', {
+            method: 'POST',
+            body: formData
+          });
+        } catch (err) {
+          console.error('Failed to mark as read:', err);
+        }
+      }
+      
+      async function markAllAsRead() {
+        try {
+          await fetch('api/notifications/read-all', { method: 'POST' });
+          notifications.forEach(n => n.unread = false);
+          updateBadges({ unread: 0, all: notifications.length, ticket: notifications.filter(n => ['tiket', 'reply', 'status'].includes(n.type)).length });
+          renderList();
+        } catch (err) {
+          console.error('Failed to mark all as read:', err);
+        }
+      }
+      
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        panel.classList.contains('open') ? closePanel() : openPanel();
+      });
+      
+      document.getElementById('closePanel').addEventListener('click', closePanel);
+      backdrop.addEventListener('click', closePanel);
+      
+      document.querySelectorAll('.np-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.np-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentTab = tab.dataset.tab;
+          loadNotifications();
+        });
+      });
+      
+      document.getElementById('readAllBtn').addEventListener('click', markAllAsRead);
+      
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closePanel();
+      });
+      
+      // Load initial count
+      fetch('api/notifications/count').then(r => r.json()).then(data => {
+        const uc = data.count || 0;
+        const countEl = document.getElementById('notifCount');
+        if (countEl && uc > 0) {
+          countEl.textContent = uc;
+          countEl.style.display = 'flex';
+          btn.classList.add('active');
+        }
+      }).catch(() => {});
+    })();
+    </script>
 </body>
 </html>
 {{end}}

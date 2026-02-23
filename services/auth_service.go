@@ -40,7 +40,7 @@ func (s *AuthService) RegisterUser(username, email, password string) error {
 		Email:      email,
 		Password:   hashedPassword,
 		IsActive:   true,
-		IsVerified: true, // Auto-verified agar bisa langsung login
+		IsVerified: true, 
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {

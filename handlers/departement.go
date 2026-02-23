@@ -318,12 +318,43 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 
 	reply := models.TicketReply{TicketID: ticket.ID, UserID: user.ID, Message: message}
 	config.DB.Create(&reply)
+	
+	// Load reply with user
+	config.DB.Preload("User").First(&reply, reply.ID)
 
+	oldStatus := ticket.Status
 	if newStatus != "" {
 		ticket.Status = models.TicketStatus(newStatus)
 	}
 	ticket.UpdatedAt = time.Now()
 	config.DB.Save(&ticket)
+	
+	// Load ticket with relations
+	config.DB.Preload("CreatedBy").Preload("AssignedTo").First(&ticket, ticket.ID)
+
+	// Create notification for ticket owner
+	go func() {
+		models.CreateNotification(
+			config.DB,
+			ticket.CreatedByID,
+			models.NotificationTypeReply,
+			"Balasan dari tim support",
+			user.GetFullName()+" membalas tiket "+ticket.GetTicketNumber()+": "+utils.TruncateString(message, 80),
+			&ticket.ID,
+		)
+		
+		// Create notification for status change
+		if ticket.Status == models.StatusClosed && oldStatus != models.StatusClosed {
+			models.CreateNotification(
+				config.DB,
+				ticket.CreatedByID,
+				models.NotificationTypeStatusChange,
+				"Tiket "+ticket.GetTicketNumber()+" selesai",
+				"Tiket Anda telah ditandai selesai oleh tim support.",
+				&ticket.ID,
+			)
+		}
+	}()
 
 	go func() {
 		target := ticket.ReplyToEmail
@@ -342,7 +373,8 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 	ticketID, _ := strconv.Atoi(path)
 
 	var ticket models.Ticket
-	if err := config.DB.First(&ticket, ticketID).Error; err == nil {
+	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err == nil {
+		wasUnassigned := ticket.AssignedToID == nil
 		ticket.AssignedToID = &user.ID
 		ticket.Status = models.StatusInProgress
 		ticket.UpdatedAt = time.Now()
@@ -355,6 +387,20 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 			AssignedAt: time.Now(),
 		}
 		config.DB.Create(&history)
+		
+		// Create notification for ticket owner
+		if wasUnassigned {
+			go func() {
+				models.CreateNotification(
+					config.DB,
+					ticket.CreatedByID,
+					models.NotificationTypeTicket,
+					"Tiket "+ticket.GetTicketNumber()+" sedang ditangani",
+					"Tiket Anda sedang ditangani oleh "+user.GetFullName()+".",
+					&ticket.ID,
+				)
+			}()
+		}
 	}
 
 	http.Redirect(w, r, config.Path("/departement/dashboard")+"?success=Tiket+berhasil+diambil.+Silakan+cek+tab+'Tiket+Saya'.", http.StatusSeeOther)
@@ -408,9 +454,27 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 			Where("ticket_id = ? AND is_completed = false", ticketID).
 			Update("is_completed", true)
 
+		oldStatus := ticket.Status
 		ticket.Status = models.StatusClosed
 		ticket.UpdatedAt = time.Now()
 		config.DB.Save(&ticket)
+		
+		// Load ticket with relations
+		config.DB.Preload("CreatedBy").Preload("AssignedTo").First(&ticket, ticket.ID)
+
+		// Create notification for status change
+		go func() {
+			if oldStatus != models.StatusClosed {
+				models.CreateNotification(
+					config.DB,
+					ticket.CreatedByID,
+					models.NotificationTypeStatusChange,
+					"Tiket "+ticket.GetTicketNumber()+" selesai",
+					"Tiket Anda telah ditandai selesai oleh tim support.",
+					&ticket.ID,
+				)
+			}
+		}()
 
 		// Send rating request email to user
 		go func() {

@@ -58,6 +58,13 @@ function initSidebarToggle() {
 function initNotificationButton() {
     const notificationBtn = document.getElementById('notificationBtn');
     if (notificationBtn) {
+        // Notification popover sudah di-handle di template (`base.html`).
+        // Jangan timpa click handler dengan toast lama.
+        const notifPanel = document.getElementById('notifPanel');
+        if (notifPanel) {
+            return;
+        }
+
         notificationBtn.addEventListener('click', function() {
             // TODO: Implement notification panel
             window.commonUtils.showToast('Fitur notifikasi akan segera hadir!', 'info');

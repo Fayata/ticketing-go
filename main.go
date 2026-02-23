@@ -35,13 +35,10 @@ func main() {
 	jwtService := utils.NewJWTService(cfg)
 	emailService := utils.NewEmailService(cfg)
 
-	// Init Services (Dependency Injection)
 	authService := services.NewAuthService(cfg, emailService, jwtService)
-	// ticketService := services.NewTicketService(...) // Lakukan hal sama utk tiket
 
 	// Init Controllers
 	authController := controllers.NewAuthController(authService)
-	// ticketController := controllers.NewTicketController(...)
 	adminHandler := handlers.NewAdminHandler(cfg)
 
 	mux := http.NewServeMux()
@@ -56,6 +53,7 @@ func main() {
 		&models.TicketReply{},
 		&models.TicketAssignmentHistory{},
 		&models.TicketRating{},
+		&models.Notification{},
 	); err != nil {
 		log.Fatal(err)
 	}
@@ -65,14 +63,11 @@ func main() {
 
 	// Load templates
 	templates = loadTemplates()
-
-	// Initialize handlers
-	// emailService := utils.NewEmailService(cfg)
-	// authHandler := handlers.NewAuthHandler(cfg)
 	dashboardHandler := handlers.NewDashboardHandler(cfg)
 	ticketHandler := handlers.NewTicketHandler(cfg, emailService)
 	settingsHandler := handlers.NewSettingsHandler(cfg)
 	departementHandler := handlers.NewDepartmentHandler(cfg, emailService)
+	notificationHandler := handlers.NewNotificationHandler(cfg)
 
 	// Routes
 	// mux := http.NewServeMux()
@@ -123,6 +118,12 @@ func main() {
 	mux.HandleFunc("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowTicketSuccess)))
 	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // Public route (uses token auth)
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
+	
+	// Notification API routes
+	mux.HandleFunc("/api/notifications", middleware.AuthRequired(notificationHandler.GetNotifications))
+	mux.HandleFunc("/api/notifications/read", middleware.AuthRequired(notificationHandler.MarkAsRead))
+	mux.HandleFunc("/api/notifications/read-all", middleware.AuthRequired(notificationHandler.MarkAllAsRead))
+	mux.HandleFunc("/api/notifications/count", middleware.AuthRequired(notificationHandler.GetUnreadCount))
 
 	// Seed Data
 	seedDefaultData()
@@ -275,17 +276,13 @@ func seedDefaultData() {
 		config.DB.FirstOrCreate(&dept, models.Department{Name: deptName})
 	}
 
-	// Seed default Super Admin (only if not exists)
-	// NOTE: Change this password immediately after first login.
 	const defaultAdminUsername = "admin"
 	const defaultAdminEmail = "admin@local.test"
 	const defaultAdminPassword = "admin12345"
 
-	// Guarantee this default admin exists (without blocking on other existing super admins)
 	var existing models.User
 	err := config.DB.Where("email = ?", defaultAdminEmail).First(&existing).Error
 	if err == nil {
-		// Ensure flags are correct (idempotent)
 		updates := map[string]interface{}{
 			"is_active":      true,
 			"is_verified":    true,
