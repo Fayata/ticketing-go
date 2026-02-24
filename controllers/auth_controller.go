@@ -16,7 +16,6 @@ func NewAuthController(authService *services.AuthService) *AuthController {
 }
 
 func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
-	// --- PERUBAHAN 1: Menangani pesan sukses/error dari URL (Solusi Masalah #2) ---
 	if r.Method == http.MethodGet {
 		data := map[string]interface{}{
 			"title":      "Login - Portal Ticketing",

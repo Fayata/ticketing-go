@@ -1,4 +1,4 @@
-/* Login Page Styles - Red & White Theme */
+/* Login Page Styles - Dark Teal Theme */
 * {
     margin: 0;
     padding: 0;
@@ -7,21 +7,21 @@
 
 :root {
     /* Primary Colors - Red Theme */
-    --primary-red: #DC143C;
-    --primary-red-hover: #B11030;
-    --primary-red-light: #FFE5EA;
-    --primary-red-dark: #8B0000;
-    --secondary-red: #E63946;
+    --primary-red: #10b981;
+    --primary-red-hover: #059669;
+    --primary-red-light: #d1fae5;
+    --primary-red-dark: #064e3b;
+    --secondary-red: #0891b2;
     
     /* Text Colors */
-    --text-primary: #1f2937;
-    --text-secondary: #6b7280;
-    --text-light: #9ca3af;
+    --text-primary: #e5f9f2;
+    --text-secondary: #a7f3d0;
+    --text-light: rgba(167, 243, 208, 0.7);
     
     /* Background Colors */
-    --bg-primary: #ffffff;
-    --bg-secondary: #f9fafb;
-    --bg-gradient: linear-gradient(135deg, #DC143C 0%, #E63946 100%);
+    --bg-primary: #0b172a;
+    --bg-secondary: #020617;
+    --bg-gradient: radial-gradient(circle at top left, rgba(16,185,129,0.25) 0%, transparent 55%), radial-gradient(circle at bottom right, rgba(99,102,241,0.22) 0%, transparent 60%), #020617;
     
     /* Border Colors */
     --border-color: #e5e7eb;
@@ -33,10 +33,10 @@
     --success-bg: #f0fdf4;
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(220, 20, 60, 0.05);
-    --shadow: 0 4px 6px -1px rgba(220, 20, 60, 0.1), 0 2px 4px -1px rgba(220, 20, 60, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(220, 20, 60, 0.1), 0 4px 6px -2px rgba(220, 20, 60, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(220, 20, 60, 0.1), 0 10px 10px -5px rgba(220, 20, 60, 0.04);
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.4);
+    --shadow: 0 20px 40px rgba(15, 23, 42, 0.7);
+    --shadow-lg: 0 30px 80px rgba(15, 23, 42, 0.85);
+    --shadow-xl: 0 50px 120px rgba(0, 0, 0, 0.9);
     
     /* Border Radius */
     --radius: 0.75rem;
@@ -47,7 +47,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background: var(--bg-gradient);
     min-height: 100vh;
     display: flex;
@@ -80,12 +80,12 @@ body {
 }
 
 .login-card {
-    background: var(--bg-primary);
+    background: linear-gradient(160deg, #0d2137 0%, #0f2d2a 55%, #0d1f2d 100%);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18), var(--shadow-xl);
     padding: 2.5rem;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
 .login-header {
@@ -99,7 +99,7 @@ body {
     justify-content: center;
     width: 4rem;
     height: 4rem;
-    background: linear-gradient(135deg, var(--primary-red), var(--secondary-red));
+    background: linear-gradient(135deg, #10b981, #0891b2);
     border-radius: 50%;
     margin-bottom: 1rem;
     box-shadow: var(--shadow-lg);
@@ -124,14 +124,14 @@ body {
 .login-title {
     font-size: 1.875rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: #f0fdf9;
     margin-bottom: 0.5rem;
     letter-spacing: -0.025em;
 }
 
 .login-subtitle {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: rgba(167, 220, 201, 0.65);
     margin-bottom: 0;
 }
 
@@ -196,7 +196,7 @@ body {
     gap: 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--text-primary);
+    color: rgba(167, 243, 208, 0.85);
 }
 
 .input-icon {
@@ -214,21 +214,21 @@ body {
     padding: 0.875rem 1rem;
     padding-left: 2.75rem;
     font-size: 0.9375rem;
-    border: 2px solid var(--border-color);
+    border: 1px solid rgba(16, 185, 129, 0.25);
     border-radius: var(--radius-sm);
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: rgba(15, 23, 42, 0.85);
+    color: #e2fff6;
     transition: var(--transition);
     outline: none;
 }
 
 .form-input:focus {
-    border-color: var(--primary-red);
-    box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.1);
+    border-color: rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2), 0 0 20px rgba(16, 185, 129, 0.18);
 }
 
 .form-input::placeholder {
-    color: var(--text-light);
+    color: rgba(167, 243, 208, 0.4);
 }
 
 .password-input {
@@ -318,7 +318,7 @@ body {
 }
 
 .checkbox-label {
-    color: var(--text-secondary);
+    color: rgba(167, 220, 201, 0.8);
     font-weight: 400;
 }
 
@@ -412,13 +412,13 @@ body {
 .login-footer {
     margin-top: 2rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--border-color);
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
     text-align: center;
 }
 
 .footer-text {
     font-size: 0.875rem;
-    color: var(--text-secondary);
+    color: rgba(148, 163, 184, 0.85);
     margin-bottom: 0.5rem;
 }
 

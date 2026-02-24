@@ -45,32 +45,32 @@
 }
 
 :root {
-    --primary-blue: #ef4522;
-    --primary-blue-hover: #eb2825;
-    --primary-blue-light: #dbeafe;
-    --primary-red: #dc143c;
-    --primary-red-hover: #b11030;
-    --primary-red-light: #ffe5ea;
-    --secondary-red: #e63946;
-    --secondary-purple: #8b5cf6;
-    --text-primary: #1f2937;
-    --text-secondary: #6b7280;
-    --text-light: #9ca3af;
-    --border-color: #e5e7eb;
+    --primary-blue: #10b981;
+    --primary-blue-hover: #059669;
+    --primary-blue-light: #d1fae5;
+    --primary-red: #0891b2;
+    --primary-red-hover: #04748c;
+    --primary-red-light: #cffafe;
+    --secondary-red: #6366f1;
+    --secondary-purple: #6366f1;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-light: #94a3b8;
+    --border-color: #e2e8f0;
     --bg-primary: #ffffff;
-    --bg-secondary: #f9fafb;
-    --bg-gray: #f3f4f6;
+    --bg-secondary: #f1f5f9;
+    --bg-gray: #f8fafc;
     --success-color: #10b981;
     --success-bg: #d1fae5;
-    --warning-color: #f59e0b;
-    --warning-bg: #fef3c7;
+    --warning-color: #ea580c;
+    --warning-bg: #fff7ed;
     --error-color: #ef4444;
     --error-bg: #fee2e2;
-    --info-color: #ee170f;
-    --info-bg: #dbeafe;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --info-color: #0891b2;
+    --info-bg: #e0f2fe;
+    --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.1), 0 1px 2px 0 rgba(15, 23, 42, 0.06);
+    --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.2), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
     --radius: 0.75rem;
     --radius-sm: 0.5rem;
     --radius-lg: 1rem;
@@ -78,7 +78,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     background-color: var(--bg-gray);
     color: var(--text-primary);
     line-height: 1.6;
@@ -93,7 +93,7 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 260px;
-    background: var(--primary-blue-hover);
+    background: linear-gradient(180deg, #d1fae5 0%, #cffafe 60%, #e0f2fe 100%);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -190,7 +190,7 @@ body {
 
 .nav-badge {
     margin-left: auto;
-    background: var(--error-color);
+    background: var(--primary-blue);
     color: white;
     font-size: 0.75rem;
     padding: 0.125rem 0.5rem;
@@ -229,7 +229,7 @@ body {
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 9999px;
-    background: linear-gradient(135deg, var(--bg-secondary), var(--error-color));
+    background: linear-gradient(135deg, #10b981, #0891b2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -424,7 +424,7 @@ body {
 
 /* Welcome Banner */
 .welcome-banner {
-    background: linear-gradient(135deg, var(--primary-blue), #eb140c);
+    background: linear-gradient(135deg, #10b981 0%, #0891b2 60%, #6366f1 100%);
     border-radius: var(--radius-lg);
     padding: 2rem;
     color: white;
@@ -784,8 +784,8 @@ body {
 }
 
 .quick-action-icon.red {
-    background: #fee2e2;
-    color: #dc2626;
+    background: #d1fae5;
+    color: #059669;
 }
 
 .quick-action-btn:hover .quick-action-icon {
