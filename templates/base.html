@@ -802,12 +802,16 @@
         
         list.querySelectorAll('.np-item').forEach(el => {
           el.addEventListener('click', async (e) => {
-            const notif = notifications.find(n => n.id === +el.dataset.id);
+            const rawId = el.dataset.id;
+            if (!rawId) return;
+            const notif = notifications.find(n => n.id === +rawId || n.id === rawId);
             if (notif?.unread) {
-              await markAsRead(notif.id);
-              notif.unread = false;
-              updateBadges();
-              renderList();
+              const ok = await markAsRead(notif.id);
+              if (ok) {
+                notif.unread = false;
+                updateBadges();
+                renderList();
+              }
             }
             const ticketId = el.dataset.ticketId;
             if (ticketId) {
@@ -819,7 +823,7 @@
       
       async function loadNotifications() {
         try {
-          const res = await fetch('api/notifications?filter=' + currentTab);
+          const res = await fetch('api/notifications?filter=' + currentTab, { credentials: 'same-origin' });
           const data = await res.json();
           notifications = data.notifications || [];
           updateBadges(data.counts);
@@ -865,20 +869,23 @@
       
       async function markAsRead(id) {
         try {
-          const formData = new FormData();
-          formData.append('id', id);
-          await fetch('api/notifications/read', {
+          const body = new URLSearchParams({ id: String(id) });
+          const res = await fetch('api/notifications/read', {
             method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body,
+            credentials: 'same-origin'
           });
+          return res.ok;
         } catch (err) {
           console.error('Failed to mark as read:', err);
+          return false;
         }
       }
       
       async function markAllAsRead() {
         try {
-          await fetch('api/notifications/read-all', { method: 'POST' });
+          await fetch('api/notifications/read-all', { method: 'POST', credentials: 'same-origin' });
           notifications.forEach(n => n.unread = false);
           updateBadges({ unread: 0, all: notifications.length, ticket: notifications.filter(n => ['tiket', 'reply', 'status'].includes(n.type)).length });
           renderList();
@@ -911,7 +918,7 @@
       });
       
       // Load initial count
-      fetch('api/notifications/count').then(r => r.json()).then(data => {
+      fetch('api/notifications/count', { credentials: 'same-origin' }).then(r => r.json()).then(data => {
         const uc = data.count || 0;
         const countEl = document.getElementById('notifCount');
         if (countEl && uc > 0) {
