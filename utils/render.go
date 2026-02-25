@@ -77,6 +77,21 @@ func InitTemplates() {
 		},
 
 		// Logic helpers
+		"add": func(a, b interface{}) int {
+			toInt := func(x interface{}) int {
+				switch v := x.(type) {
+				case int:
+					return v
+				case int64:
+					return int(v)
+				case float64:
+					return int(v)
+				default:
+					return 0
+				}
+			}
+			return toInt(a) + toInt(b)
+		},
 		"eq": func(a, b interface{}) bool {
 			return a == b
 		},
