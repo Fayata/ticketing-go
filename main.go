@@ -260,6 +260,21 @@ func loadTemplates() *template.Template {
 			}
 			return "User"
 		},
+		"add": func(a, b interface{}) int {
+			toInt := func(x interface{}) int {
+				switch v := x.(type) {
+				case int:
+					return v
+				case int64:
+					return int(v)
+				case float64:
+					return int(v)
+				default:
+					return 0
+				}
+			}
+			return toInt(a) + toInt(b)
+		},
 		"seq": func(start, end int) []int {
 			var result []int
 			for i := start; i <= end; i++ {
