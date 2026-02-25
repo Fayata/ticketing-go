@@ -120,14 +120,14 @@
                     </div>
                 </div>
                 <div class="user-actions">
-                    <a href="settings" class="user-action-btn">
+                    <a href="settings" class="user-action-btn" aria-label="Settings">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="3"></circle>
                             <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m-2 2l-4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m-2-2l-4.2-4.2"></path>
                         </svg>
                         <span>Settings</span>
                     </a>
-                    <a href="logout" class="user-action-btn logout">
+                    <a href="logout" class="user-action-btn logout" aria-label="Logout">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                             <polyline points="16 17 21 12 16 7"></polyline>
@@ -142,6 +142,9 @@
         <main class="main-content">
             <!-- Header -->
             <header class="header">
+                <button type="button" class="header-mobile-menu" id="mobileMenuToggle" aria-label="Buka menu" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
                 <div class="header-left">
                     <h1>{{if .page_title}}{{.page_title}}{{else}}Dashboard{{end}}</h1>
                     <p>{{if .page_subtitle}}{{.page_subtitle}}{{else}}Selamat datang kembali!{{end}}</p>

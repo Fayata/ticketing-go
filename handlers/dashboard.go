@@ -54,6 +54,14 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 	// Get unread notification count
 	unreadCount, _ := models.GetUnreadCount(config.DB, user.ID)
 
+	// Artikel populer dari Knowledge Base (urut views desc)
+	var popularArticles []*models.KBArticle
+	config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true).
+		Order("views DESC").Limit(6).Find(&popularArticles)
+	if popularArticles == nil {
+		popularArticles = []*models.KBArticle{}
+	}
+
 	data := AddBaseData(r, map[string]interface{}{
 		"title":                "Dashboard - Portal Ticketing",
 		"page_title":           "Dashboard",
@@ -68,7 +76,7 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 		"total_tickets":        totalCount,
 		"recent_tickets":       recentTickets,
 		"announcements":        []interface{}{},
-		"popular_articles":     []interface{}{},
+		"popular_articles":     popularArticles,
 		"unread_count":         unreadCount,
 	})
 

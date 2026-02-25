@@ -39,16 +39,29 @@ function initSidebarToggle() {
 
     // Mobile Menu Toggle
     if (mobileMenuToggle && sidebar) {
+        let overlay = null;
+        function closeMobileSidebar() {
+            sidebar.classList.remove('mobile-open');
+            if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            overlay = null;
+        }
         mobileMenuToggle.addEventListener('click', function() {
+            if (window.innerWidth > 768) return;
             sidebar.classList.toggle('mobile-open');
+            if (sidebar.classList.contains('mobile-open')) {
+                overlay = document.createElement('div');
+                overlay.setAttribute('aria-hidden', 'true');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199;';
+                overlay.addEventListener('click', closeMobileSidebar);
+                document.body.appendChild(overlay);
+            } else {
+                closeMobileSidebar();
+            }
         });
-
-        // Close sidebar when clicking outside on mobile
         document.addEventListener('click', function(e) {
-            if (window.innerWidth <= 768) {
-                if (!sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target)) {
-                    sidebar.classList.remove('mobile-open');
-                }
+            if (window.innerWidth <= 768 && !sidebar.classList.contains('mobile-open')) return;
+            if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target) && e.target !== overlay) {
+                closeMobileSidebar();
             }
         });
     }

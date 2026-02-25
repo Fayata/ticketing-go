@@ -11,25 +11,28 @@
 </head>
 <body>
     <div class="department-layout">
-        <aside class="dept-sidebar">
+        <aside class="dept-sidebar" id="deptSidebar">
             <div class="dept-sidebar-header">
                 <h1 class="dept-logo">Ticketing Staff</h1>
+                <button type="button" class="dept-sidebar-toggle" id="deptSidebarToggle" aria-label="Toggle sidebar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
             </div>
     
             <nav class="dept-nav">
                 <a href="departement/dashboard" class="dept-nav-item {{if eq .nav_active "dept_dashboard"}}active{{end}}">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                    <span>Dashboard</span>
+                    <span class="dept-nav-label">Dashboard</span>
                 </a>
 
                 <a href="department/all-tickets" class="dept-nav-item {{if eq .nav_active "dept_all_tickets"}}active{{end}}">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                    <span>Semua Tiket</span>
+                    <span class="dept-nav-label">Semua Tiket</span>
                 </a>
 
                 <a href="admin/knowledge-base" class="dept-nav-item {{if eq .nav_active "kb_admin"}}active{{end}}">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
-                    <span>Kelola Knowledge Base</span>
+                    <span class="dept-nav-label">Kelola Knowledge Base</span>
                 </a>
                 <!-- 
                 <a href="#" class="dept-nav-item" onclick="return false;">
@@ -53,21 +56,24 @@
                     <div class="dept-avatar-circle">
                         {{if .user}}{{slice .user.Username 0 2 | upper}}{{else}}ST{{end}}
                     </div>
-                    <div style="flex:1;">
-                        <div style="font-weight:600;">{{if .user}}{{getFullName .user}}{{else}}Staff{{end}}</div>
-                        <div style="font-size:0.875rem; color:#059669;">Staff Area</div>
+                    <div class="dept-profile-details">
+                        <div class="dept-profile-name">{{if .user}}{{getFullName .user}}{{else}}Staff{{end}}</div>
+                        <div class="dept-profile-badge">Staff Area</div>
                     </div>
                 </div>
                 
-                <a href="department/logout-release" onclick="return confirm('Ketika logout anda akan melepas semua tiket yang sedang dikerjakan?')" class="dept-nav-item" style="color:#0d9488;">
+                <a href="department/logout-release" onclick="return confirm('Ketika logout anda akan melepas semua tiket yang sedang dikerjakan?')" class="dept-nav-item dept-logout-btn" style="color:#0d9488;">
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    <span>Logout & Release</span>
+                    <span class="dept-nav-label">Logout & Release</span>
                 </a>
             </div>
         </aside>
     
         <main class="dept-main">
             <header class="dept-header">
+                <button type="button" class="dept-header-mobile-menu" id="deptMobileMenuToggle" aria-label="Buka menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
                 <div>
                     <h2 style="font-size:1.5rem; font-weight:700; margin:0;">{{.page_title}}</h2>
                     <p style="color:#6b7280; margin:0.25rem 0 0 0;">{{.page_subtitle}}</p>
@@ -234,6 +240,42 @@
         };
         document.addEventListener('keydown', handleEscape);
     }
+    (function(){
+        var sb = document.getElementById('deptSidebar');
+        var btn = document.getElementById('deptSidebarToggle');
+        var mobileBtn = document.getElementById('deptMobileMenuToggle');
+        if (sb && btn) {
+            var stored = localStorage.getItem('deptSidebarCollapsed');
+            if (stored === '1') sb.classList.add('collapsed');
+            btn.addEventListener('click', function() {
+                if (window.innerWidth <= 768) {
+                    sb.classList.toggle('mobile-open');
+                    if (sb.classList.contains('mobile-open')) {
+                        var ov = document.createElement('div');
+                        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199;';
+                        ov.addEventListener('click', function() { sb.classList.remove('mobile-open'); if (ov.parentNode) ov.parentNode.removeChild(ov); });
+                        document.body.appendChild(ov);
+                    }
+                } else {
+                    sb.classList.toggle('collapsed');
+                    localStorage.setItem('deptSidebarCollapsed', sb.classList.contains('collapsed') ? '1' : '0');
+                }
+            });
+        }
+        if (mobileBtn && sb) {
+            var overlay = null;
+            mobileBtn.addEventListener('click', function() {
+                if (window.innerWidth > 768) return;
+                sb.classList.toggle('mobile-open');
+                if (sb.classList.contains('mobile-open')) {
+                    overlay = document.createElement('div');
+                    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:199;';
+                    overlay.addEventListener('click', function() { sb.classList.remove('mobile-open'); if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); overlay = null; });
+                    document.body.appendChild(overlay);
+                } else if (overlay && overlay.parentNode) { overlay.parentNode.removeChild(overlay); overlay = null; }
+            });
+        }
+    })();
     </script>
 </body>
 </html>

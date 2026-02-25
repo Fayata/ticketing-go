@@ -208,60 +208,27 @@
             <div class="card-body">
                 {{if .popular_articles}}
                     {{range .popular_articles}}
-                    <a href="knowledge-base" class="kb-item" style="text-decoration:none;color:inherit;display:block;">
+                    <a href="knowledge-base/article/{{.ID}}" class="kb-item">
                         <div class="kb-content">
                             <div class="kb-icon">
+                                {{if .Category.Icon}}<span class="kb-icon-emoji">{{.Category.Icon}}</span>{{else}}
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                </svg>
+                                </svg>{{end}}
                             </div>
                             <div class="kb-text">
-                                <h4>{{.title}}</h4>
+                                <h4>{{.Title}}</h4>
                                 <div class="kb-meta">
-                                    <span>{{.category}}</span>
+                                    <span>{{if .Category}}{{.Category.Name}}{{else}}-{{end}}</span>
                                     <span>•</span>
-                                    <span>{{.views}} views</span>
+                                    <span>{{.Views}} views</span>
                                 </div>
                             </div>
                         </div>
                     </a>
                     {{end}}
                 {{else}}
-                    <a href="knowledge-base" class="kb-item" style="text-decoration:none;color:inherit;display:block;">
-                        <div class="kb-content">
-                            <div class="kb-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                </svg>
-                            </div>
-                            <div class="kb-text">
-                                <h4>Cara Membuat Tiket Baru</h4>
-                                <div class="kb-meta">
-                                    <span>Getting Started</span>
-                                    <span>•</span>
-                                    <span>0 views</span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                    <a href="knowledge-base" class="kb-item" style="text-decoration:none;color:inherit;display:block;">
-                        <div class="kb-content">
-                            <div class="kb-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                                </svg>
-                            </div>
-                            <div class="kb-text">
-                                <h4>FAQ - Pertanyaan Umum</h4>
-                                <div class="kb-meta">
-                                    <span>Account</span>
-                                    <span>•</span>
-                                    <span>0 views</span>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
+                    <p class="kb-empty-msg">Belum ada artikel. <a href="knowledge-base" class="view-all-link">Buka Knowledge Base</a></p>
                 {{end}}
             </div>
             <div class="card-header" style="border-top: 1px solid var(--border-color); border-bottom: none;">

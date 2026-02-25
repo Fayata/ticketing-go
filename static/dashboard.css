@@ -326,7 +326,23 @@ body {
 }
 
 .sidebar.collapsed .user-actions {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: center;
+    gap: 0.375rem;
+}
+.sidebar.collapsed .user-action-btn {
+    flex: 0;
+    min-width: 2.5rem;
+    padding: 0.5rem;
+}
+.sidebar.collapsed .user-action-btn span {
+    display: none;
+}
+.sidebar.collapsed .user-info {
+    justify-content: center;
+}
+.sidebar.collapsed .user-avatar {
+    margin: 0;
 }
 
 /* Main Content */
@@ -905,6 +921,7 @@ body {
     gap: 0.75rem;
 }
 
+.kb-icon-emoji { font-size: 1.25rem; line-height: 1; }
 .kb-icon {
     width: 2rem;
     height: 2rem;
@@ -994,49 +1011,118 @@ body {
     }
 }
 
+/* Tombol menu mobile (hanya tampil di mobile) */
+.header-mobile-menu {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-right: 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--text-primary);
+}
+.header-mobile-menu:hover {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
 @media (max-width: 768px) {
+    .header-mobile-menu {
+        display: flex;
+    }
     .sidebar {
         transform: translateX(-100%);
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 200;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.15);
     }
-    
     .sidebar.mobile-open {
         transform: translateX(0);
     }
-    
     .main-content {
         margin-left: 0;
     }
-    
     .sidebar.collapsed ~ .main-content {
         margin-left: 0;
     }
-    
     .header {
-        padding: 1rem;
+        padding: 0.75rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.75rem;
     }
-    
+    .header-left {
+        flex: 1;
+        min-width: 0;
+    }
+    .header-left h1 {
+        font-size: 1.2rem;
+        line-height: 1.3;
+    }
+    .header-left p {
+        font-size: 0.8rem;
+    }
+    .header-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .header-actions .btn-primary {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
     .content {
-        padding: 1rem;
+        padding: 0.75rem 1rem;
+        overflow-x: hidden;
+        min-width: 0;
     }
-    
     .welcome-banner {
-        padding: 1.5rem;
+        padding: 1rem 1.25rem;
     }
-    
     .banner-text h2 {
-        font-size: 1.25rem;
+        font-size: 1.15rem;
     }
-    
     .banner-actions {
         flex-direction: column;
+        width: 100%;
     }
-    
+    .banner-actions .btn-white {
+        width: 100%;
+    }
     .stats-grid {
         grid-template-columns: 1fr;
+        gap: 0.75rem;
     }
-    
     .quick-actions {
         grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    .main-grid {
+        gap: 1rem;
+    }
+    .card {
+        overflow: hidden;
+    }
+    .card-body {
+        overflow-x: auto;
+    }
+    table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .kb-item, .ticket-item {
+        padding: 0.75rem;
+    }
+    .notif-panel {
+        max-width: calc(100vw - 2rem);
+        right: 0.5rem;
+        left: auto;
     }
 }
 
