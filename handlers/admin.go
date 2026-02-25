@@ -347,11 +347,23 @@ func (h *AdminHandler) ListKBAdmin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	user := GetUserFromContext(r).(*models.User)
+	userVal := GetUserFromContext(r)
+	var user *models.User
+	if userVal != nil {
+		if u, ok := userVal.(*models.User); ok {
+			user = u
+		}
+	}
 	var categories []models.KBCategory
 	config.DB.Order("sort_order ASC, name ASC").Find(&categories)
 	var articles []models.KBArticle
 	config.DB.Preload("Category").Order("updated_at DESC").Find(&articles)
+	if categories == nil {
+		categories = []models.KBCategory{}
+	}
+	if articles == nil {
+		articles = []models.KBArticle{}
+	}
 	var messages []string
 	if s := r.URL.Query().Get("success"); s != "" {
 		messages = append(messages, s)

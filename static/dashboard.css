@@ -1230,6 +1230,7 @@ body {
 .article-cat-badge.indigo { background: #e0e7ff; color: #4338ca; }
 .article-cat-badge.amber  { background: #fef3c7; color: #d97706; }
 .article-cat-badge.rose   { background: #ffe4e6; color: #e11d48; }
+.article-cat-badge.violet { background: #ede9fe; color: #6d28d9; }
 .article-arrow { color: var(--text-secondary); font-size: 0.9rem; flex-shrink: 0; margin-top: 0.1rem; transition: color 0.18s, transform 0.18s; }
 .article-item:hover .article-arrow { color: var(--primary-blue); transform: translateX(3px); }
 .article-empty-inline { padding: 1.5rem; text-align: center; color: var(--text-secondary); font-size: 0.875rem; }

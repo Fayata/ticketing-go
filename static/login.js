@@ -60,6 +60,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false; 
             }
 
+            // Jika "Ingat saya" dicentang, simpan username dan password untuk isi ulang next time
+            var rememberCheckbox = document.getElementById('remember_me');
+            try {
+                if (rememberCheckbox && rememberCheckbox.checked) {
+                    localStorage.setItem('remember_username', username);
+                    localStorage.setItem('remember_password', password);
+                    localStorage.setItem('remember_me', 'true');
+                } else {
+                    localStorage.removeItem('remember_username');
+                    localStorage.removeItem('remember_password');
+                    if (rememberCheckbox) localStorage.setItem('remember_me', 'false');
+                }
+            } catch (e) {}
+
             loginButton.disabled = true;
             loginButton.classList.add('loading');
             buttonText.style.opacity = '0';
@@ -79,10 +93,31 @@ document.addEventListener('DOMContentLoaded', function() {
     //     });
     // }
 
-    // Auto-focus on username field if empty
+    // Ingat saya: isi ulang username dan password dari localStorage
     const usernameInput = document.getElementById('id_username');
-    if (usernameInput && !usernameInput.value) {
-        usernameInput.focus();
+    const passwordInputForRemember = document.getElementById('id_password');
+    if (usernameInput) {
+        try {
+            var savedUsername = localStorage.getItem('remember_username');
+            var savedPassword = localStorage.getItem('remember_password');
+            if (savedUsername) {
+                usernameInput.value = savedUsername;
+                usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                if (usernameInput.parentElement && !usernameInput.parentElement.classList.contains('focused')) {
+                    usernameInput.parentElement.classList.add('focused');
+                }
+            }
+            if (savedPassword && passwordInputForRemember) {
+                passwordInputForRemember.value = savedPassword;
+                passwordInputForRemember.dispatchEvent(new Event('input', { bubbles: true }));
+                if (passwordInputForRemember.parentElement && !passwordInputForRemember.parentElement.classList.contains('focused')) {
+                    passwordInputForRemember.parentElement.classList.add('focused');
+                }
+            }
+        } catch (e) {}
+        if (!usernameInput.value) {
+            usernameInput.focus();
+        }
     }
 
     // Enter key to submit form
@@ -114,17 +149,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Remember me checkbox enhancement
+    // Remember me checkbox: restore state; saat unchecked hapus username tersimpan
     const rememberMe = document.getElementById('remember_me');
     if (rememberMe) {
-        // Check if remember me was previously checked
-        const savedRememberMe = localStorage.getItem('remember_me');
-        if (savedRememberMe === 'true') {
+        var savedRememberMe = localStorage.getItem('remember_me');
+        var hasSavedUsername = !!localStorage.getItem('remember_username');
+        if (savedRememberMe === 'true' || hasSavedUsername) {
             rememberMe.checked = true;
         }
-
         rememberMe.addEventListener('change', function() {
             localStorage.setItem('remember_me', this.checked);
+            if (!this.checked) {
+                try {
+                    localStorage.removeItem('remember_username');
+                    localStorage.removeItem('remember_password');
+                } catch (e) {}
+            }
         });
     }
 

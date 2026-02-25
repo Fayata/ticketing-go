@@ -8,7 +8,7 @@
         <div class="card-header"><h2>Tambah Kategori</h2></div>
         <div class="card-body">
             {{if .error}}<div class="alert alert-error" style="margin-bottom:1rem;">{{.error}}</div>{{end}}
-            <form method="post" action="admin/knowledge-base/categories/create/post">
+            <form method="post" action="admin/knowledge-base/categories/create/post" id="kbCategoryForm">
                 <div class="form-group" style="margin-bottom:1rem;">
                     <label class="form-label">Nama kategori *</label>
                     <input type="text" name="name" class="form-input" required placeholder="Contoh: Technical Support">
@@ -19,11 +19,39 @@
                 </div>
                 <div class="form-group" style="margin-bottom:1rem;">
                     <label class="form-label">Icon (emoji)</label>
-                    <input type="text" name="icon" class="form-input" placeholder="📄 atau 🖥️">
+                    <div class="kb-picker-wrap">
+                        <input type="hidden" name="icon" id="kb_icon" value="">
+                        <button type="button" class="kb-emoji-trigger form-input" id="emojiTrigger" style="display:flex; align-items:center; gap:0.5rem; text-align:left; cursor:pointer;">
+                            <span id="emojiPreview" style="font-size:1.5rem;">Pilih emoji</span>
+                        </button>
+                        <div class="kb-emoji-dropdown" id="emojiDropdown" style="display:none;">
+                            <div class="kb-emoji-grid" id="emojiGrid"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group" style="margin-bottom:1rem;">
-                    <label class="form-label">Kelas warna (green, cyan, indigo, amber, rose, violet)</label>
-                    <input type="text" name="color_class" class="form-input" value="green" placeholder="green">
+                    <label class="form-label">Warna</label>
+                    <div class="kb-picker-wrap">
+                        <input type="hidden" name="color_class" id="kb_color_class" value="green">
+                        <button type="button" class="kb-color-trigger form-input" id="colorTrigger" style="display:flex; align-items:center; gap:0.5rem; text-align:left; cursor:pointer;">
+                            <span class="kb-color-swatch" id="colorPreview" style="width:24px; height:24px; border-radius:4px; background:#d1fae5; border:1px solid #a7f3d0;"></span>
+                            <span id="colorLabel">green</span>
+                        </button>
+                        <div class="kb-color-dropdown" id="colorDropdown" style="display:none;">
+                            <div class="kb-color-palette" id="colorPalette">
+                                <button type="button" class="kb-color-cell" data-class="green" style="background:#d1fae5;" title="green"></button>
+                                <button type="button" class="kb-color-cell" data-class="cyan" style="background:#cffafe;" title="cyan"></button>
+                                <button type="button" class="kb-color-cell" data-class="indigo" style="background:#e0e7ff;" title="indigo"></button>
+                                <button type="button" class="kb-color-cell" data-class="amber" style="background:#fef3c7;" title="amber"></button>
+                                <button type="button" class="kb-color-cell" data-class="rose" style="background:#ffe4e6;" title="rose"></button>
+                                <button type="button" class="kb-color-cell" data-class="violet" style="background:#ede9fe;" title="violet"></button>
+                            </div>
+                            <div class="kb-color-sample-wrap">
+                                <span class="kb-color-sample-label">Sample</span>
+                                <div class="kb-color-sample" id="colorSample"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div style="display:flex; gap:0.75rem;">
                     <button type="submit" class="btn-primary">Simpan</button>
@@ -33,4 +61,75 @@
         </div>
     </div>
 </div>
+<style>
+.kb-picker-wrap { position: relative; }
+.kb-emoji-trigger, .kb-color-trigger { width: 100%; }
+.kb-emoji-dropdown, .kb-color-dropdown {
+    position: absolute; left: 0; top: 100%; margin-top: 4px;
+    background: #fff; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 100; padding: 12px; min-width: 200px;
+}
+.kb-emoji-grid {
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-height: 200px; overflow-y: auto;
+}
+.kb-emoji-cell {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; cursor: pointer; border-radius: 6px; border: none; background: transparent;
+}
+.kb-emoji-cell:hover { background: var(--bg-secondary, #f1f5f9); }
+.kb-color-palette {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;
+}
+.kb-color-cell {
+    width: 40px; height: 40px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; padding: 0;
+}
+.kb-color-cell:hover { border-color: #64748b; }
+.kb-color-cell.selected { border-color: #059669; box-shadow: 0 0 0 1px #059669; }
+.kb-color-sample-wrap { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color, #e2e8f0); }
+.kb-color-sample-label { font-size: 0.75rem; color: var(--text-secondary, #64748b); display: block; margin-bottom: 4px; }
+.kb-color-sample { height: 28px; border-radius: 4px; border: 1px solid var(--border-color, #e2e8f0); }
+</style>
+<script>
+(function(){
+    var emojis = ['📄','📁','🖥️','⚙️','🔧','📋','📌','📎','📂','💡','🔔','📢','📖','📚','🎯','✅','❓','❗','🔒','🔓','📧','📞','🌐','💬','👤','👥','🏢','📊','📈','📉','🛠️','🔨','⚡','🔥','⭐','❤️','💚','💙','📝','✏️','🗂️','📑','🔖','📌','🎨','🖼️','📷','📹','🔍','📌','🏷️','📦','📤','📥','💾','🗃️','📂','📅','⏰','🔔','✔️','➡️','📌','🔗'];
+    var colorMap = { green:'#d1fae5', cyan:'#cffafe', indigo:'#e0e7ff', amber:'#fef3c7', rose:'#ffe4e6', violet:'#ede9fe' };
+    var iconInput = document.getElementById('kb_icon');
+    var emojiPreview = document.getElementById('emojiPreview');
+    var emojiTrigger = document.getElementById('emojiTrigger');
+    var emojiDropdown = document.getElementById('emojiDropdown');
+    var colorInput = document.getElementById('kb_color_class');
+    var colorPreview = document.getElementById('colorPreview');
+    var colorLabel = document.getElementById('colorLabel');
+    var colorSample = document.getElementById('colorSample');
+    var colorTrigger = document.getElementById('colorTrigger');
+    var colorDropdown = document.getElementById('colorDropdown');
+
+    var grid = document.getElementById('emojiGrid');
+    emojis.forEach(function(e){
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'kb-emoji-cell'; btn.textContent = e;
+        btn.addEventListener('click', function(){ iconInput.value = e; emojiPreview.textContent = e; emojiDropdown.style.display = 'none'; });
+        grid.appendChild(btn);
+    });
+
+    emojiTrigger.addEventListener('click', function(ev){ ev.preventDefault(); colorDropdown.style.display = 'none'; emojiDropdown.style.display = emojiDropdown.style.display === 'none' ? 'block' : 'none'; });
+    colorTrigger.addEventListener('click', function(ev){ ev.preventDefault(); emojiDropdown.style.display = 'none'; colorDropdown.style.display = colorDropdown.style.display === 'none' ? 'block' : 'none'; });
+
+    function setColor(cls) {
+        colorInput.value = cls;
+        colorPreview.style.background = colorMap[cls] || colorMap.green;
+        colorLabel.textContent = cls;
+        colorSample.style.background = colorMap[cls] || colorMap.green;
+        document.querySelectorAll('.kb-color-cell').forEach(function(el){ el.classList.toggle('selected', el.getAttribute('data-class') === cls); });
+    }
+    setColor('green');
+    document.querySelectorAll('.kb-color-cell').forEach(function(el){
+        el.addEventListener('click', function(){ setColor(el.getAttribute('data-class')); colorDropdown.style.display = 'none'; });
+    });
+
+    document.addEventListener('click', function(ev){
+        if (!ev.target.closest('.kb-picker-wrap')) { emojiDropdown.style.display = 'none'; colorDropdown.style.display = 'none'; }
+    });
+})();
+</script>
 {{end}}

@@ -73,7 +73,7 @@
                     <span>Knowledge Base</span>
                 </a>
                 
-                {{if or .user.IsStaff .user.IsSuperAdmin}}
+                {{if and .user (or .user.IsStaff .user.IsSuperAdmin)}}
                 <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(16,185,129,0.15);">
                     <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 1rem 0.5rem;">Kelola</div>
                     <a href="admin/knowledge-base" class="nav-item {{if eq .nav_active "admin_kb"}}active{{end}}">
