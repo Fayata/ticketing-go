@@ -442,9 +442,6 @@
       position: relative;
       display: inline-block;
     }
-    .notif-wrap.panel-open {
-      z-index: 1001;
-    }
 
     .notif-btn {
       width: 38px;
@@ -506,6 +503,15 @@
       opacity: 1;
       transform: translateY(0) scale(1);
       pointer-events: auto;
+    }
+    /* Saat panel dipindah ke body (portal), selalu di atas backdrop */
+    .notif-panel.notif-panel-portal {
+      position: fixed;
+      top: var(--notif-portal-top, 0);
+      right: var(--notif-portal-right, 20px);
+      left: auto;
+      width: 360px;
+      z-index: 1001;
     }
 
     .notif-panel::before {
@@ -758,16 +764,21 @@
       document.body.appendChild(backdrop);
       
       function openPanel() {
-        panel.classList.add('open');
-        if (wrap) wrap.classList.add('panel-open');
+        var rect = btn.getBoundingClientRect();
+        panel.style.setProperty('--notif-portal-top', (rect.bottom + 10) + 'px');
+        panel.style.setProperty('--notif-portal-right', (window.innerWidth - rect.right) + 'px');
+        document.body.appendChild(panel);
+        panel.classList.add('open', 'notif-panel-portal');
         backdrop.classList.add('show');
         btn.setAttribute('aria-expanded', 'true');
         loadNotifications();
       }
       
       function closePanel() {
-        panel.classList.remove('open');
-        if (wrap) wrap.classList.remove('panel-open');
+        panel.classList.remove('open', 'notif-panel-portal');
+        panel.style.removeProperty('--notif-portal-top');
+        panel.style.removeProperty('--notif-portal-right');
+        if (wrap) wrap.appendChild(panel);
         backdrop.classList.remove('show');
         btn.setAttribute('aria-expanded', 'false');
       }
