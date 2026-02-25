@@ -184,6 +184,7 @@
     </div>
 
     <div class="sidebar-section">
+        {{/* Pengumuman sementara disembunyikan
         <div class="card">
             <div class="card-header">
                 <h2>Pengumuman</h2>
@@ -191,48 +192,23 @@
             <div class="card-body">
                 {{if .announcements}}
                     {{range .announcements}}
-                    <div class="announcement-item">
-                        <div class="announcement-content">
-                            <svg class="announcement-icon {{if eq .type "WARNING"}}warning{{else}}info{{end}}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="8" x2="12" y2="12"></line>
-                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                            <div class="announcement-text">
-                                <h4>{{.title}}</h4>
-                                <p>{{.description}}</p>
-                                <span>{{timeSince .created_at}} lalu</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="announcement-item">...</div>
                     {{end}}
                 {{else}}
-                    <div class="announcement-item">
-                        <div class="announcement-content">
-                            <svg class="announcement-icon info" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="16" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                            </svg>
-                            <div class="announcement-text">
-                                <h4>Selamat Datang!</h4>
-                                <p>Selamat datang di sistem ticketing kami. Tim support siap membantu Anda 24/7.</p>
-                                <span>Baru saja</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="announcement-item">...</div>
                 {{end}}
             </div>
         </div>
+        */}}
 
-        <div class="card" style="margin-top: 1.5rem;">
+        <div class="card">
             <div class="card-header">
                 <h2>Artikel Populer</h2>
             </div>
             <div class="card-body">
                 {{if .popular_articles}}
                     {{range .popular_articles}}
-                    <div class="kb-item">
+                    <a href="knowledge-base" class="kb-item" style="text-decoration:none;color:inherit;display:block;">
                         <div class="kb-content">
                             <div class="kb-icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -248,10 +224,10 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                     {{end}}
                 {{else}}
-                    <div class="kb-item">
+                    <a href="knowledge-base" class="kb-item" style="text-decoration:none;color:inherit;display:block;">
                         <div class="kb-content">
                             <div class="kb-icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -267,8 +243,8 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="kb-item">
+                    </a>
+                    <a href="knowledge-base" class="kb-item" style="text-decoration:none;color:inherit;display:block;">
                         <div class="kb-content">
                             <div class="kb-icon">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -285,11 +261,11 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 {{end}}
             </div>
             <div class="card-header" style="border-top: 1px solid var(--border-color); border-bottom: none;">
-                <a href="#" class="view-all-link" style="margin: 0 auto;">
+                <a href="knowledge-base" class="view-all-link" style="margin: 0 auto;">
                     Lihat Semua Artikel
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="9 18 15 12 9 6"></polyline>

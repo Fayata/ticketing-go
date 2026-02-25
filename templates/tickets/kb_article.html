@@ -1,0 +1,21 @@
+{{define "tickets/kb_article_content"}}
+<div class="content kb-article-content">
+    <div class="card" style="max-width: 800px;">
+        <div class="card-header" style="display: block;">
+            <a href="knowledge-base" class="view-all-link" style="margin-bottom: 0.5rem; display: inline-flex;">← Kembali ke Knowledge Base</a>
+            {{if .article.Category}}<span class="article-cat-badge {{.article.Category.ColorClass}}" style="margin-left: 0.5rem;">{{.article.Category.Name}}</span>{{end}}
+            <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-top: 0.75rem;">{{.article.Title}}</h1>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                👁 {{.article.Views}} views · {{.article.ReadTimeMinutes}} mnt baca · Diperbarui {{date .article.UpdatedAt}}
+            </div>
+        </div>
+        <div class="card-body" style="padding: 1.5rem 1.4rem;">
+            <div class="kb-article-body">{{linebreaks .article.Content}}</div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "tickets/kb_article"}}
+{{template "base" .}}
+{{end}}

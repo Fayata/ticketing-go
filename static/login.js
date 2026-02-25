@@ -1,6 +1,23 @@
 // Login Page JavaScript
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Theme Toggle (dark/light) - preferensi user disimpan di localStorage
+    var themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            try { localStorage.setItem('theme', theme); } catch (e) {}
+            themeToggle.textContent = theme === 'light' ? '\u263C' : '\u263E';
+            themeToggle.setAttribute('aria-label', theme === 'light' ? 'Mode terang (klik untuk gelap)' : 'Mode gelap (klik untuk terang)');
+        }
+        var current = document.documentElement.getAttribute('data-theme') || 'dark';
+        themeToggle.textContent = current === 'light' ? '\u263C' : '\u263E';
+        themeToggle.addEventListener('click', function() {
+            var next = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+        });
+    }
+
     // Password Toggle Functionality
     const passwordInput = document.getElementById('id_password');
     const togglePassword = document.getElementById('togglePassword');

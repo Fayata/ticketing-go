@@ -6,6 +6,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{if .title}}{{.title}}{{else}}Portal Ticketing{{end}}</title>
+    <script>
+      (function(){
+        var t = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="static/dashboard.css">
     <link rel="stylesheet" href="static/pages.css">
@@ -59,7 +65,7 @@
                     <span>Buat Tiket</span>
                 </a>
                 
-                <a href="#" class="nav-item {{if eq .nav_active "kb"}}active{{end}}" onclick="showCustomAlert('Fitur Knowledge Base akan segera hadir!'); return false;">
+                <a href="knowledge-base" class="nav-item {{if eq .nav_active "kb"}}active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
                         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
@@ -67,9 +73,20 @@
                     <span>Knowledge Base</span>
                 </a>
                 
+                {{if or .user.IsStaff .user.IsSuperAdmin}}
+                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(16,185,129,0.15);">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 1rem 0.5rem;">Kelola</div>
+                    <a href="admin/knowledge-base" class="nav-item {{if eq .nav_active "admin_kb"}}active{{end}}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                        </svg>
+                        <span>Knowledge Base</span>
+                    </a>
+                </div>
+                {{end}}
                 {{if and .user .user.IsSuperAdmin}}
-                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
-                    <div style="font-size: 0.75rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 1rem 0.5rem;">Admin</div>
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(16,185,129,0.15);">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 1rem 0.5rem;">Admin</div>
                     <a href="admin/users" class="nav-item {{if eq .nav_active "admin_users"}}active{{end}}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -227,6 +244,16 @@
                     {{template "admin/department_form_content" .}}
                 {{else if eq .template_name "admin/staff_assign_form"}}
                     {{template "admin/staff_assign_form_content" .}}
+                {{else if eq .template_name "admin/kb_list"}}
+                    {{template "admin/kb_list_content" .}}
+                {{else if eq .template_name "admin/kb_category_form"}}
+                    {{template "admin/kb_category_form_content" .}}
+                {{else if eq .template_name "admin/kb_article_form"}}
+                    {{template "admin/kb_article_form_content" .}}
+                {{else if eq .template_name "tickets/knowledge_base"}}
+                    {{template "tickets/knowledge_base_content" .}}
+                {{else if eq .template_name "tickets/kb_article"}}
+                    {{template "tickets/kb_article_content" .}}
                 {{else}}
                     {{block "content" .}}{{end}}
                 {{end}}
@@ -759,7 +786,7 @@
         }
         
         list.innerHTML = items.map(n => `
-          <div class="np-item ${n.unread ? 'unread' : ''}" data-id="${n.id}" ${n.ticket_id ? `onclick="window.location.href='tiket/${n.ticket_id}'"` : ''}>
+          <div class="np-item ${n.unread ? 'unread' : ''}" data-id="${n.id}" data-ticket-id="${n.ticket_id || ''}">
             <div class="np-icon ${n.color}">${icons[n.icon] || icons.info}</div>
             <div class="np-body">
               <div class="np-notif-title">${n.title}</div>
@@ -778,6 +805,10 @@
               notif.unread = false;
               updateBadges();
               renderList();
+            }
+            const ticketId = el.dataset.ticketId;
+            if (ticketId) {
+              window.location.href = 'tiket/' + ticketId;
             }
           });
         });

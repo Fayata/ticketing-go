@@ -54,6 +54,8 @@ func main() {
 		&models.TicketAssignmentHistory{},
 		&models.TicketRating{},
 		&models.Notification{},
+		&models.KBCategory{},
+		&models.KBArticle{},
 	); err != nil {
 		log.Fatal(err)
 	}
@@ -103,6 +105,11 @@ func main() {
 	mux.HandleFunc("/admin/users/staff/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleStaffRole)))
 	mux.HandleFunc("/admin/departments", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListDepartments)))
 	mux.HandleFunc("/admin/departments/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateDepartmentForm)))
+	mux.HandleFunc("/admin/knowledge-base", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.ListKBAdmin)))
+	mux.HandleFunc("/admin/knowledge-base/categories/create", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryForm)))
+	mux.HandleFunc("/admin/knowledge-base/categories/create/post", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryPost)))
+	mux.HandleFunc("/admin/knowledge-base/articles/create", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBArticleForm)))
+	mux.HandleFunc("/admin/knowledge-base/articles/create/post", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBArticlePost)))
 	mux.HandleFunc("/department/tiket/claim/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ClaimTicket)))
 	mux.HandleFunc("/department/tiket/release/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ReleaseTicket)))
 	mux.HandleFunc("/department/tiket/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.HandleTicketDetail)))
@@ -118,6 +125,8 @@ func main() {
 	mux.HandleFunc("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowTicketSuccess)))
 	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // Public route (uses token auth)
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
+	mux.HandleFunc("/knowledge-base", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKnowledgeBase)))
+	mux.HandleFunc("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKBArticle)))
 	
 	// Notification API routes
 	mux.HandleFunc("/api/notifications", middleware.AuthRequired(notificationHandler.GetNotifications))

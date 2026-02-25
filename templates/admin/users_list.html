@@ -63,7 +63,7 @@
                             {{if .IsActive}}
                                 <span class="status-badge in-progress" style="background:#ecfdf3; color:#15803d; border-color:#bbf7d0;">Aktif</span>
                             {{else}}
-                                <span class="status-badge closed" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;">Non-Aktif</span>
+                                <span class="status-badge closed" style="background:#f1f5f9; color:#64748b; border-color:#e2e8f0;">Non-Aktif</span>
                             {{end}}
                         </td>
                         <td style="padding: 1rem;">
@@ -71,7 +71,7 @@
                                 <a href="admin/users/staff/{{.ID}}" style="font-size:0.8rem; margin-right:10px; color:#2563eb; text-decoration:underline;">
                                     {{if .IsStaff}}Hapus Staff{{else}}Jadikan Staff{{end}}
                                 </a>
-                                <a href="admin/users/toggle/{{.ID}}" style="font-size:0.8rem; color:#b91c1c; text-decoration:underline;">
+                                <a href="admin/users/toggle/{{.ID}}" style="font-size:0.8rem; color:#059669; text-decoration:underline;">
                                     {{if .IsActive}}Nonaktifkan{{else}}Aktifkan{{end}}
                                 </a>
                             {{end}}

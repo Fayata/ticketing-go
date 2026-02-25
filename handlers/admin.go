@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"ticketing/config"
 	"ticketing/models"
@@ -325,4 +326,155 @@ func (h *AdminHandler) CreateDepartmentForm(w http.ResponseWriter, r *http.Reque
 
 		http.Redirect(w, r, config.Path("/admin/departments"), http.StatusSeeOther)
 	}
+}
+
+// --- Knowledge Base Admin (Staff & SuperAdmin) ---
+
+func slugify(s string) string {
+	s = strings.ToLower(s)
+	s = strings.TrimSpace(s)
+	s = strings.ReplaceAll(s, " ", "-")
+	for _, r := range s {
+		if r != '-' && (r < 'a' || r > 'z') && (r < '0' || r > '9') {
+			s = strings.ReplaceAll(s, string(r), "")
+		}
+	}
+	return s
+}
+
+func (h *AdminHandler) ListKBAdmin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	user := GetUserFromContext(r).(*models.User)
+	var categories []models.KBCategory
+	config.DB.Order("sort_order ASC, name ASC").Find(&categories)
+	var articles []models.KBArticle
+	config.DB.Preload("Category").Order("updated_at DESC").Find(&articles)
+	var messages []string
+	if s := r.URL.Query().Get("success"); s != "" {
+		messages = append(messages, s)
+	}
+	if e := r.URL.Query().Get("error"); e != "" {
+		messages = append(messages, "Error: "+e)
+	}
+
+	data := AddBaseData(r, map[string]interface{}{
+		"title":          "Kelola Knowledge Base",
+		"page_title":     "Kelola Knowledge Base",
+		"page_subtitle":  "Kategori dan artikel",
+		"nav_active":     "admin_kb",
+		"template_name":  "admin/kb_list",
+		"user":           user,
+		"categories":     categories,
+		"articles":       articles,
+		"messages":       messages,
+	})
+	RenderTemplate(w, "admin/kb_list", data)
+}
+
+func (h *AdminHandler) CreateKBCategoryForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	errMsg := r.URL.Query().Get("error")
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         "Tambah Kategori KB",
+		"page_title":    "Tambah Kategori",
+		"nav_active":    "admin_kb",
+		"template_name": "admin/kb_category_form",
+		"error":         errMsg,
+	})
+	RenderTemplate(w, "admin/kb_category_form", data)
+}
+
+func (h *AdminHandler) CreateKBCategoryPost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base"), http.StatusSeeOther)
+		return
+	}
+	name := strings.TrimSpace(r.FormValue("name"))
+	desc := strings.TrimSpace(r.FormValue("description"))
+	icon := strings.TrimSpace(r.FormValue("icon"))
+	colorClass := strings.TrimSpace(r.FormValue("color_class"))
+	if colorClass == "" {
+		colorClass = "green"
+	}
+	if name == "" {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/create")+"?error=Nama+wajib+diisi", http.StatusSeeOther)
+		return
+	}
+	slug := slugify(name)
+	var existing models.KBCategory
+	if config.DB.Where("slug = ?", slug).First(&existing).Error == nil {
+		slug = slug + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	}
+	cat := models.KBCategory{
+		Name:        name,
+		Slug:        slug,
+		Description: desc,
+		Icon:        icon,
+		ColorClass:  colorClass,
+	}
+	if err := config.DB.Create(&cat).Error; err != nil {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/create")+"?error=Gagal+menyimpan", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Kategori+berhasil+ditambah", http.StatusSeeOther)
+}
+
+func (h *AdminHandler) CreateKBArticleForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var categories []models.KBCategory
+	config.DB.Order("sort_order ASC, name ASC").Find(&categories)
+	errMsg := r.URL.Query().Get("error")
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         "Tambah Artikel KB",
+		"page_title":    "Tambah Artikel",
+		"nav_active":    "admin_kb",
+		"template_name": "admin/kb_article_form",
+		"categories":    categories,
+		"error":         errMsg,
+	})
+	RenderTemplate(w, "admin/kb_article_form", data)
+}
+
+func (h *AdminHandler) CreateKBArticlePost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base"), http.StatusSeeOther)
+		return
+	}
+	title := strings.TrimSpace(r.FormValue("title"))
+	content := r.FormValue("content")
+	categoryIDStr := r.FormValue("category_id")
+	readTimeStr := strings.TrimSpace(r.FormValue("read_time_minutes"))
+	if title == "" || categoryIDStr == "" {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/create")+"?error=Judul+dan+kategori+wajib", http.StatusSeeOther)
+		return
+	}
+	catID, _ := strconv.Atoi(categoryIDStr)
+	readTime, _ := strconv.Atoi(readTimeStr)
+	slug := slugify(title)
+	var existing models.KBArticle
+	if config.DB.Where("slug = ?", slug).First(&existing).Error == nil {
+		slug = slug + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+	}
+	art := models.KBArticle{
+		CategoryID:      uint(catID),
+		Title:           title,
+		Slug:            slug,
+		Content:         content,
+		ReadTimeMinutes: readTime,
+		Published:      true,
+	}
+	if err := config.DB.Create(&art).Error; err != nil {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/create")+"?error=Gagal+menyimpan", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Artikel+berhasil+ditambah", http.StatusSeeOther)
 }

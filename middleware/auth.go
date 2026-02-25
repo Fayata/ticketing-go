@@ -158,3 +158,15 @@ func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 		next.ServeHTTP(w, r)
 	}
 }
+
+// StaffOrSuperAdminRequired allows akses untuk staff atau super admin (mis. kelola Knowledge Base)
+func StaffOrSuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user := r.Context().Value(UserKey).(*models.User)
+		if !user.IsStaff && !user.IsSuperAdmin {
+			http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	}
+}

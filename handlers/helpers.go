@@ -161,6 +161,7 @@ func init() {
 			}
 			return result
 		},
+		"add": func(a, b int) int { return a + b },
 	}
 
 	// Load templates with functions

@@ -1,0 +1,133 @@
+{{define "tickets/knowledge_base_content"}}
+<div class="page-body kb-page-body">
+    <!-- Hero Search -->
+    <div class="kb-hero">
+        <span class="kb-hero-icon">📚</span>
+        <h2 class="kb-hero-title">Ada yang bisa kami bantu?</h2>
+        <p class="kb-hero-sub">Cari artikel, panduan, dan solusi dari artikel kami</p>
+
+        <form method="get" action="knowledge-base" class="search-wrap">
+            <span class="search-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input class="search-input" type="text" name="q" placeholder="Cari artikel, topik, atau pertanyaan..." value="{{.search_query}}">
+            <button type="submit" class="search-btn">Cari</button>
+        </form>
+
+        <div class="kb-stats">
+            <div class="kb-stat">
+                <div class="kb-stat-num">{{.total_articles}}</div>
+                <div class="kb-stat-label">Artikel</div>
+            </div>
+            <div class="kb-stat">
+                <div class="kb-stat-num">{{.total_categories}}</div>
+                <div class="kb-stat-label">Kategori</div>
+            </div>
+            <div class="kb-stat">
+                <div class="kb-stat-num">24/7</div>
+                <div class="kb-stat-label">Support</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kategori -->
+    <div class="categories-wrap">
+        <div class="section-header">
+            <h3 class="section-title">Telusuri Kategori</h3>
+            <a class="view-all-link" href="knowledge-base">Lihat Semua ›</a>
+        </div>
+
+        <div class="categories-grid">
+            {{range .categories}}
+            <a class="cat-card" href="knowledge-base?category={{.Category.Slug}}">
+                <div class="cat-icon-wrap {{.Category.ColorClass}}">{{if .Category.Icon}}{{.Category.Icon}}{{else}}📄{{end}}</div>
+                <div class="cat-name">{{.Category.Name}}</div>
+                <div class="cat-desc">{{.Category.Description}}</div>
+                <span class="cat-count">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                    {{.ArticleCount}} artikel
+                </span>
+            </a>
+            {{end}}
+            {{if not .categories}}
+            <p class="kb-empty-msg">Belum ada kategori. Staff dapat menambahkannya di menu Knowledge Base.</p>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- Artikel Populer + Baru Diperbarui -->
+    <div class="articles-wrap">
+        <div class="articles-layout">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🔥 Artikel Populer</span>
+                    <a class="view-all-link" href="knowledge-base">Lihat Semua ›</a>
+                </div>
+                <div class="article-list">
+                    {{range $i, $a := .popular_articles}}
+                    <a class="article-item" href="knowledge-base/article/{{$a.ID}}">
+                        <div class="article-num">{{add $i 1}}</div>
+                        <div class="article-body">
+                            <div class="article-title">{{$a.Title}}</div>
+                            <div class="article-meta">
+                                {{if $a.Category}}<span class="article-cat-badge {{$a.Category.ColorClass}}">{{$a.Category.Name}}</span>{{end}}
+                                <span>👁 {{$a.Views}} views</span>
+                                <span>{{$a.ReadTimeMinutes}} mnt baca</span>
+                            </div>
+                        </div>
+                        <span class="article-arrow">›</span>
+                    </a>
+                    {{end}}
+                    {{if not .popular_articles}}
+                    <div class="article-empty-inline">Belum ada artikel. Klik "Buat Tiket" jika butuh bantuan.</div>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🆕 Baru Diperbarui</span>
+                </div>
+                <div class="activity-list">
+                    {{range .recent_articles}}
+                    <a class="activity-item" href="knowledge-base/article/{{.ID}}" style="text-decoration:none;color:inherit;">
+                        <div class="activity-dot green"></div>
+                        <div>
+                            <div class="activity-text">{{.Title}}</div>
+                            <div class="activity-time">Diperbarui {{timeSince .UpdatedAt}} · {{if .Category}}{{.Category.Name}}{{else}}-{{end}}</div>
+                        </div>
+                    </a>
+                    {{end}}
+                    {{if not .recent_articles}}
+                    <div class="activity-item">
+                        <div class="activity-dot green"></div>
+                        <div class="activity-text">Belum ada artikel</div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Banner -->
+    <div class="feedback-wrap">
+        <div class="feedback-banner">
+            <div class="feedback-left">
+                <span class="feedback-emoji">🤔</span>
+                <div>
+                    <div class="feedback-title">Tidak menemukan jawaban yang Anda cari?</div>
+                    <div class="feedback-sub">Tim support kami siap membantu Anda 24/7 melalui tiket</div>
+                </div>
+            </div>
+            <div class="feedback-btns">
+                <a href="kirim-tiket" class="btn-outline-teal" style="text-decoration:none;">Hubungi Kami</a>
+                <a href="kirim-tiket" class="btn-solid-teal" style="text-decoration:none;">＋ Buat Tiket</a>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "tickets/knowledge_base"}}
+{{template "base" .}}
+{{end}}
