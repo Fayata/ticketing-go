@@ -442,6 +442,9 @@
       position: relative;
       display: inline-block;
     }
+    .notif-wrap.panel-open {
+      z-index: 1001;
+    }
 
     .notif-btn {
       width: 38px;
@@ -749,12 +752,14 @@
       
       const panel = document.getElementById('notifPanel');
       const btn = document.getElementById('notificationBtn');
+      const wrap = document.querySelector('.notif-wrap');
       const backdrop = document.createElement('div');
       backdrop.className = 'notif-backdrop';
       document.body.appendChild(backdrop);
       
       function openPanel() {
         panel.classList.add('open');
+        if (wrap) wrap.classList.add('panel-open');
         backdrop.classList.add('show');
         btn.setAttribute('aria-expanded', 'true');
         loadNotifications();
@@ -762,6 +767,7 @@
       
       function closePanel() {
         panel.classList.remove('open');
+        if (wrap) wrap.classList.remove('panel-open');
         backdrop.classList.remove('show');
         btn.setAttribute('aria-expanded', 'false');
       }
