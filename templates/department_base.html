@@ -81,6 +81,12 @@
                     {{template "tickets/department_ticket_detail_content" .}}
                 {{else if eq .template_name "tickets/department_all_tickets"}}
                     {{template "tickets/department_all_tickets_content" .}}
+                {{else if eq .template_name "department_kb_list"}}
+                    {{template "admin/kb_list_content" .}}
+                {{else if eq .template_name "department_kb_category_form"}}
+                    {{template "admin/kb_category_form_content" .}}
+                {{else if eq .template_name "department_kb_article_form"}}
+                    {{template "admin/kb_article_form_content" .}}
                 {{else}}
                     {{template "tickets/department_dashboard_content" .}}
                 {{end}}

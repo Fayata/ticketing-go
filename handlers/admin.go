@@ -383,6 +383,12 @@ func (h *AdminHandler) ListKBAdmin(w http.ResponseWriter, r *http.Request) {
 		"articles":       articles,
 		"messages":       messages,
 	})
+	if user != nil && user.IsStaff {
+		data["nav_active"] = "kb_admin"
+		data["template_name"] = "department_kb_list"
+		RenderTemplate(w, "department_kb_list", data)
+		return
+	}
 	RenderTemplate(w, "admin/kb_list", data)
 }
 
@@ -392,6 +398,13 @@ func (h *AdminHandler) CreateKBCategoryForm(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	errMsg := r.URL.Query().Get("error")
+	userVal := GetUserFromContext(r)
+	var user *models.User
+	if userVal != nil {
+		if u, ok := userVal.(*models.User); ok {
+			user = u
+		}
+	}
 	data := AddBaseData(r, map[string]interface{}{
 		"title":         "Tambah Kategori KB",
 		"page_title":    "Tambah Kategori",
@@ -399,6 +412,12 @@ func (h *AdminHandler) CreateKBCategoryForm(w http.ResponseWriter, r *http.Reque
 		"template_name": "admin/kb_category_form",
 		"error":         errMsg,
 	})
+	if user != nil && user.IsStaff {
+		data["nav_active"] = "kb_admin"
+		data["template_name"] = "department_kb_category_form"
+		RenderTemplate(w, "department_kb_category_form", data)
+		return
+	}
 	RenderTemplate(w, "admin/kb_category_form", data)
 }
 
@@ -445,6 +464,13 @@ func (h *AdminHandler) CreateKBArticleForm(w http.ResponseWriter, r *http.Reques
 	var categories []models.KBCategory
 	config.DB.Order("sort_order ASC, name ASC").Find(&categories)
 	errMsg := r.URL.Query().Get("error")
+	userVal := GetUserFromContext(r)
+	var user *models.User
+	if userVal != nil {
+		if u, ok := userVal.(*models.User); ok {
+			user = u
+		}
+	}
 	data := AddBaseData(r, map[string]interface{}{
 		"title":         "Tambah Artikel KB",
 		"page_title":    "Tambah Artikel",
@@ -453,6 +479,12 @@ func (h *AdminHandler) CreateKBArticleForm(w http.ResponseWriter, r *http.Reques
 		"categories":    categories,
 		"error":         errMsg,
 	})
+	if user != nil && user.IsStaff {
+		data["nav_active"] = "kb_admin"
+		data["template_name"] = "department_kb_article_form"
+		RenderTemplate(w, "department_kb_article_form", data)
+		return
+	}
 	RenderTemplate(w, "admin/kb_article_form", data)
 }
 

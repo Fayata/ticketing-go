@@ -2,18 +2,23 @@
 {{template "base" .}}
 {{end}}
 
+{{define "department_kb_article_form"}}
+{{template "department_base" .}}
+{{end}}
+
 {{define "admin/kb_article_form_content"}}
+<div class="kb-admin">
 <div class="content">
-    <div class="card" style="max-width: 700px;">
+    <div class="card kb-admin-form-card kb-admin-form-card--wide">
         <div class="card-header"><h2>Tambah Artikel</h2></div>
         <div class="card-body">
-            {{if .error}}<div class="alert alert-error" style="margin-bottom:1rem;">{{.error}}</div>{{end}}
+            {{if .error}}<div class="alert alert-error">{{.error}}</div>{{end}}
             <form method="post" action="admin/knowledge-base/articles/create/post">
-                <div class="form-group" style="margin-bottom:1rem;">
+                <div class="form-group">
                     <label class="form-label">Judul *</label>
                     <input type="text" name="title" class="form-input" required placeholder="Judul artikel">
                 </div>
-                <div class="form-group" style="margin-bottom:1rem;">
+                <div class="form-group">
                     <label class="form-label">Kategori *</label>
                     <select name="category_id" class="form-input" required>
                         <option value="">-- Pilih kategori --</option>
@@ -22,20 +27,21 @@
                         {{end}}
                     </select>
                 </div>
-                <div class="form-group" style="margin-bottom:1rem;">
+                <div class="form-group">
                     <label class="form-label">Isi (teks atau HTML)</label>
                     <textarea name="content" class="form-input" rows="12" placeholder="Konten artikel..."></textarea>
                 </div>
-                <div class="form-group" style="margin-bottom:1rem;">
+                <div class="form-group">
                     <label class="form-label">Estimasi baca (menit)</label>
                     <input type="number" name="read_time_minutes" class="form-input" value="5" min="0">
                 </div>
-                <div style="display:flex; gap:0.75rem;">
+                <div class="kb-form-actions">
                     <button type="submit" class="btn-primary">Simpan</button>
-                    <a href="admin/knowledge-base" class="btn-outline-teal" style="text-decoration:none; display:inline-flex; align-items:center;">Batal</a>
+                    <a href="admin/knowledge-base" class="btn-outline-teal">Batal</a>
                 </div>
             </form>
         </div>
     </div>
+</div>
 </div>
 {{end}}

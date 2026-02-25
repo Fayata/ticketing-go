@@ -2,66 +2,59 @@
 {{template "base" .}}
 {{end}}
 
-{{define "admin/kb_list_content"}}
-<div class="content">
-    {{if .messages}}{{range .messages}}<div class="alert alert-success" style="margin-bottom:1rem;">{{.}}</div>{{end}}{{end}}
-    {{if .error}}<div class="alert alert-error" style="margin-bottom:1rem;">{{.error}}</div>{{end}}
+{{define "department_kb_list"}}
+{{template "department_base" .}}
+{{end}}
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
-        <h2 style="font-size:1.25rem; font-weight:700;">Kelola Knowledge Base</h2>
-        <div style="display:flex; gap:0.75rem;">
+{{define "admin/kb_list_content"}}
+<div class="kb-admin">
+<div class="content">
+    {{if .messages}}{{range .messages}}<div class="alert alert-success">{{.}}</div>{{end}}{{end}}
+    {{if .error}}<div class="alert alert-error">{{.error}}</div>{{end}}
+
+    <div class="kb-admin-header">
+        <h2 class="kb-admin-title">Kelola Knowledge Base</h2>
+        <div class="kb-admin-actions">
             <a href="admin/knowledge-base/categories/create" class="btn-primary">＋ Kategori</a>
             <a href="admin/knowledge-base/articles/create" class="btn-primary">＋ Artikel</a>
         </div>
     </div>
 
-    <div class="card" style="margin-bottom:1.5rem;">
+    <div class="card kb-admin-card">
         <div class="card-header"><h2>Kategori</h2></div>
         <div class="card-body">
             {{if .categories}}
-            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                <thead style="background:var(--bg-secondary); text-align:left;">
-                    <tr><th style="padding:0.75rem; border-bottom:1px solid var(--border-color);">Nama</th><th style="padding:0.75rem; border-bottom:1px solid var(--border-color);">Slug</th><th style="padding:0.75rem; border-bottom:1px solid var(--border-color);">Warna</th></tr>
-                </thead>
+            <table class="kb-admin-table">
+                <thead><tr><th>Nama</th><th>Slug</th><th>Warna</th></tr></thead>
                 <tbody>
                     {{range .categories}}
-                    <tr style="border-bottom:1px solid var(--border-color);">
-                        <td style="padding:0.75rem;">{{.Name}}</td>
-                        <td style="padding:0.75rem; color:var(--text-secondary);">{{.Slug}}</td>
-                        <td style="padding:0.75rem;"><span class="article-cat-badge {{.ColorClass}}">{{.ColorClass}}</span></td>
-                    </tr>
+                    <tr><td>{{.Name}}</td><td class="text-muted">{{.Slug}}</td><td><span class="article-cat-badge {{.ColorClass}}">{{.ColorClass}}</span></td></tr>
                     {{end}}
                 </tbody>
             </table>
             {{else}}
-            <p style="padding:1.5rem; color:var(--text-secondary);">Belum ada kategori. <a href="admin/knowledge-base/categories/create" class="view-all-link">Tambah kategori</a></p>
+            <p class="kb-admin-empty">Belum ada kategori. <a href="admin/knowledge-base/categories/create" class="view-all-link">Tambah kategori</a></p>
             {{end}}
         </div>
     </div>
 
-    <div class="card">
+    <div class="card kb-admin-card">
         <div class="card-header"><h2>Artikel</h2></div>
         <div class="card-body">
             {{if .articles}}
-            <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-                <thead style="background:var(--bg-secondary); text-align:left;">
-                    <tr><th style="padding:0.75rem; border-bottom:1px solid var(--border-color);">Judul</th><th style="padding:0.75rem; border-bottom:1px solid var(--border-color);">Kategori</th><th style="padding:0.75rem; border-bottom:1px solid var(--border-color);">Views</th><th style="padding:0.75rem; border-bottom:1px solid var(--border-color);">Updated</th></tr>
-                </thead>
+            <table class="kb-admin-table">
+                <thead><tr><th>Judul</th><th>Kategori</th><th>Views</th><th>Updated</th></tr></thead>
                 <tbody>
                     {{range .articles}}
-                    <tr style="border-bottom:1px solid var(--border-color);">
-                        <td style="padding:0.75rem;"><a href="knowledge-base/article/{{.ID}}" class="view-all-link">{{.Title}}</a></td>
-                        <td style="padding:0.75rem;">{{if .Category}}{{.Category.Name}}{{else}}-{{end}}</td>
-                        <td style="padding:0.75rem;">{{.Views}}</td>
-                        <td style="padding:0.75rem; color:var(--text-secondary);">{{dateShort .UpdatedAt}}</td>
-                    </tr>
+                    <tr><td><a href="knowledge-base/article/{{.ID}}" class="view-all-link">{{.Title}}</a></td><td>{{if .Category}}{{.Category.Name}}{{else}}-{{end}}</td><td>{{.Views}}</td><td class="text-muted">{{dateShort .UpdatedAt}}</td></tr>
                     {{end}}
                 </tbody>
             </table>
             {{else}}
-            <p style="padding:1.5rem; color:var(--text-secondary);">Belum ada artikel. <a href="admin/knowledge-base/articles/create" class="view-all-link">Tambah artikel</a></p>
+            <p class="kb-admin-empty">Belum ada artikel. <a href="admin/knowledge-base/articles/create" class="view-all-link">Tambah artikel</a></p>
             {{end}}
         </div>
     </div>
+</div>
 </div>
 {{end}}

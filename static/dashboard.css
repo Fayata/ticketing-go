@@ -1231,6 +1231,56 @@ body {
 .article-cat-badge.amber  { background: #fef3c7; color: #d97706; }
 .article-cat-badge.rose   { background: #ffe4e6; color: #e11d48; }
 .article-cat-badge.violet { background: #ede9fe; color: #6d28d9; }
+
+/* KB Admin form & list - tema konsisten */
+.kb-admin .content { padding: 0; }
+.kb-admin .card { max-width: 500px; }
+.kb-admin .card-body { padding: 1.5rem; }
+.kb-admin .form-group { margin-bottom: 1rem; }
+.kb-admin .form-label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.375rem; }
+.kb-admin .form-input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+.kb-admin textarea.form-input { min-height: 80px; resize: vertical; }
+.kb-admin .kb-picker-wrap { position: relative; }
+.kb-admin .kb-emoji-trigger,
+.kb-admin .kb-color-trigger { width: 100%; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 0.5rem; }
+.kb-admin .kb-emoji-dropdown,
+.kb-admin .kb-color-dropdown {
+    position: absolute; left: 0; top: 100%; margin-top: 4px;
+    background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg); z-index: 100; padding: 12px; min-width: 200px;
+}
+.kb-admin .kb-emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; max-height: 200px; overflow-y: auto; }
+.kb-admin .kb-emoji-cell {
+    width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; cursor: pointer; border-radius: 6px; border: none; background: transparent;
+}
+.kb-admin .kb-emoji-cell:hover { background: var(--bg-secondary); }
+.kb-admin .kb-color-palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.kb-admin .kb-color-cell {
+    width: 40px; height: 40px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; padding: 0;
+}
+.kb-admin .kb-color-cell:hover { border-color: var(--text-secondary); }
+.kb-admin .kb-color-cell.selected { border-color: var(--primary-blue); box-shadow: 0 0 0 1px var(--primary-blue); }
+.kb-admin .kb-color-sample-wrap { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color); }
+.kb-admin .kb-color-sample-label { font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+.kb-admin .kb-color-sample { height: 28px; border-radius: 4px; border: 1px solid var(--border-color); }
+.kb-admin .kb-emoji-preview { font-size: 1.25rem; }
+.kb-admin .kb-color-swatch { width: 24px; height: 24px; border-radius: 4px; background: #d1fae5; border: 1px solid rgba(5, 150, 105, 0.3); flex-shrink: 0; }
+.kb-admin .kb-form-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+.kb-admin .kb-admin-form-card { max-width: 500px; }
+.kb-admin .kb-admin-form-card--wide { max-width: 700px; }
+.kb-admin .kb-admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+.kb-admin .kb-admin-title { font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--text-primary); }
+.kb-admin .kb-admin-actions { display: flex; gap: 0.75rem; }
+.kb-admin .kb-admin-card { margin-bottom: 1.5rem; }
+.kb-admin .kb-admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.kb-admin .kb-admin-table thead { background: var(--bg-secondary); text-align: left; }
+.kb-admin .kb-admin-table th, .kb-admin .kb-admin-table td { padding: 0.75rem; border-bottom: 1px solid var(--border-color); }
+.kb-admin .kb-admin-table th { font-weight: 600; color: var(--text-secondary); }
+.kb-admin .kb-admin-empty { padding: 1.5rem; color: var(--text-secondary); margin: 0; }
+.kb-admin .text-muted { color: var(--text-secondary); }
+.kb-admin .alert { margin-bottom: 1rem; }
+
 .article-arrow { color: var(--text-secondary); font-size: 0.9rem; flex-shrink: 0; margin-top: 0.1rem; transition: color 0.18s, transform 0.18s; }
 .article-item:hover .article-arrow { color: var(--primary-blue); transform: translateX(3px); }
 .article-empty-inline { padding: 1.5rem; text-align: center; color: var(--text-secondary); font-size: 0.875rem; }
