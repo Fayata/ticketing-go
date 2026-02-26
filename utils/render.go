@@ -266,9 +266,15 @@ func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interf
 		if u, ok := user.(*models.User); ok {
 			unreadCount, _ := models.GetUnreadCount(config.DB, u.ID)
 			data["unread_count"] = unreadCount
+			unreadReplies, _ := models.GetUnreadRepliesCount(config.DB, u.ID)
+			data["unread_replies_count"] = unreadReplies
 		}
 	} else {
 		data["unread_count"] = 0
+		data["unread_replies_count"] = 0
+	}
+	if data["unread_replies_count"] == nil {
+		data["unread_replies_count"] = 0
 	}
 
 	return data

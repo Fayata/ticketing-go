@@ -73,3 +73,12 @@ func GetUnreadCount(db *gorm.DB, userID uint) (int64, error) {
 		Count(&count).Error
 	return count, err
 }
+
+// Hitung notif balasan (reply) yang belum dibaca — untuk badge "Tiket Saya"
+func GetUnreadRepliesCount(db *gorm.DB, userID uint) (int64, error) {
+	var count int64
+	err := db.Model(&Notification{}).
+		Where("user_id = ? AND type = ? AND is_read = ?", userID, NotificationTypeReply, false).
+		Count(&count).Error
+	return count, err
+}
