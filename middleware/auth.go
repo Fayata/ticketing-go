@@ -18,7 +18,7 @@ const (
 	ActiveTicketsCountKey contextKey = "active_tickets_count"
 )
 
-// AuthRequired middleware untuk memastikan user sudah login
+// AuthRequired: wajib login, user dimuat ke context.
 func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sess, err := config.Store.Get(r, "session")
@@ -33,7 +33,6 @@ func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Load user dari database
 		var user models.User
 		if err := config.DB.Preload("Groups").Preload("Department").First(&user, userID).Error; err != nil {
 			sess.Options.MaxAge = -1
@@ -42,11 +41,9 @@ func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Set user ke context
 		ctx := context.WithValue(r.Context(), UserKey, &user)
 		ctx = context.WithValue(ctx, AuthenticatedKey, true)
 
-		// Count active tickets
 		var activeCount int64
 		config.DB.Model(&models.Ticket{}).
 			Where("created_by_id = ? AND status != ?", user.ID, models.StatusClosed).
@@ -57,8 +54,7 @@ func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// PortalUserRequired middleware: hanya untuk pengguna portal (bukan staff).
-// Staff selalu diarahkan ke dashboard departemen agar tampilan tidak tercampur dengan user.
+// PortalUserRequired: hanya user portal (bukan staff/admin). Staff/admin diarahkan ke area masing-masing.
 func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -67,7 +63,7 @@ func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Akses ini khusus untuk akun pengguna portal.", http.StatusForbidden)
 			return
 		}
-		// Staff & Admin jangan akses halaman user — staff ke departemen, admin ke area admin
+		// Staff/admin tidak akses halaman user
 		if user.IsSuperAdmin {
 			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
 			return
@@ -81,14 +77,14 @@ func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// GuestOnly middleware untuk halaman yang hanya boleh diakses user yang belum login
+// GuestOnly: hanya untuk yang belum login. Sudah login di-redirect sesuai role.
 func GuestOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sess, err := config.Store.Get(r, "session")
 		if err == nil {
 			userID := sess.Values["user_id"]
 			if userID != nil {
-				// Redirect sesuai role: admin -> area admin, staff -> dashboard departemen, user -> dashboard
+				// Redirect sesuai role
 				var user models.User
 				if err := config.DB.Select("is_staff", "is_super_admin").First(&user, userID).Error; err == nil {
 					if user.IsSuperAdmin {
@@ -109,7 +105,7 @@ func GuestOnly(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// SetUserLocals middleware untuk set user info ke semua template
+// SetUserLocals: isi context dengan user untuk template.
 func SetUserLocals(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess, err := config.Store.Get(r, "session")
@@ -121,7 +117,6 @@ func SetUserLocals(next http.Handler) http.Handler {
 					ctx := context.WithValue(r.Context(), UserKey, &user)
 					ctx = context.WithValue(ctx, AuthenticatedKey, true)
 
-					// Count active tickets
 					var activeCount int64
 					config.DB.Model(&models.Ticket{}).
 						Where("created_by_id = ? AND status != ?", user.ID, models.StatusClosed).
@@ -140,18 +135,19 @@ func SetUserLocals(next http.Handler) http.Handler {
 	})
 }
 
-// LoggingMiddleware logs all HTTP requests
+// LoggingMiddleware: log hanya request yang mengubah data (login, POST user, CUD admin/staff). GET tidak dicatat.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
-		log.Printf("%s %s %s", r.Method, r.RequestURI, time.Since(start))
-		
+		m := r.Method
+		if m == http.MethodPost || m == http.MethodPut || m == http.MethodDelete || m == http.MethodPatch {
+			log.Printf("[%s] %s %s", m, r.RequestURI, time.Since(start))
+		}
 	})
-	
 }
 
-// DepartmentRequired: hanya staff yang boleh akses. User biasa tidak bisa akses area staff/departemen.
+// DepartmentRequired: hanya staff. User diarahkan ke dashboard.
 func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -165,7 +161,7 @@ func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// SuperAdminRequired: hanya super admin yang boleh akses. User biasa dan staff tidak bisa akses area admin.
+// SuperAdminRequired: hanya super admin. Lainnya diarahkan ke dashboard/departemen.
 func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -183,7 +179,7 @@ func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// StaffOrSuperAdminRequired: hanya staff atau super admin. User biasa tidak bisa akses (mis. KB admin).
+// StaffOrSuperAdminRequired: staff atau super admin saja (mis. KB admin).
 func StaffOrSuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)

@@ -20,31 +20,22 @@ import (
 var templates *template.Template
 
 func main() {
-	// Load configuration
 	cfg := config.LoadConfig()
-
-	// Initialize database
 	if err := config.InitDatabase(cfg); err != nil {
 		log.Fatal(err)
 	}
-	config.InitDatabase(cfg)
 	config.InitSession(cfg.SessionSecret, cfg.SessionSecure)
 	utils.InitTemplates()
 
-	// Init Utils
 	jwtService := utils.NewJWTService(cfg)
 	emailService := utils.NewEmailService(cfg)
-
 	authService := services.NewAuthService(cfg, emailService, jwtService)
-
-	// Init Controllers
 	authController := controllers.NewAuthController(authService)
 	adminHandler := handlers.NewAdminHandler(cfg)
 
 	mux := http.NewServeMux()
-	// mux := http.NewServeMux()
 
-	// Auto migrate models
+	// Migrasi model DB
 	if err := config.AutoMigrate(
 		&models.User{},
 		&models.Group{},
@@ -60,10 +51,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Initialize session store
-	config.InitSession(cfg.SessionSecret, cfg.SessionSecure)
-
-	// Load templates
 	templates = loadTemplates()
 	dashboardHandler := handlers.NewDashboardHandler(cfg)
 	ticketHandler := handlers.NewTicketHandler(cfg, emailService)
@@ -71,14 +58,11 @@ func main() {
 	departementHandler := handlers.NewDepartmentHandler(cfg, emailService)
 	notificationHandler := handlers.NewNotificationHandler(cfg)
 
-	// Routes
-	// mux := http.NewServeMux()
-
-	// Static files
+	// Static: css, js, images di bawah ./static
 	fs := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// Public routes
+	// Rute publik
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -87,17 +71,14 @@ func main() {
 		http.Redirect(w, r, config.Path("/login"), http.StatusSeeOther)
 	})
 
-	// mux.HandleFunc("/login", middleware.GuestOnly(authHandler.ShowLogin))
-	// mux.HandleFunc("/login-post", authHandler.Login)
-	// mux.HandleFunc("/register", middleware.GuestOnly(authHandler.ShowRegister))
-	// mux.HandleFunc("/register-post", authHandler.Register)
-	// mux.HandleFunc("/logout", authHandler.Logout)
 	mux.HandleFunc("/login", middleware.GuestOnly(authController.Login))
 	mux.HandleFunc("/register", middleware.GuestOnly(authController.Register))
 	mux.HandleFunc("/verify-email", authController.VerifyEmail)
 	mux.HandleFunc("/logout", authController.Logout)
 	mux.HandleFunc("/forgot-password", middleware.GuestOnly(authController.ForgotPassword))
 	mux.HandleFunc("/reset-password", middleware.GuestOnly(authController.ResetPassword))
+
+	// Rute admin (super admin) & staff (departemen)
 	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard)))
 	mux.HandleFunc("/admin/users", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListUsers)))
 	mux.HandleFunc("/admin/users/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateUserForm)))
@@ -117,31 +98,28 @@ func main() {
 	mux.HandleFunc("/department/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
 	mux.HandleFunc("/department/all-tickets", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets)))
 
-	// Protected routes
+	// Rute user (portal)
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard)))
 	mux.HandleFunc("/tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowMyTickets)))
 	mux.HandleFunc("/tiket/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleTicketDetail)))
 	mux.HandleFunc("/kirim-tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleCreateTicket)))
 	mux.HandleFunc("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowTicketSuccess)))
-	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // Public route (uses token auth)
+	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // rating pakai token
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
 	mux.HandleFunc("/knowledge-base", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKnowledgeBase)))
 	mux.HandleFunc("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKBArticle)))
 	
-	// Notification API routes
+	// API notifikasi
 	mux.HandleFunc("/api/notifications", middleware.AuthRequired(notificationHandler.GetNotifications))
 	mux.HandleFunc("/api/notifications/read", middleware.AuthRequired(notificationHandler.MarkAsRead))
 	mux.HandleFunc("/api/notifications/read-all", middleware.AuthRequired(notificationHandler.MarkAllAsRead))
 	mux.HandleFunc("/api/notifications/count", middleware.AuthRequired(notificationHandler.GetUnreadCount))
 
-	// Seed Data
 	seedDefaultData()
 
-	// Start Server
 	log.Printf("🚀 Server starting on port %s", cfg.Port)
 	log.Printf("🌐 Visit: http://localhost:%s", cfg.Port)
 
-	// Apply logging middleware
 	loggedMux := middleware.LoggingMiddleware(mux)
 
 	if err := http.ListenAndServe(":"+cfg.Port, loggedMux); err != nil {

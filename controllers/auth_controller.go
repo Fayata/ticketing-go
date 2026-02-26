@@ -55,14 +55,11 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		sess.Values["username"] = user.Username
 		sess.Save(r, w)
 
-		// --- PERUBAHAN 2: Logika Redirect sesuai Role (Solusi Masalah #3) ---
-		// Prioritaskan parameter 'next' jika ada
 		if nextParam != "" {
 			http.Redirect(w, r, config.Path(nextParam), http.StatusSeeOther)
 			return
 		}
-
-		// Jika tidak ada 'next', cek role: Admin -> area admin, Staff -> dashboard departemen, User -> dashboard
+		// Redirect sesuai role: admin / staff / user
 		if user.IsSuperAdmin {
 			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
 		} else if user.IsStaff {
@@ -95,7 +92,6 @@ func (c *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// --- PERUBAHAN 3: Pesan yang lebih jelas (Solusi Masalah #2) ---
 		http.Redirect(w, r, config.Path("/login")+"?success=Akun+berhasil+dibuat.+Cek+email+Anda+untuk+verifikasi+sebelum+login.", http.StatusSeeOther)
 	}
 }

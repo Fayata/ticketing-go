@@ -19,17 +19,14 @@ func NewNotificationHandler(cfg *config.Config) *NotificationHandler {
 	return &NotificationHandler{cfg: cfg}
 }
 
-// GetNotifications returns notifications for the current user
+// GetNotifications: daftar notifikasi user (filter: semua/belum/tiket).
 func (h *NotificationHandler) GetNotifications(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	user := GetUserFromContext(r).(*models.User)
-	
-	// Get filter from query
-	filter := r.URL.Query().Get("filter") // semua, belum, tiket
+	filter := r.URL.Query().Get("filter")
 	
 	var notifications []models.Notification
 	query := config.DB.Where("user_id = ?", user.ID)
@@ -99,7 +96,7 @@ func (h *NotificationHandler) GetNotifications(w http.ResponseWriter, r *http.Re
 	})
 }
 
-// MarkAsRead marks a notification as read
+// MarkAsRead: tandai satu notifikasi sebagai dibaca.
 func (h *NotificationHandler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -132,7 +129,7 @@ func (h *NotificationHandler) MarkAsRead(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// MarkAllAsRead marks all notifications as read
+// MarkAllAsRead: tandai semua notifikasi user sebagai dibaca.
 func (h *NotificationHandler) MarkAllAsRead(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -152,7 +149,7 @@ func (h *NotificationHandler) MarkAllAsRead(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// GetUnreadCount returns unread notification count
+// GetUnreadCount: jumlah notifikasi belum dibaca.
 func (h *NotificationHandler) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -173,7 +170,7 @@ func (h *NotificationHandler) GetUnreadCount(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-// Helper functions
+// Helper icon/warna per tipe notifikasi
 func getNotificationIconAndColor(notifType models.NotificationType) (icon, color string) {
 	switch notifType {
 	case models.NotificationTypeTicket:
@@ -211,7 +208,7 @@ func formatTimeAgo(t time.Time) string {
 	return t.Format("02 Jan 2006")
 }
 
-// CreateNotificationForTicketReply creates notification when ticket gets a reply
+// CreateNotificationForTicketReply: buat notif saat tiket dapat balasan.
 func CreateNotificationForTicketReply(ticket *models.Ticket, reply *models.TicketReply) {
 	// Notify ticket owner if reply is from staff
 	if reply.User.IsStaff && ticket.CreatedByID != reply.UserID {
@@ -240,7 +237,7 @@ func CreateNotificationForTicketReply(ticket *models.Ticket, reply *models.Ticke
 	}
 }
 
-// CreateNotificationForTicketStatusChange creates notification when ticket status changes
+// CreateNotificationForTicketStatusChange: buat notif saat status tiket berubah.
 func CreateNotificationForTicketStatusChange(ticket *models.Ticket, oldStatus models.TicketStatus) {
 	if ticket.Status == models.StatusClosed && oldStatus != models.StatusClosed {
 		models.CreateNotification(
