@@ -6,7 +6,7 @@
             <p>Tim support kami siap membantu Anda 24/7. Buat tiket sekarang atau cari jawaban di Knowledge Base.</p>
             <div class="banner-actions">
                 <a href="kirim-tiket" class="btn-white">Buat Tiket Baru</a>
-                <a href="#" class="btn-outline" onclick="showCustomAlert('Fitur Knowledge Base akan segera hadir!'); return false;">Lihat Knowledge Base</a>
+                <a href="knowledge-base" class="btn-outline" onclick="showCustomAlert('Fitur Knowledge Base akan segera hadir!'); return false;">Lihat Knowledge Base</a>
             </div>
         </div>
         <div class="banner-icon">
@@ -207,24 +207,17 @@
             </div>
             <div class="card-body">
                 {{if .popular_articles}}
-                    {{range .popular_articles}}
-                    <a href="knowledge-base/article/{{.ID}}" class="kb-item">
-                        <div class="kb-content">
-                            <div class="kb-icon">
-                                {{if .Category.Icon}}<span class="kb-icon-emoji">{{.Category.Icon}}</span>{{else}}
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                </svg>{{end}}
-                            </div>
-                            <div class="kb-text">
-                                <h4>{{.Title}}</h4>
-                                <div class="kb-meta">
-                                    <span>{{if .Category}}{{.Category.Name}}{{else}}-{{end}}</span>
-                                    <span>•</span>
-                                    <span>{{.Views}} views</span>
-                                </div>
+                    {{range $i, $a := .popular_articles}}
+                    <a href="knowledge-base/article/{{$a.ID}}" class="article-item" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;border-radius:8px;text-decoration:none;color:inherit;border:1px solid var(--border-color);margin-bottom:0.5rem;">
+                        <div style="width:1.75rem;height:1.75rem;border-radius:50%;background:var(--primary-blue);color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">{{add $i 1}}</div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:600;color:var(--text-primary);">{{$a.Title}}</div>
+                            <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem;">
+                                {{if $a.Category}}<span class="article-cat-badge {{$a.Category.ColorClass}}">{{$a.Category.Name}}</span>{{end}}
+                                <span>{{$a.Views}} views</span>
                             </div>
                         </div>
+                        <span style="color:var(--text-light);">›</span>
                     </a>
                     {{end}}
                 {{else}}

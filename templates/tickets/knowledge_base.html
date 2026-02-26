@@ -6,12 +6,25 @@
         <h2 class="kb-hero-title">Ada yang bisa kami bantu?</h2>
         <p class="kb-hero-sub">Cari artikel, panduan, dan solusi dari artikel kami</p>
 
-        <form method="get" action="knowledge-base" class="search-wrap">
-            <span class="search-icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </span>
-            <input class="search-input" type="text" name="q" placeholder="Cari artikel, topik, atau pertanyaan..." value="{{.search_query}}">
-            <button type="submit" class="search-btn">Cari</button>
+        <form method="get" action="knowledge-base" class="kb-search-form">
+            <div class="kb-filter-wrap">
+                <select name="category" class="kb-filter-select" aria-label="Filter kategori">
+                    <option value="">Semua kategori</option>
+                    {{range .categories}}
+                    <option value="{{.Category.Slug}}" {{if eq $.selected_category .Category.Slug}}selected{{end}}>{{.Category.Name}}</option>
+                    {{end}}
+                </select>
+                <span class="kb-filter-arrow">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+            </div>
+            <div class="search-wrap">
+                <span class="search-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </span>
+                <input class="search-input" type="text" name="q" placeholder="Cari artikel, topik, atau pertanyaan..." value="{{.search_query}}">
+                <button type="submit" class="search-btn">Cari</button>
+            </div>
         </form>
 
         <div class="kb-stats">
@@ -30,11 +43,42 @@
         </div>
     </div>
 
+    {{if .show_search_results}}
+    <!-- Hasil Pencarian -->
+    <div class="articles-wrap search-results-wrap">
+        <div class="section-header">
+            <h3 class="section-title">Hasil pencarian{{if .search_query}} untuk "{{.search_query}}"{{end}}{{if .selected_category}}{{range .categories}}{{if eq .Category.Slug $.selected_category}} · {{.Category.Name}}{{end}}{{end}}{{end}}</h3>
+            <a class="view-all-link" href="knowledge-base">Hapus filter</a>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="article-list">
+                    {{range $i, $a := .search_results}}
+                    <a class="article-item" href="knowledge-base/article/{{$a.ID}}">
+                        <div class="article-num">{{add $i 1}}</div>
+                        <div class="article-body">
+                            <div class="article-title">{{$a.Title}}</div>
+                            <div class="article-meta">
+                                {{if $a.Category}}<span class="article-cat-badge {{$a.Category.ColorClass}}">{{$a.Category.Name}}</span>{{end}}
+                                <span>{{$a.Views}} views</span>
+                            </div>
+                        </div>
+                        <span class="article-arrow">›</span>
+                    </a>
+                    {{end}}
+                    {{if not .search_results}}
+                    <div class="article-empty-inline">Tidak ada artikel yang cocok. Coba kata kunci lain atau pilih kategori berbeda.</div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+    {{else}}
     <!-- Kategori -->
     <div class="categories-wrap">
         <div class="section-header">
             <h3 class="section-title">Telusuri Kategori</h3>
-            <a class="view-all-link" href="knowledge-base">Lihat Semua ›</a>
+            <a class="view-all-link" href="knowledge-base?view=all">Lihat Semua ›</a>
         </div>
 
         <div class="categories-grid">
@@ -55,13 +99,46 @@
         </div>
     </div>
 
+    {{end}}
+    {{if not .show_search_results}}
+    {{if .view_all}}
+    <!-- Semua Artikel (Lihat Semua) -->
+    <div class="articles-wrap">
+        <div class="section-header">
+            <h3 class="section-title">Semua Artikel</h3>
+            <a class="view-all-link" href="knowledge-base">‹ Kembali ke ringkasan</a>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="article-list">
+                    {{range $i, $a := .all_articles}}
+                    <a class="article-item" href="knowledge-base/article/{{$a.ID}}">
+                        <div class="article-num">{{add $i 1}}</div>
+                        <div class="article-body">
+                            <div class="article-title">{{$a.Title}}</div>
+                            <div class="article-meta">
+                                {{if $a.Category}}<span class="article-cat-badge {{$a.Category.ColorClass}}">{{$a.Category.Name}}</span>{{end}}
+                                <span>{{$a.Views}} views</span>
+                            </div>
+                        </div>
+                        <span class="article-arrow">›</span>
+                    </a>
+                    {{end}}
+                    {{if not .all_articles}}
+                    <div class="article-empty-inline">Belum ada artikel.</div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+    </div>
+    {{else}}
     <!-- Artikel Populer + Baru Diperbarui -->
     <div class="articles-wrap">
         <div class="articles-layout">
             <div class="card">
                 <div class="card-header">
                     <span class="card-title">Artikel Populer</span>
-                    <a class="view-all-link" href="knowledge-base">Lihat Semua ›</a>
+                    <a class="view-all-link" href="knowledge-base?view=all">Lihat Semua ›</a>
                 </div>
                 <div class="article-list">
                     {{range $i, $a := .popular_articles}}
@@ -71,8 +148,7 @@
                             <div class="article-title">{{$a.Title}}</div>
                             <div class="article-meta">
                                 {{if $a.Category}}<span class="article-cat-badge {{$a.Category.ColorClass}}">{{$a.Category.Name}}</span>{{end}}
-                                <span>👁 {{$a.Views}} views</span>
-                                <span>{{$a.ReadTimeMinutes}} mnt baca</span>
+                                <span>{{$a.Views}} views</span>
                             </div>
                         </div>
                         <span class="article-arrow">›</span>
@@ -108,6 +184,8 @@
             </div>
         </div>
     </div>
+    {{end}}
+    {{end}}
 
     <!-- Feedback Banner -->
     <div class="feedback-wrap">

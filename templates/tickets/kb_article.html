@@ -1,19 +1,72 @@
 {{define "tickets/kb_article_content"}}
-<div class="content kb-article-content">
-    <div class="card" style="max-width: 800px;">
+<div class="content kb-article-content" style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: start;">
+    <div class="card" style="max-width: 800px; flex: 1 1 100%;">
         <div class="card-header" style="display: block;">
             <a href="knowledge-base" class="view-all-link" style="margin-bottom: 0.5rem; display: inline-flex;">← Kembali ke Knowledge Base</a>
             {{if .article.Category}}<span class="article-cat-badge {{.article.Category.ColorClass}}" style="margin-left: 0.5rem;">{{.article.Category.Name}}</span>{{end}}
             <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-top: 0.75rem;">{{.article.Title}}</h1>
             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                {{.article.Views}} views · {{.article.ReadTimeMinutes}} mnt baca · Diperbarui {{date .article.UpdatedAt}}
+                <span id="articleViewsCount">{{.article.Views}}</span> views · Diperbarui {{date .article.UpdatedAt}}
             </div>
         </div>
         <div class="card-body" style="padding: 1.5rem 1.4rem;">
-            <div class="kb-article-body">{{linebreaks .article.Content}}</div>
+            <div class="kb-article-body" id="kbArticleBody">{{linebreaks .article.Content}}</div>
         </div>
     </div>
+    {{if .related_articles}}
+    <div class="card" style="min-width: 280px; max-width: 320px; flex: 1 1 280px;">
+        <div class="card-header">
+            <span class="card-title">Artikel terkait</span>
+        </div>
+        <div class="card-body" style="padding: 0.75rem;">
+            <div class="article-list">
+                {{range .related_articles}}
+                <a class="article-item" href="knowledge-base/article/{{.ID}}" style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border-color);text-decoration:none;color:inherit;">
+                    <div class="article-body" style="flex:1;min-width:0;">
+                        <div class="article-title" style="font-size:0.9rem;">{{.Title}}</div>
+                        <div class="article-meta" style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.2rem;">
+                            {{if .Category}}<span class="article-cat-badge {{.Category.ColorClass}}">{{.Category.Name}}</span>{{end}}
+                            <span>{{.Views}} views</span>
+                        </div>
+                    </div>
+                    <span style="color:var(--text-light);">›</span>
+                </a>
+                {{end}}
+            </div>
+        </div>
+    </div>
+    {{end}}
 </div>
+<script>
+(function(){
+    var articleId = {{.article.ID}};
+    var viewRecorded = false;
+    var body = document.getElementById('kbArticleBody');
+    if (!body) return;
+    function checkScroll() {
+        if (viewRecorded) return;
+        var rect = body.getBoundingClientRect();
+        var bottom = rect.bottom;
+        var winH = window.innerHeight;
+        if (bottom <= winH + 50) {
+            viewRecorded = true;
+            fetch('api/kb/article/view', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({ article_id: articleId })
+            }).then(function(r){ return r.json(); }).then(function(data){
+                if (data && data.ok) {
+                    var el = document.getElementById('articleViewsCount');
+                    if (el) el.textContent = parseInt(el.textContent, 10) + 1;
+                }
+            }).catch(function(){});
+        }
+    }
+    window.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll, { passive: true });
+    checkScroll();
+})();
+</script>
 {{end}}
 
 {{define "tickets/kb_article"}}

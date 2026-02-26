@@ -3,6 +3,8 @@ package services
 import (
 	"ticketing/config"
 	"ticketing/models"
+
+	"gorm.io/gorm"
 )
 
 type KBService struct{}
@@ -59,13 +61,74 @@ func (s *KBService) GetKBPageData() (*KBPageData, error) {
 	}, nil
 }
 
-// GetKBArticleByID loads published article by ID and increments views. Returns nil if not found.
+// GetKBArticleByID loads published article by ID (does not increment views). Returns nil if not found.
 func (s *KBService) GetKBArticleByID(id uint) (*models.KBArticle, error) {
 	var article models.KBArticle
 	if err := config.DB.Preload("Category").Where("id = ? AND published = ? AND deleted_at IS NULL", id, true).First(&article).Error; err != nil {
 		return nil, err
 	}
-	config.DB.Model(&article).Update("views", article.Views+1)
-	article.Views++
 	return &article, nil
+}
+
+// RecordArticleView increments view count for the article (call when user has scrolled to end).
+func (s *KBService) RecordArticleView(articleID uint) error {
+	return config.DB.Model(&models.KBArticle{}).Where("id = ? AND published = ? AND deleted_at IS NULL", articleID, true).
+		Update("views", gorm.Expr("views + 1")).Error
+}
+
+// GetRelatedArticles returns articles from the same category (or popular) excluding the given article.
+func (s *KBService) GetRelatedArticles(articleID uint, categoryID *uint, limit int) []models.KBArticle {
+	if limit <= 0 {
+		limit = 6
+	}
+	var list []models.KBArticle
+	q := config.DB.Preload("Category").Where("id != ? AND published = ? AND deleted_at IS NULL", articleID, true)
+	if categoryID != nil && *categoryID != 0 {
+		q = q.Where("category_id = ?", *categoryID).Order("updated_at DESC")
+	} else {
+		q = q.Order("views DESC")
+	}
+	q.Limit(limit).Find(&list)
+	return list
+}
+
+// GetKBAllArticles returns all published articles (for "Lihat Semua").
+func (s *KBService) GetKBAllArticles(limit int) []models.KBArticle {
+	if limit <= 0 {
+		limit = 500
+	}
+	var list []models.KBArticle
+	config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true).
+		Order("views DESC, updated_at DESC").Limit(limit).Find(&list)
+	return list
+}
+
+// SearchKBArticles returns articles filtered by query (title/content) and optional category.
+func (s *KBService) SearchKBArticles(query string, categoryID *uint, limit int) []models.KBArticle {
+	if limit <= 0 {
+		limit = 200
+	}
+	q := config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true)
+	if query != "" {
+		like := "%" + query + "%"
+		q = q.Where("title ILIKE ? OR content ILIKE ? OR slug ILIKE ?", like, like, like)
+	}
+	if categoryID != nil && *categoryID != 0 {
+		q = q.Where("category_id = ?", *categoryID)
+	}
+	var list []models.KBArticle
+	q.Order("views DESC, updated_at DESC").Limit(limit).Find(&list)
+	return list
+}
+
+// GetCategoryIDBySlug returns category ID for slug, or 0 if not found.
+func (s *KBService) GetCategoryIDBySlug(slug string) uint {
+	if slug == "" {
+		return 0
+	}
+	var c models.KBCategory
+	if err := config.DB.Where("slug = ? AND deleted_at IS NULL", slug).First(&c).Error; err != nil {
+		return 0
+	}
+	return c.ID
 }

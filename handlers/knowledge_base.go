@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,6 +27,26 @@ func (h *DashboardHandler) ShowKnowledgeBase(w http.ResponseWriter, r *http.Requ
 	}
 
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	categorySlug := strings.TrimSpace(r.URL.Query().Get("category"))
+
+	unreadCount, _ := models.GetUnreadCount(config.DB, user.ID)
+	viewAll := strings.TrimSpace(r.URL.Query().Get("view")) == "all"
+	var allArticles []models.KBArticle
+	var searchResults []models.KBArticle
+	showSearchResults := false
+	var categoryID *uint
+	if categorySlug != "" {
+		id := h.kbService.GetCategoryIDBySlug(categorySlug)
+		if id != 0 {
+			categoryID = &id
+		}
+	}
+	if q != "" || (categoryID != nil && *categoryID != 0) {
+		showSearchResults = true
+		searchResults = h.kbService.SearchKBArticles(q, categoryID, 200)
+	} else if viewAll {
+		allArticles = h.kbService.GetKBAllArticles(500)
+	}
 
 	data := AddBaseData(r, map[string]interface{}{
 		"title":                "Knowledge Base — Ticketing",
@@ -35,13 +56,18 @@ func (h *DashboardHandler) ShowKnowledgeBase(w http.ResponseWriter, r *http.Requ
 		"template_name":        "tickets/knowledge_base",
 		"user":                 user,
 		"active_tickets_count": activeTicketsCount,
-		"unread_count":         kbData.TotalArticles,
+		"unread_count":         unreadCount,
 		"categories":           kbData.Categories,
 		"popular_articles":     kbData.PopularArticles,
 		"recent_articles":      kbData.RecentArticles,
 		"total_articles":       kbData.TotalArticles,
 		"total_categories":     kbData.TotalCategories,
 		"search_query":         q,
+		"view_all":             viewAll,
+		"all_articles":         allArticles,
+		"show_search_results":  showSearchResults,
+		"search_results":       searchResults,
+		"selected_category":   categorySlug,
 	})
 
 	RenderTemplate(w, "tickets/knowledge_base", data)
@@ -68,7 +94,11 @@ func (h *DashboardHandler) ShowKBArticle(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, config.Path("/knowledge-base"), http.StatusSeeOther)
 		return
 	}
-
+	var catID *uint
+	if article.CategoryID != 0 {
+		catID = &article.CategoryID
+	}
+	relatedArticles := h.kbService.GetRelatedArticles(article.ID, catID, 6)
 	unreadCount, _ := models.GetUnreadCount(config.DB, user.ID)
 
 	data := AddBaseData(r, map[string]interface{}{
@@ -81,7 +111,37 @@ func (h *DashboardHandler) ShowKBArticle(w http.ResponseWriter, r *http.Request)
 		"active_tickets_count": activeTicketsCount,
 		"unread_count":         unreadCount,
 		"article":              article,
+		"related_articles":     relatedArticles,
 	})
 
 	RenderTemplate(w, "tickets/kb_article", data)
+}
+
+// RecordKBArticleView increments view count when user has scrolled to end of article (API).
+func (h *DashboardHandler) RecordKBArticleView(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body struct {
+		ArticleID uint `json:"article_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		idStr := r.URL.Query().Get("id")
+		if idStr != "" {
+			if id, err := strconv.Atoi(idStr); err == nil && id > 0 {
+				body.ArticleID = uint(id)
+			}
+		}
+	}
+	if body.ArticleID == 0 {
+		http.Error(w, "article_id required", http.StatusBadRequest)
+		return
+	}
+	if err := h.kbService.RecordArticleView(body.ArticleID); err != nil {
+		http.Error(w, "failed to record view", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"ok": true})
 }

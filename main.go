@@ -114,6 +114,7 @@ func main() {
 	mux.HandleFunc("/api/notifications/read", middleware.AuthRequired(notificationHandler.MarkAsRead))
 	mux.HandleFunc("/api/notifications/read-all", middleware.AuthRequired(notificationHandler.MarkAllAsRead))
 	mux.HandleFunc("/api/notifications/count", middleware.AuthRequired(notificationHandler.GetUnreadCount))
+	mux.HandleFunc("/api/kb/article/view", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.RecordKBArticleView)))
 
 	seedDefaultData()
 
