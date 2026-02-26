@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"ticketing/config"
 	"ticketing/controllers"
@@ -120,8 +121,12 @@ func main() {
 	log.Printf("🌐 Visit: http://localhost:%s", cfg.Port)
 
 	loggedMux := middleware.LoggingMiddleware(mux)
-
-	if err := http.ListenAndServe(":"+cfg.Port, loggedMux); err != nil {
+	var handler http.Handler = loggedMux
+	if config.AppBasePath != "" && config.AppBasePath != "/" {
+		prefix := strings.TrimRight(config.AppBasePath, "/")
+		handler = http.StripPrefix(prefix, loggedMux)
+	}
+	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
 		log.Fatal(err)
 	}
 }

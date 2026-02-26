@@ -511,7 +511,21 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 
 func (h *DepartmentHandler) LogoutAndRelease(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", user.ID, models.StatusInProgress).
-		Updates(map[string]interface{}{"assigned_to_id": nil, "status": models.StatusWaiting})
+	// Lepas semua tiket yang sedang dikerjakan staff ini ke pool (assigned_to_id = NULL, status = WAITING)
+	result := config.DB.Model(&models.Ticket{}).
+		Where("assigned_to_id = ? AND status = ?", user.ID, models.StatusInProgress).
+		Select("assigned_to_id", "status", "updated_at").
+		Updates(map[string]interface{}{
+			"assigned_to_id": nil,
+			"status":         models.StatusWaiting,
+			"updated_at":     time.Now(),
+		})
+	if result.RowsAffected > 0 {
+		// Tandai assignment history yang belum released
+		now := time.Now()
+		config.DB.Model(&models.TicketAssignmentHistory{}).
+			Where("staff_id = ? AND released_at IS NULL", user.ID).
+			Update("released_at", &now)
+	}
 	http.Redirect(w, r, config.Path("/logout"), http.StatusSeeOther)
 }

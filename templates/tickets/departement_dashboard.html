@@ -108,13 +108,13 @@
         </div>
     </div>
 
-    <div class="dept-card" style="display:flex; flex-direction:column; max-height:850px; padding:0; overflow:hidden; border-top: 4px solid #dc2626;">
-        <div style="padding:1.5rem; border-bottom:1px solid #e5e7eb; background:#fef2f2;">
+    <div class="dept-card dept-pool-card">
+        <div class="dept-pool-header">
             <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:#991b1b;">Pool Tiket (Masuk)</h3>
             <span style="font-size:0.875rem; color:#6b7280;">{{len .ticket_pool}} tiket menunggu</span>
         </div>
 
-        <div style="flex:1; overflow-y:auto; padding:1rem;">
+        <div class="dept-pool-body">
             {{range .ticket_pool}}
             <div class="ticket-item-card" onclick="window.location.href='department/tiket/{{.ID}}'">
                 <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">

@@ -740,28 +740,31 @@ body {
     border: 1px solid;
 }
 
+/* Menunggu balasan = abu */
 .status-badge.open {
-    background: var(--warning-bg);
-    color: #b45309;
-    border-color: #fde68a;
+    background: #f1f5f9;
+    color: #64748b;
+    border-color: #e2e8f0;
 }
 
+/* Dalam progress = hijau */
 .status-badge.in-progress {
-    background: var(--info-bg);
-    color: #1e40af;
-    border-color: #bfdbfe;
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
 }
 
 .status-badge.resolved {
-    background: var(--success-bg);
-    color: #065f46;
-    border-color: #a7f3d0;
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
 }
 
+/* Closed = merah */
 .status-badge.closed {
-    background: var(--bg-secondary);
-    color: var(--text-secondary);
-    border-color: var(--border-color);
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
 }
 
 /* Priority */
