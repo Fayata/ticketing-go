@@ -1,0 +1,97 @@
+/* Modal alert (halaman departemen — tema amber/merah) */
+.custom-alert-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.custom-alert-box {
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    max-width: 420px;
+    width: 90%;
+    animation: slideUp 0.3s ease;
+    border: 1px solid #E4E6EB;
+}
+
+.custom-alert-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    border: 2px solid #FBBF24;
+}
+
+.custom-alert-icon svg {
+    width: 24px;
+    height: 24px;
+    color: #B45309;
+}
+
+.custom-alert-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111318;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+}
+
+.custom-alert-message {
+    font-size: 14px;
+    color: #5A6070;
+    text-align: center;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.custom-alert-button {
+    width: 100%;
+    padding: 10px 20px;
+    background: #C0392B;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.custom-alert-button:hover {
+    background: #96281B;
+    box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
+}
+
+.custom-alert-button:active {
+    transform: scale(0.98);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

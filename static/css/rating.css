@@ -1,0 +1,124 @@
+/* Halaman rating tiket (token di URL) */
+.rating-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.ticket-info {
+    background: #f3f4f6;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.ticket-info h2 {
+    margin: 0 0 0.5rem 0;
+    color: #1f2937;
+}
+
+.ticket-info p {
+    margin: 0.25rem 0;
+    color: #6b7280;
+}
+
+.rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 2rem 0;
+    flex-direction: row-reverse;
+}
+
+.star-input {
+    display: none;
+}
+
+.star-label {
+    font-size: 3rem;
+    color: #d1d5db;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.star-label:hover,
+.star-label:hover~.star-label {
+    color: #fbbf24;
+}
+
+.star-input:checked~.star-label,
+.star-input:checked~.star-label~.star-label {
+    color: #fbbf24;
+}
+
+.star-input:checked~.star-label {
+    color: #f59e0b;
+}
+
+.comment-box {
+    width: 100%;
+    min-height: 120px;
+    padding: 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 1.5rem;
+}
+
+.comment-box:focus {
+    outline: none;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 60, 0.1);
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.submit-btn:hover {
+    background: #b91c1c;
+}
+
+.success-message {
+    background: #d1fae5;
+    color: #065f46;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.already-rated {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.rating-display {
+    display: flex;
+    justify-content: center;
+    gap: 0.25rem;
+    margin: 1rem 0;
+}
+
+.rating-display .star {
+    font-size: 2rem;
+    color: #fbbf24;
+}

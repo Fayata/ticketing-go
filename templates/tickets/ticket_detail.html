@@ -300,68 +300,7 @@
                                     style="font-size: 3rem; color: #d1d5db; cursor: pointer; transition: color 0.2s;">★</label>
                             </div>
 
-                            <script>
-                                // Star rating interaction
-                                (function () {
-                                    const form = document.querySelector('form[action*="/rating/"]');
-                                    if (!form) return;
-
-                                    const stars = form.querySelectorAll('input[name="rating"]');
-                                    const labels = form.querySelectorAll('label[for^="star"]');
-
-                                    labels.forEach((label) => {
-                                        label.addEventListener('click', function (e) {
-                                            e.preventDefault();
-                                            const starId = label.getAttribute('for');
-                                            const starInput = document.getElementById(starId);
-                                            if (starInput) {
-                                                starInput.checked = true;
-                                                updateStarColors();
-                                            }
-                                        });
-
-                                        label.addEventListener('mouseenter', function () {
-                                            const starId = label.getAttribute('for');
-                                            const starValue = parseInt(starId.replace('star', ''));
-                                            highlightStars(starValue);
-                                        });
-                                    });
-
-                                    form.addEventListener('mouseleave', function () {
-                                        updateStarColors();
-                                    });
-
-                                    stars.forEach(star => {
-                                        star.addEventListener('change', function () {
-                                            updateStarColors();
-                                        });
-                                    });
-
-                                    function highlightStars(upTo) {
-                                        labels.forEach((label) => {
-                                            const starId = label.getAttribute('for');
-                                            const starValue = parseInt(starId.replace('star', ''));
-                                            if (starValue <= upTo) {
-                                                label.style.color = '#fbbf24';
-                                            } else {
-                                                label.style.color = '#d1d5db';
-                                            }
-                                        });
-                                    }
-
-                                    function updateStarColors() {
-                                        const checked = form.querySelector('input[name="rating"]:checked');
-                                        if (checked) {
-                                            const value = parseInt(checked.value);
-                                            highlightStars(value);
-                                        } else {
-                                            labels.forEach(label => {
-                                                label.style.color = '#d1d5db';
-                                            });
-                                        }
-                                    }
-                                })();
-                            </script>
+                            <script src="static/js/rating-stars.js"></script>
                         </div>
 
                         <div style="margin-bottom: 1.5rem;">

@@ -54,15 +54,5 @@
     </form>
 </div>
 
-<script>
-function toggleDepartment() {
-    const role = document.getElementById('roleSelect').value;
-    const deptDiv = document.getElementById('deptContainer');
-    if (role === 'staff') {
-        deptDiv.style.display = 'block';
-    } else {
-        deptDiv.style.display = 'none';
-    }
-}
-</script>
+<script src="static/js/user-form.js"></script>
 {{end}}
