@@ -49,11 +49,11 @@
                 <div class="t-title">{{$ticket.Title}}</div>
                 <div class="t-meta">
                     {{if eq $ticket.Status "WAITING"}}
-                    <span class="badge b-blue"><span class="badge-dot"></span> Waiting</span>
+                    <span class="status-badge open"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
                     {{else if eq $ticket.Status "IN_PROGRESS"}}
-                    <span class="badge b-amber"><span class="badge-dot"></span> In Progress</span>
-                    {{else if eq $ticket.Status "CLOSED"}}
-                    <span class="badge b-green"><span class="badge-dot"></span> Closed</span>
+                    <span class="status-badge in-progress"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
+                    {{else}}
+                    <span class="status-badge closed"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
                     {{end}}
                     <div class="meta-chip">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -198,11 +198,11 @@
                 <div class="info-row">
                     <span class="info-k">Status</span>
                     {{if eq $ticket.Status "WAITING"}}
-                    <span class="badge b-blue" style="font-size: 11px;"><span class="badge-dot"></span> Waiting</span>
+                    <span class="status-badge open" style="font-size: 11px;"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
                     {{else if eq $ticket.Status "IN_PROGRESS"}}
-                    <span class="badge b-amber" style="font-size: 11px;"><span class="badge-dot"></span> In Progress</span>
+                    <span class="status-badge in-progress" style="font-size: 11px;"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
                     {{else}}
-                    <span class="badge b-green" style="font-size: 11px;"><span class="badge-dot"></span> Closed</span>
+                    <span class="status-badge closed" style="font-size: 11px;"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
                     {{end}}
                 </div>
             </div>

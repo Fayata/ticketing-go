@@ -52,7 +52,7 @@
                             <div class="ticket-id-status">
                                 <!-- <span class="ticket-id">#TKT-{{.ID}}</span> -->
                                 <span class="ticket-id">{{.GetTicketNumber}}</span>
-                                <span class="status-badge {{if eq .Status "WAITING"}}open{{else if eq .Status "IN_PROGRESS"}}in-progress{{else}}closed{{end}}">
+                                <span class="status-badge {{getStatusClass .Status}}">
                                     {{.GetStatusDisplay}}
                                 </span>
                             </div>

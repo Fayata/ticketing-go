@@ -731,7 +731,7 @@ body {
     color: var(--text-light);
 }
 
-/* Status Badge */
+/* Status Badge: menunggu = abu-abu, in progress = hijau, closed = merah */
 .status-badge {
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
@@ -740,20 +740,15 @@ body {
     border: 1px solid;
 }
 
-/* Menunggu balasan = abu */
+/* Menunggu balasan = abu-abu */
 .status-badge.open {
     background: #f1f5f9;
     color: #64748b;
     border-color: #e2e8f0;
 }
 
-/* Dalam progress = hijau */
-.status-badge.in-progress {
-    background: #dcfce7;
-    color: #15803d;
-    border-color: #bbf7d0;
-}
-
+/* In progress = hijau */
+.status-badge.in-progress,
 .status-badge.resolved {
     background: #dcfce7;
     color: #15803d;
@@ -765,6 +760,23 @@ body {
     background: #fee2e2;
     color: #b91c1c;
     border-color: #fecaca;
+}
+
+[data-theme="dark"] .status-badge.open {
+    background: rgba(100, 116, 139, 0.25);
+    color: #94a3b8;
+    border-color: rgba(148, 163, 184, 0.3);
+}
+[data-theme="dark"] .status-badge.in-progress,
+[data-theme="dark"] .status-badge.resolved {
+    background: rgba(22, 163, 74, 0.2);
+    color: #4ade80;
+    border-color: rgba(74, 222, 128, 0.35);
+}
+[data-theme="dark"] .status-badge.closed {
+    background: rgba(185, 28, 28, 0.25);
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.35);
 }
 
 /* Priority */

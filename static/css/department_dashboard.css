@@ -332,10 +332,25 @@
 .priority-MEDIUM { background-color: #fefce8; color: #ca8a04; }
 .priority-LOW { background-color: #f0fdf4; color: #16a34a; }
 
-/* Status Colors */
-.status-WAITING { background-color: #fff7ed; color: #c2410c; }
-.status-IN_PROGRESS { background-color: #eff6ff; color: #2563eb; }
-.status-CLOSED { background-color: #f0fdf4; color: #16a34a; }
+/* Status Colors: menunggu = abu-abu, in progress = hijau, closed = merah */
+.status-WAITING,
+.badge.status-WAITING { background-color: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+.status-IN_PROGRESS,
+.badge.status-IN_PROGRESS { background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.status-CLOSED,
+.badge.status-CLOSED { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* Status badge (sama dengan portal user) */
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid;
+}
+.status-badge.open { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+.status-badge.in-progress { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+.status-badge.closed { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
 
 /* --- KB Admin (form & list) - tema sama department --- */
 .kb-admin .content { padding: 0; }

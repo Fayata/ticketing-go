@@ -29,10 +29,7 @@
                     <!-- <span>Tiket #{{$ticket.ID}}</span> -->
                     <span>{{$ticket.GetTicketNumber}}</span>
                 </div>
-                <span class="status-badge {{if eq $ticket.Status " WAITING"}}open{{else if eq
-                    $ticket.Status "IN_PROGRESS" }}in-progress{{else}}closed{{end}}">
-                    {{$ticket.GetStatusDisplay}}
-                </span>
+                <span class="status-badge {{getStatusClass $ticket.Status}}">{{$ticket.GetStatusDisplay}}</span>
             </div>
 
             <h1 class="ticket-title-large">{{$ticket.Title}}</h1>
@@ -357,10 +354,7 @@
                         </div>
                         <div class="info-item">
                             <span class="info-label">Status</span>
-                            <span class="status-badge {{if eq $ticket.Status " WAITING"}}open{{else if eq
-                                $ticket.Status "IN_PROGRESS" }}in-progress{{else}}closed{{end}}">
-                                {{$ticket.GetStatusDisplay}}
-                            </span>
+                            <span class="status-badge {{getStatusClass $ticket.Status}}">{{$ticket.GetStatusDisplay}}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Prioritas</span>
