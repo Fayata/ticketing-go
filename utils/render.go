@@ -233,6 +233,15 @@ func GetUserFromContext(r *http.Request) interface{} {
 	return r.Context().Value(middleware.UserKey)
 }
 
+// GetActiveTicketsCount returns active tickets count from request context (set by AuthRequired middleware).
+func GetActiveTicketsCount(r *http.Request) interface{} {
+	count := r.Context().Value(middleware.ActiveTicketsCountKey)
+	if count == nil {
+		return 0
+	}
+	return count
+}
+
 func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interface{} {
 	if data == nil {
 		data = make(map[string]interface{})

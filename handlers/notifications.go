@@ -4,19 +4,20 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 
 	"ticketing/config"
 	"ticketing/models"
+	"ticketing/services"
 	"ticketing/utils"
 )
 
 type NotificationHandler struct {
-	cfg *config.Config
+	cfg                 *config.Config
+	notificationService *services.NotificationService
 }
 
-func NewNotificationHandler(cfg *config.Config) *NotificationHandler {
-	return &NotificationHandler{cfg: cfg}
+func NewNotificationHandler(cfg *config.Config, notificationService *services.NotificationService) *NotificationHandler {
+	return &NotificationHandler{cfg: cfg, notificationService: notificationService}
 }
 
 // List notifikasi user. Query param filter: semua | belum | tiket.
@@ -27,69 +28,20 @@ func (h *NotificationHandler) GetNotifications(w http.ResponseWriter, r *http.Re
 	}
 	user := GetUserFromContext(r).(*models.User)
 	filter := r.URL.Query().Get("filter")
-	
-	var notifications []models.Notification
-	query := config.DB.Where("user_id = ?", user.ID)
-	
-	if filter == "belum" {
-		query = query.Where("is_read = ?", false)
-	} else if filter == "tiket" {
-		query = query.Where("type IN ?", []models.NotificationType{
-			models.NotificationTypeTicket,
-			models.NotificationTypeReply,
-			models.NotificationTypeStatusChange,
-		})
+
+	result, err := h.notificationService.GetNotificationsWithCounts(user.ID, filter)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
-	
-	query.Preload("Ticket").
-		Order("created_at DESC").
-		Limit(50).
-		Find(&notifications)
-	
-	type NotificationResponse struct {
-		ID       uint   `json:"id"`
-		Type     string `json:"type"`
-		Icon     string `json:"icon"`
-		Color    string `json:"color"`
-		Title    string `json:"title"`
-		Desc     string `json:"desc"`
-		Time     string `json:"time"`
-		Unread   bool   `json:"unread"`
-		TicketID *uint  `json:"ticket_id,omitempty"`
-	}
-	
-	responses := make([]NotificationResponse, 0, len(notifications))
-	for _, n := range notifications {
-		icon, color := getNotificationIconAndColor(n.Type)
-		responses = append(responses, NotificationResponse{
-			ID:       n.ID,
-			Type:     string(n.Type),
-			Icon:     icon,
-			Color:    color,
-			Title:    n.Title,
-			Desc:     n.Message,
-			Time:     formatTimeAgo(n.CreatedAt),
-			Unread:   !n.IsRead,
-			TicketID: n.TicketID,
-		})
-	}
-	
-	var allCount, unreadCount, ticketCount int64
-	config.DB.Model(&models.Notification{}).Where("user_id = ?", user.ID).Count(&allCount)
-	config.DB.Model(&models.Notification{}).Where("user_id = ? AND is_read = ?", user.ID, false).Count(&unreadCount)
-	config.DB.Model(&models.Notification{}).Where("user_id = ? AND type IN ?", user.ID, []models.NotificationType{
-		models.NotificationTypeTicket,
-		models.NotificationTypeReply,
-		models.NotificationTypeStatusChange,
-	}).Count(&ticketCount)
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"notifications": responses,
+		"notifications": result.Notifications,
 		"counts": map[string]int64{
-			"all":    allCount,
-			"unread": unreadCount,
-			"ticket": ticketCount,
+			"all":    result.Counts.All,
+			"unread": result.Counts.Unread,
+			"ticket": result.Counts.Ticket,
 		},
 	})
 }
@@ -112,19 +64,13 @@ func (h *NotificationHandler) MarkAsRead(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Invalid notification ID", http.StatusBadRequest)
 		return
 	}
-	var notif models.Notification
-	if err := config.DB.Where("id = ? AND user_id = ?", notifID, user.ID).First(&notif).Error; err != nil {
-		http.Error(w, "Notification not found", http.StatusNotFound)
-		return
-	}
-	if err := notif.MarkAsRead(config.DB); err != nil {
+	ok, err := h.notificationService.MarkOneAsRead(user.ID, uint(notifID))
+	if err != nil || !ok {
 		http.Error(w, "Failed to mark as read", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-	})
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
 }
 
 // Tandai semua notif user sebagai dibaca.
@@ -133,18 +79,13 @@ func (h *NotificationHandler) MarkAllAsRead(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	user := GetUserFromContext(r).(*models.User)
-	
-	if err := models.MarkAllAsRead(config.DB, user.ID); err != nil {
+	if err := h.notificationService.MarkAllAsReadForUser(user.ID); err != nil {
 		http.Error(w, "Failed to mark all as read", http.StatusInternalServerError)
 		return
 	}
-	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": true,
-	})
+	json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
 }
 
 // Jumlah notif belum dibaca (buat badge di navbar).
@@ -153,57 +94,14 @@ func (h *NotificationHandler) GetUnreadCount(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	user := GetUserFromContext(r).(*models.User)
-	
-	count, err := models.GetUnreadCount(config.DB, user.ID)
+	count, err := h.notificationService.GetUnreadCountForUser(user.ID)
 	if err != nil {
 		http.Error(w, "Failed to get count", http.StatusInternalServerError)
 		return
 	}
-	
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"count": count,
-	})
-}
-
-// icon & warna per tipe notif (buat tampilan di panel)
-func getNotificationIconAndColor(notifType models.NotificationType) (icon, color string) {
-	switch notifType {
-	case models.NotificationTypeTicket:
-		return "ticket", "ic-red"
-	case models.NotificationTypeReply:
-		return "reply", "ic-blue"
-	case models.NotificationTypeStatusChange:
-		return "check", "ic-green"
-	case models.NotificationTypeSystem:
-		return "alert", "ic-amber"
-	default:
-		return "info", "ic-blue"
-	}
-}
-
-func formatTimeAgo(t time.Time) string {
-	now := time.Now()
-	diff := now.Sub(t)
-	
-	if diff < time.Minute {
-		return "Baru saja"
-	}
-	if diff < time.Hour {
-		minutes := int(diff.Minutes())
-		return strconv.Itoa(minutes) + " menit lalu"
-	}
-	if diff < 24*time.Hour {
-		hours := int(diff.Hours())
-		return strconv.Itoa(hours) + " jam lalu"
-	}
-	if diff < 7*24*time.Hour {
-		days := int(diff.Hours() / 24)
-		return strconv.Itoa(days) + " hari lalu"
-	}
-	return t.Format("02 Jan 2006")
+	json.NewEncoder(w).Encode(map[string]interface{}{"count": count})
 }
 
 // Buat notif ke pemilik tiket pas ada balasan.

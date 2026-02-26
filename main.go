@@ -1,12 +1,8 @@
 package main
 
 import (
-	"html/template"
 	"log"
 	"net/http"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"ticketing/config"
 	"ticketing/controllers"
@@ -16,8 +12,6 @@ import (
 	"ticketing/services"
 	"ticketing/utils"
 )
-
-var templates *template.Template
 
 func main() {
 	cfg := config.LoadConfig()
@@ -32,6 +26,12 @@ func main() {
 	authService := services.NewAuthService(cfg, emailService, jwtService)
 	authController := controllers.NewAuthController(authService)
 	adminHandler := handlers.NewAdminHandler(cfg)
+
+	dashboardService := services.NewDashboardService()
+	kbService := services.NewKBService()
+	notificationService := services.NewNotificationService()
+	ticketService := services.NewTicketService(jwtService)
+	settingsService := services.NewSettingsService()
 
 	mux := http.NewServeMux()
 
@@ -51,12 +51,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	templates = loadTemplates()
-	dashboardHandler := handlers.NewDashboardHandler(cfg)
-	ticketHandler := handlers.NewTicketHandler(cfg, emailService)
-	settingsHandler := handlers.NewSettingsHandler(cfg)
+	dashboardHandler := handlers.NewDashboardHandler(cfg, dashboardService, kbService)
+	ticketHandler := handlers.NewTicketHandler(cfg, emailService, ticketService)
+	settingsHandler := handlers.NewSettingsHandler(cfg, settingsService)
 	departementHandler := handlers.NewDepartmentHandler(cfg, emailService)
-	notificationHandler := handlers.NewNotificationHandler(cfg)
+	notificationHandler := handlers.NewNotificationHandler(cfg, notificationService)
 
 	// file static (css, js, gambar)
 	fs := http.FileServer(http.Dir("./static"))
@@ -127,148 +126,6 @@ func main() {
 	}
 }
 
-func loadTemplates() *template.Template {
-	funcMap := template.FuncMap{
-		"slice": func(s string, start, end int) string {
-			if start < 0 || end > len(s) || start > end {
-				return s
-			}
-			return s[start:end]
-		},
-		"upper": strings.ToUpper,
-		"date": func(t interface{}) string {
-			if t == nil {
-				return ""
-			}
-			switch v := t.(type) {
-			case time.Time:
-				return v.Format("02 Jan 2006, 15:04")
-			case *time.Time:
-				if v == nil {
-					return ""
-				}
-				return v.Format("02 Jan 2006, 15:04")
-			}
-			return ""
-		},
-		"dateShort": func(t interface{}) string {
-			if t == nil {
-				return ""
-			}
-			switch v := t.(type) {
-			case time.Time:
-				return v.Format("02 Jan 2006")
-			case *time.Time:
-				if v == nil {
-					return ""
-				}
-				return v.Format("02 Jan 2006")
-			}
-			return ""
-		},
-		"timeSince": func(t time.Time) string {
-			now := time.Now()
-			diff := now.Sub(t)
-			days := int(diff.Hours() / 24)
-			hours := int(diff.Hours())
-			minutes := int(diff.Minutes())
-			if days > 0 {
-				return strings.Replace("{days} hari", "{days}", string(rune(days+'0')), 1)
-			}
-			if hours > 0 {
-				return strings.Replace("{hours} jam", "{hours}", string(rune(hours+'0')), 1)
-			}
-			if minutes > 0 {
-				return strings.Replace("{minutes} menit", "{minutes}", string(rune(minutes+'0')), 1)
-			}
-			return "Baru saja"
-		},
-		"getStatusClass": func(status interface{}) string {
-			s := strings.ToUpper(status.(string))
-			switch s {
-			case "WAITING", "OPEN":
-				return "open"
-			case "IN_PROGRESS":
-				return "in-progress"
-			case "CLOSED", "RESOLVED":
-				return "closed"
-			default:
-				return "closed"
-			}
-		},
-		"getPriorityClass": func(priority interface{}) string {
-			p := strings.ToUpper(priority.(string))
-			switch p {
-			case "HIGH":
-				return "high"
-			case "MEDIUM":
-				return "medium"
-			case "LOW":
-				return "low"
-			default:
-				return "low"
-			}
-		},
-		"eq":  func(a, b interface{}) bool { return a == b },
-		"len": func(arr interface{}) int { return len(arr.([]interface{})) },
-		"linebreaks": func(val interface{}) template.HTML {
-			if val == nil {
-				return ""
-			}
-			s := val.(string)
-			s = strings.ReplaceAll(s, "\r\n", "<br>")
-			s = strings.ReplaceAll(s, "\n", "<br>")
-			return template.HTML(s)
-		},
-		"getFullName": func(user interface{}) string {
-			if user == nil {
-				return "User"
-			}
-			if u, ok := user.(*models.User); ok {
-				if u.FirstName != "" || u.LastName != "" {
-					return strings.TrimSpace(u.FirstName + " " + u.LastName)
-				}
-				return u.Username
-			}
-			if u, ok := user.(models.User); ok {
-				if u.FirstName != "" || u.LastName != "" {
-					return strings.TrimSpace(u.FirstName + " " + u.LastName)
-				}
-				return u.Username
-			}
-			return "User"
-		},
-		"add": func(a, b interface{}) int {
-			toInt := func(x interface{}) int {
-				switch v := x.(type) {
-				case int:
-					return v
-				case int64:
-					return int(v)
-				case float64:
-					return int(v)
-				default:
-					return 0
-				}
-			}
-			return toInt(a) + toInt(b)
-		},
-		"seq": func(start, end int) []int {
-			var result []int
-			for i := start; i <= end; i++ {
-				result = append(result, i)
-			}
-			return result
-		},
-	}
-
-	tmpl := template.New("").Funcs(funcMap)
-	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "*.html")))
-	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "tickets", "*.html")))
-	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "admin", "*.html")))
-
-	return tmpl
-}
 func seedDefaultData() {
 	var portalGroup models.Group
 	config.DB.FirstOrCreate(&portalGroup, models.Group{Name: "Portal Users"})

@@ -5,14 +5,17 @@ import (
 
 	"ticketing/config"
 	"ticketing/models"
+	"ticketing/services"
 )
 
 type DashboardHandler struct {
-	cfg *config.Config
+	cfg              *config.Config
+	dashboardService  *services.DashboardService
+	kbService        *services.KBService
 }
 
-func NewDashboardHandler(cfg *config.Config) *DashboardHandler {
-	return &DashboardHandler{cfg: cfg}
+func NewDashboardHandler(cfg *config.Config, dashboardService *services.DashboardService, kbService *services.KBService) *DashboardHandler {
+	return &DashboardHandler{cfg: cfg, dashboardService: dashboardService, kbService: kbService}
 }
 
 func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request) {
@@ -24,42 +27,10 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 	user := GetUserFromContext(r).(*models.User)
 	activeTicketsCount := GetActiveTicketsCount(r)
 
-	var waitingCount, inProgressCount, closedCount, totalCount int64
-
-	config.DB.Model(&models.Ticket{}).
-		Where("created_by_id = ? AND status = ?", user.ID, models.StatusWaiting).
-		Count(&waitingCount)
-
-	config.DB.Model(&models.Ticket{}).
-		Where("created_by_id = ? AND status = ?", user.ID, models.StatusInProgress).
-		Count(&inProgressCount)
-
-	config.DB.Model(&models.Ticket{}).
-		Where("created_by_id = ? AND status = ?", user.ID, models.StatusClosed).
-		Count(&closedCount)
-
-	config.DB.Model(&models.Ticket{}).
-		Where("created_by_id = ?", user.ID).
-		Count(&totalCount)
-
-	// tiket terbaru user
-	var recentTickets []*models.Ticket
-	config.DB.Preload("Department").
-		Preload("Replies").
-		Where("created_by_id = ?", user.ID).
-		Order("created_at DESC").
-		Limit(5).
-		Find(&recentTickets)
-
-	// buat badge notif
-	unreadCount, _ := models.GetUnreadCount(config.DB, user.ID)
-
-	// artikel KB yang paling banyak dilihat
-	var popularArticles []*models.KBArticle
-	config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true).
-		Order("views DESC").Limit(6).Find(&popularArticles)
-	if popularArticles == nil {
-		popularArticles = []*models.KBArticle{}
+	dataOut, err := h.dashboardService.GetDashboardData(user.ID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
 	data := AddBaseData(r, map[string]interface{}{
@@ -70,14 +41,14 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 		"template_name":        "tickets/dashboard",
 		"user":                 user,
 		"active_tickets_count": activeTicketsCount,
-		"waiting_tickets":      waitingCount,
-		"in_progress_tickets":  inProgressCount,
-		"closed_tickets":       closedCount,
-		"total_tickets":        totalCount,
-		"recent_tickets":       recentTickets,
+		"waiting_tickets":      dataOut.WaitingCount,
+		"in_progress_tickets":  dataOut.InProgressCount,
+		"closed_tickets":       dataOut.ClosedCount,
+		"total_tickets":        dataOut.TotalCount,
+		"recent_tickets":       dataOut.RecentTickets,
 		"announcements":        []interface{}{},
-		"popular_articles":     popularArticles,
-		"unread_count":         unreadCount,
+		"popular_articles":     dataOut.PopularArticles,
+		"unread_count":         dataOut.UnreadCount,
 	})
 
 	RenderTemplate(w, "tickets/dashboard", data)

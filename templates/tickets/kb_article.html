@@ -6,7 +6,7 @@
             {{if .article.Category}}<span class="article-cat-badge {{.article.Category.ColorClass}}" style="margin-left: 0.5rem;">{{.article.Category.Name}}</span>{{end}}
             <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-top: 0.75rem;">{{.article.Title}}</h1>
             <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                👁 {{.article.Views}} views · {{.article.ReadTimeMinutes}} mnt baca · Diperbarui {{date .article.UpdatedAt}}
+                {{.article.Views}} views · {{.article.ReadTimeMinutes}} mnt baca · Diperbarui {{date .article.UpdatedAt}}
             </div>
         </div>
         <div class="card-body" style="padding: 1.5rem 1.4rem;">

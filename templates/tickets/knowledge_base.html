@@ -2,7 +2,7 @@
 <div class="page-body kb-page-body">
     <!-- Hero Search -->
     <div class="kb-hero">
-        <span class="kb-hero-icon">📚</span>
+        <!-- <span class="kb-hero-icon"></span> -->
         <h2 class="kb-hero-title">Ada yang bisa kami bantu?</h2>
         <p class="kb-hero-sub">Cari artikel, panduan, dan solusi dari artikel kami</p>
 
@@ -40,7 +40,7 @@
         <div class="categories-grid">
             {{range .categories}}
             <a class="cat-card" href="knowledge-base?category={{.Category.Slug}}">
-                <div class="cat-icon-wrap {{.Category.ColorClass}}">{{if .Category.Icon}}{{.Category.Icon}}{{else}}📄{{end}}</div>
+                <div class="cat-icon-wrap {{.Category.ColorClass}}">{{if .Category.Icon}}{{.Category.Icon}}{{else}}{{end}}</div>
                 <div class="cat-name">{{.Category.Name}}</div>
                 <div class="cat-desc">{{.Category.Description}}</div>
                 <span class="cat-count">
@@ -60,7 +60,7 @@
         <div class="articles-layout">
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title">🔥 Artikel Populer</span>
+                    <span class="card-title">Artikel Populer</span>
                     <a class="view-all-link" href="knowledge-base">Lihat Semua ›</a>
                 </div>
                 <div class="article-list">
@@ -86,7 +86,7 @@
 
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title">🆕 Baru Diperbarui</span>
+                    <span class="card-title">Baru Diperbarui</span>
                 </div>
                 <div class="activity-list">
                     {{range .recent_articles}}
@@ -113,7 +113,7 @@
     <div class="feedback-wrap">
         <div class="feedback-banner">
             <div class="feedback-left">
-                <span class="feedback-emoji">🤔</span>
+                <!-- <span class="feedback-emoji">🤔</span> -->
                 <div>
                     <div class="feedback-title">Tidak menemukan jawaban yang Anda cari?</div>
                     <div class="feedback-sub">Tim support kami siap membantu Anda 24/7 melalui tiket</div>

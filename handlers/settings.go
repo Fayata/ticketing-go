@@ -7,15 +7,16 @@ import (
 
 	"ticketing/config"
 	"ticketing/models"
-	"ticketing/utils"
+	"ticketing/services"
 )
 
 type SettingsHandler struct {
-	cfg *config.Config
+	cfg              *config.Config
+	settingsService  *services.SettingsService
 }
 
-func NewSettingsHandler(cfg *config.Config) *SettingsHandler {
-	return &SettingsHandler{cfg: cfg}
+func NewSettingsHandler(cfg *config.Config, settingsService *services.SettingsService) *SettingsHandler {
+	return &SettingsHandler{cfg: cfg, settingsService: settingsService}
 }
 
 // HandleSettings handles both GET and POST for settings
@@ -64,160 +65,38 @@ func (h *SettingsHandler) ShowSettings(w http.ResponseWriter, r *http.Request) {
 // UpdateProfile update profil user
 func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-
 	username := strings.TrimSpace(r.FormValue("username"))
 	email := strings.TrimSpace(r.FormValue("email"))
 	firstName := strings.TrimSpace(r.FormValue("first_name"))
 	lastName := strings.TrimSpace(r.FormValue("last_name"))
 
-	// Validasi
-	errors := make(map[string]string)
-
-	if username == "" {
-		errors["username"] = "Username wajib diisi"
-	}
-	if email == "" {
-		errors["email"] = "Email wajib diisi"
-	}
-
-	// Check username exists (exclude current user)
-	var existingUser models.User
-	if username != "" {
-		if err := config.DB.Where("username = ? AND id != ?", username, user.ID).First(&existingUser).Error; err == nil {
-			errors["username"] = "Username sudah digunakan"
-		}
-	}
-
-	// Check email exists (exclude current user)
-	if email != "" {
-		if err := config.DB.Where("email = ? AND id != ?", email, user.ID).First(&existingUser).Error; err == nil {
-			errors["email"] = "Email sudah terdaftar"
-		}
-	}
-
-	if len(errors) > 0 {
-		data := map[string]interface{}{
-			"errors":        errors,
+	result, _ := h.settingsService.UpdateProfile(user.ID, username, email, firstName, lastName)
+	if result != nil && len(result.Errors) > 0 {
+		h.renderSettingsPage(w, r, map[string]interface{}{
+			"errors":        result.Errors,
 			"form_username": username,
 			"form_email":    email,
 			"form_first":    firstName,
 			"form_last":     lastName,
-		}
-		h.renderSettingsPage(w, r, data)
+		})
 		return
 	}
-
-	// Update user
-	user.Username = username
-	user.Email = email
-	user.FirstName = firstName
-	user.LastName = lastName
-
-	if err := config.DB.Save(user).Error; err != nil {
-		log.Printf("Failed to update user: %v", err)
-		data := map[string]interface{}{
-			"errors": map[string]string{
-				"__all__": "Gagal memperbarui profil. Silakan coba lagi.",
-			},
-			"form_username": username,
-			"form_email":    email,
-			"form_first":    firstName,
-			"form_last":     lastName,
-		}
-		h.renderSettingsPage(w, r, data)
-		return
-	}
-
-	// Update session username
 	sess, _ := config.Store.Get(r, "session")
 	sess.Values["username"] = username
 	sess.Save(r, w)
-
 	log.Printf("Profile updated for user: %s", username)
-
 	http.Redirect(w, r, config.Path("/settings")+"?success=Profil+berhasil+diperbarui", http.StatusSeeOther)
 }
 
 // ChangePassword mengubah password user
 func (h *SettingsHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-
-	oldPassword := r.FormValue("old_password")
-	newPassword1 := r.FormValue("new_password1")
-	newPassword2 := r.FormValue("new_password2")
-
-	// Validasi
-	errors := make(map[string]string)
-
-	if oldPassword == "" {
-		errors["old_password"] = "Password lama wajib diisi"
-	}
-	if newPassword1 == "" {
-		errors["new_password1"] = "Password baru wajib diisi"
-	}
-	if newPassword2 == "" {
-		errors["new_password2"] = "Konfirmasi password baru wajib diisi"
-	}
-
-	if len(errors) > 0 {
-		h.renderSettingsPage(w, r, map[string]interface{}{
-			"errors": errors,
-		})
+	result, _ := h.settingsService.ChangePassword(user.ID, r.FormValue("old_password"), r.FormValue("new_password1"), r.FormValue("new_password2"))
+	if result != nil && len(result.Errors) > 0 {
+		h.renderSettingsPage(w, r, map[string]interface{}{"errors": result.Errors})
 		return
 	}
-
-	// Check old password
-	if !utils.CheckPasswordHash(oldPassword, user.Password) {
-		h.renderSettingsPage(w, r, map[string]interface{}{
-			"errors": map[string]string{
-				"old_password": "Password lama tidak sesuai",
-			},
-		})
-		return
-	}
-
-	// Check new passwords match
-	if newPassword1 != newPassword2 {
-		h.renderSettingsPage(w, r, map[string]interface{}{
-			"errors": map[string]string{
-				"new_password2": "Password baru tidak cocok",
-			},
-		})
-		return
-	}
-
-	// Validate new password length
-	if len(newPassword1) < 8 {
-		h.renderSettingsPage(w, r, map[string]interface{}{
-			"errors": map[string]string{
-				"new_password1": "Password minimal 8 karakter",
-			},
-		})
-		return
-	}
-
-	// Hash new password
-	hashedPassword, err := utils.HashPassword(newPassword1)
-	if err != nil {
-		log.Printf("Failed to hash password: %v", err)
-		http.Redirect(w, r, config.Path("/settings")+"?error=Gagal+mengubah+password", http.StatusSeeOther)
-		return
-	}
-
-	// Update password
-	user.Password = hashedPassword
-	if err := config.DB.Save(user).Error; err != nil {
-		log.Printf("Failed to update password: %v", err)
-		h.renderSettingsPage(w, r, map[string]interface{}{
-			"errors": map[string]string{
-				"__all__": "Gagal mengubah password. Silakan coba lagi.",
-			},
-		})
-		return
-	}
-
 	log.Printf("Password changed for user: %s", user.Username)
-
 	http.Redirect(w, r, config.Path("/settings")+"?success=Password+berhasil+diubah", http.StatusSeeOther)
 }
 

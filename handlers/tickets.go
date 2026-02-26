@@ -6,23 +6,21 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"ticketing/config"
 	"ticketing/models"
+	"ticketing/services"
 	"ticketing/utils"
 )
 
 type TicketHandler struct {
-	cfg          *config.Config
-	emailService *utils.EmailService
+	cfg           *config.Config
+	emailService  *utils.EmailService
+	ticketService *services.TicketService
 }
 
-func NewTicketHandler(cfg *config.Config, emailService *utils.EmailService) *TicketHandler {
-	return &TicketHandler{
-		cfg:          cfg,
-		emailService: emailService,
-	}
+func NewTicketHandler(cfg *config.Config, emailService *utils.EmailService, ticketService *services.TicketService) *TicketHandler {
+	return &TicketHandler{cfg: cfg, emailService: emailService, ticketService: ticketService}
 }
 
 func (h *TicketHandler) HandleCreateTicket(w http.ResponseWriter, r *http.Request) {
@@ -40,18 +38,11 @@ func (h *TicketHandler) HandleCreateTicket(w http.ResponseWriter, r *http.Reques
 // ShowCreateTicket menampilkan form create ticket
 func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	var departmentCount int64
-	config.DB.Model(&models.Department{}).Count(&departmentCount)
-	if departmentCount == 0 {
-		RenderTemplate(w, "tickets/setup_error.html", map[string]interface{}{
-			"title": "Error Konfigurasi",
-		})
+	if h.ticketService.DepartmentCount() == 0 {
+		RenderTemplate(w, "tickets/setup_error.html", map[string]interface{}{"title": "Error Konfigurasi"})
 		return
 	}
-
-	var departments []models.Department
-	config.DB.Find(&departments)
-
+	departments, _ := h.ticketService.GetDepartmentsForCreate()
 	data := AddBaseData(r, map[string]interface{}{
 		"title":         "Kirim Tiket Baru - Portal Ticketing",
 		"page_title":    "Kirim Tiket",
@@ -67,19 +58,16 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 // CreateTicket proses pembuatan ticket baru
 func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-
 	r.ParseForm()
 	title := r.FormValue("title")
 	description := r.FormValue("description")
 	replyToEmail := r.FormValue("reply_to_email")
 	priority := r.FormValue("priority")
 	departmentIDStr := r.FormValue("department")
-
 	if title == "" || description == "" || replyToEmail == "" {
 		http.Error(w, "Semua field wajib diisi", http.StatusBadRequest)
 		return
 	}
-
 	var departmentID *uint
 	if departmentIDStr != "" {
 		id, err := strconv.ParseUint(departmentIDStr, 10, 32)
@@ -89,72 +77,21 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ticket := models.Ticket{
-		Title:        title,
-		Description:  description,
-		ReplyToEmail: replyToEmail,
-		Priority:     models.TicketPriority(priority),
-		Status:       models.StatusWaiting,
-		CreatedByID:  user.ID,
-		DepartmentID: departmentID,
-	}
-
-	if err := config.DB.Create(&ticket).Error; err != nil {
+	ticket, err := h.ticketService.CreateTicket(user.ID, title, description, replyToEmail, priority, departmentID)
+	if err != nil {
 		log.Printf("Failed to create ticket: %v", err)
 		http.Error(w, "Failed to create ticket", http.StatusInternalServerError)
 		return
 	}
-
-	config.DB.Preload("Department").First(&ticket, ticket.ID)
-
 	departmentName := "Tidak Ditentukan"
 	if ticket.Department != nil {
 		departmentName = ticket.Department.Name
 	}
-
-	// Send confirmation email (Async)
 	go func() {
 		log.Printf(" Mengirim email konfirmasi ke: %s", replyToEmail)
-		err := h.emailService.SendTicketConfirmation(
-			replyToEmail,
-			user.GetFullName(),
-			ticket.Title,
-			ticket.ID,
-			departmentName,
-			ticket.GetPriorityDisplay(),
-			ticket.GetStatusDisplay(),
-			ticket.Description,
-		)
-		if err != nil {
-			log.Printf("Failed to send confirmation email: %v", err)
-		}
+		_ = h.emailService.SendTicketConfirmation(replyToEmail, user.GetFullName(), ticket.Title, ticket.ID, departmentName, ticket.GetPriorityDisplay(), ticket.GetStatusDisplay(), ticket.Description)
 	}()
-
 	log.Printf("Ticket #%d created by user %s", ticket.ID, user.Username)
-
-	// Create notification for staff in the department (if assigned)
-	if ticket.DepartmentID != nil {
-		go func() {
-			// Load ticket with CreatedBy for GetFullName
-			var ticketWithUser models.Ticket
-			config.DB.Preload("CreatedBy").First(&ticketWithUser, ticket.ID)
-			
-			var staffUsers []models.User
-			config.DB.Where("department_id = ? AND is_staff = ? AND is_active = ?", ticket.DepartmentID, true, true).
-				Find(&staffUsers)
-			for _, staff := range staffUsers {
-				models.CreateNotification(
-					config.DB,
-					staff.ID,
-					models.NotificationTypeTicket,
-					"Tiket baru masuk",
-					ticketWithUser.GetTicketNumber()+" dari \""+ticketWithUser.CreatedBy.Username+"\" membutuhkan penanganan segera.",
-					&ticket.ID,
-				)
-			}
-		}()
-	}
-
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/sukses/%d", ticket.ID)), http.StatusSeeOther)
 }
 
@@ -164,22 +101,18 @@ func (h *TicketHandler) ShowTicketSuccess(w http.ResponseWriter, r *http.Request
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	// Extract ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/sukses/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
 		http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 		return
 	}
-	var ticket models.Ticket
-	if err := config.DB.First(&ticket, ticketID).Error; err != nil {
+	ticket, err := h.ticketService.GetTicketByIDForSuccess(ticketID)
+	if err != nil {
 		http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 		return
 	}
-	RenderTemplate(w, "ticket_success.html", map[string]interface{}{
-		"title":  "Tiket Berhasil Dibuat",
-		"ticket": &ticket,
-	})
+	RenderTemplate(w, "ticket_success.html", map[string]interface{}{"title": "Tiket Berhasil Dibuat", "ticket": ticket})
 }
 
 // ShowMyTickets menampilkan daftar tiket user
@@ -188,9 +121,7 @@ func (h *TicketHandler) ShowMyTickets(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	user := GetUserFromContext(r).(*models.User)
-
 	searchQuery := r.URL.Query().Get("search")
 	statusFilter := r.URL.Query().Get("status")
 	if statusFilter == "" {
@@ -200,60 +131,7 @@ func (h *TicketHandler) ShowMyTickets(w http.ResponseWriter, r *http.Request) {
 	if priorityFilter == "" {
 		priorityFilter = "all"
 	}
-
-	query := config.DB.Preload("Department").
-		Preload("Replies").
-		Where("created_by_id = ?", user.ID)
-
-	if searchQuery != "" {
-		cleanSearch := strings.TrimPrefix(strings.ToUpper(searchQuery), "T")
-		if ticketID, err := strconv.Atoi(cleanSearch); err == nil {
-			query = query.Where("id = ? OR title LIKE ? OR description LIKE ?",
-				ticketID,
-				"%"+searchQuery+"%",
-				"%"+searchQuery+"%")
-		} else {
-			if len(cleanSearch) > 2 {
-				potentialIDStr := cleanSearch[2:]
-				if potentialID, err := strconv.Atoi(potentialIDStr); err == nil {
-					query = query.Where("id = ? OR title LIKE ? OR description LIKE ?",
-						potentialID,
-						"%"+searchQuery+"%",
-						"%"+searchQuery+"%")
-				} else {
-					// Fallback search biasa
-					query = query.Where("title LIKE ? OR description LIKE ?",
-						"%"+searchQuery+"%",
-						"%"+searchQuery+"%")
-				}
-			} else {
-				query = query.Where("title LIKE ? OR description LIKE ?",
-					"%"+searchQuery+"%",
-					"%"+searchQuery+"%")
-			}
-		}
-	}
-
-	if statusFilter != "all" {
-		var status models.TicketStatus
-		switch statusFilter {
-		case "open":
-			status = models.StatusWaiting
-		case "in_progress":
-			status = models.StatusInProgress
-		case "closed":
-			status = models.StatusClosed
-		}
-		query = query.Where("status = ?", status)
-	}
-
-	if priorityFilter != "all" {
-		query = query.Where("priority = ?", priorityFilter)
-	}
-
-	var tickets []*models.Ticket
-	query.Order("created_at DESC").Find(&tickets)
-
+	tickets, _ := h.ticketService.GetMyTickets(user.ID, searchQuery, statusFilter, priorityFilter)
 	data := AddBaseData(r, map[string]interface{}{
 		"title":           "Tiket Saya - Portal Ticketing",
 		"page_title":      "Tiket Saya",
@@ -265,7 +143,6 @@ func (h *TicketHandler) ShowMyTickets(w http.ResponseWriter, r *http.Request) {
 		"status_filter":   statusFilter,
 		"priority_filter": priorityFilter,
 	})
-
 	RenderTemplate(w, "tickets/my_tickets", data)
 }
 
@@ -284,153 +161,64 @@ func (h *TicketHandler) HandleTicketDetail(w http.ResponseWriter, r *http.Reques
 // ShowTicketDetail menampilkan detail tiket
 func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-
-	// Extract ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
 		http.Redirect(w, r, config.Path("/tiket"), http.StatusSeeOther)
 		return
 	}
-
-	var ticket models.Ticket
-	if err := config.DB.Preload("CreatedBy").
-		Preload("Department").
-		Preload("Replies.User").
-		Where("id = ? AND created_by_id = ?", ticketID, user.ID).
-		First(&ticket).Error; err != nil {
+	detail, err := h.ticketService.GetTicketDetailForUser(user.ID, ticketID)
+	if err != nil {
 		http.Error(w, "Ticket not found", http.StatusNotFound)
 		return
 	}
-
-	// Load rating if ticket is closed (ignore record not found without logging error)
-	var rating models.TicketRating
-	hasRating := false
-	var ratingToken string
-	if ticket.Status == models.StatusClosed {
-		var result models.TicketRating
-		dbResult := config.DB.Where("ticket_id = ?", ticketID).Limit(1).Find(&result)
-		if dbResult.Error == nil && dbResult.RowsAffected > 0 {
-			rating = result
-			hasRating = true
-		} else {
-			// Only generate token if user is the ticket owner and not already rated
-			if ticket.CreatedByID == user.ID {
-				// Generate rating token for user to rate (valid for 30 days)
-				jwtService := utils.NewJWTService(h.cfg)
-				token, err := jwtService.GenerateToken(user.ID, "rate_ticket", 30*24*time.Hour)
-				if err == nil {
-					ratingToken = token
-				}
-			}
-		}
-	}
-
-	// Get success/error message from query parameter
-	successMsg := r.URL.Query().Get("success")
-	errorMsg := r.URL.Query().Get("error")
-
 	data := AddBaseData(r, map[string]interface{}{
-		"title":         fmt.Sprintf("Tiket #%d - %s", ticket.ID, ticket.Title),
-		"page_title":    fmt.Sprintf("Detail Tiket #%d", ticket.ID),
-		"page_subtitle": ticket.Title,
+		"title":         fmt.Sprintf("Tiket #%d - %s", detail.Ticket.ID, detail.Ticket.Title),
+		"page_title":    fmt.Sprintf("Detail Tiket #%d", detail.Ticket.ID),
+		"page_subtitle": detail.Ticket.Title,
 		"nav_active":    "tickets",
 		"template_name": "tickets/ticket_detail",
-		"ticket":        &ticket,
-		"replies":       ticket.Replies,
-		"has_rating":    hasRating,
-		"rating":        rating,
-		"rating_token":  ratingToken,
-		"success":       successMsg,
-		"error":         errorMsg,
+		"ticket":        detail.Ticket,
+		"replies":       detail.Ticket.Replies,
+		"has_rating":    detail.HasRating,
+		"rating":        detail.Rating,
+		"rating_token":  detail.RatingToken,
+		"success":       r.URL.Query().Get("success"),
+		"error":         r.URL.Query().Get("error"),
 	})
-
-	// PERBAIKAN: Hapus .html
 	RenderTemplate(w, "tickets/ticket_detail", data)
 }
 
 // AddReply menambahkan reply ke tiket dan mengirim email
 func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-
-	// Extract ID from URL path
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
 		http.Redirect(w, r, config.Path("/tiket"), http.StatusSeeOther)
 		return
 	}
-
 	r.ParseForm()
 	message := r.FormValue("message")
 	if message == "" {
 		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
 		return
 	}
-
-	var ticket models.Ticket
-	if err := config.DB.Preload("CreatedBy").
-		Where("id = ? AND created_by_id = ?", ticketID, user.ID).
-		First(&ticket).Error; err != nil {
+	reply, ticket, err := h.ticketService.AddReply(uint(ticketID), user.ID, message)
+	if err != nil {
 		http.Error(w, "Ticket not found", http.StatusNotFound)
 		return
 	}
-
-	reply := models.TicketReply{
-		TicketID: ticket.ID,
-		UserID:   user.ID,
-		Message:  message,
-	}
-
-	if err := config.DB.Create(&reply).Error; err != nil {
-		log.Printf("Failed to create reply: %v", err)
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
-		return
-	}
-
-	config.DB.Model(&ticket).Update("updated_at", time.Now())
-	
-	// Load reply with user
-	config.DB.Preload("User").First(&reply, reply.ID)
-
 	log.Printf("Reply added to ticket #%d by user %s", ticketID, user.Username)
-
-	// Create notification for staff if reply is from ticket owner
-	if !user.IsStaff && ticket.AssignedToID != nil {
-		go func() {
-			models.CreateNotification(
-				config.DB,
-				*ticket.AssignedToID,
-				models.NotificationTypeReply,
-				"Balasan dari pengguna",
-				user.GetFullName()+" membalas tiket "+ticket.GetTicketNumber()+": "+utils.TruncateString(reply.Message, 80),
-				&ticket.ID,
-			)
-		}()
-	}
-
 	if reply.UserID != ticket.CreatedByID {
 		targetEmail := ticket.ReplyToEmail
 		if targetEmail == "" {
 			targetEmail = ticket.CreatedBy.Email
 		}
-
 		go func() {
-			err := h.emailService.SendTicketReply(
-				targetEmail,
-				ticket.CreatedBy.GetFullName(),
-				ticket.Title,
-				ticket.ID,
-				ticket.GetStatusDisplay(),
-				reply.Message,
-				user.GetFullName(),
-			)
-			if err != nil {
-				log.Printf("Failed to send reply email notification: %v", err)
-			}
+			_ = h.emailService.SendTicketReply(targetEmail, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName())
 		}()
 	}
-
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
 }
 
@@ -440,55 +228,30 @@ func (h *TicketHandler) ShowRatingForm(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	// Extract ticket ID from URL
 	path := strings.TrimPrefix(r.URL.Path, "/rating/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
 		http.Error(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
-
-	// Get token from query parameter
 	token := r.URL.Query().Get("token")
 	if token == "" {
 		http.Error(w, "Rating token required", http.StatusBadRequest)
 		return
 	}
-
-	// Validate token
-	jwtService := utils.NewJWTService(h.cfg)
-	claims, err := jwtService.ValidateToken(token)
-	if err != nil || claims.Purpose != "rate_ticket" {
+	formData, err := h.ticketService.GetRatingFormData(ticketID, token)
+	if err != nil {
 		http.Error(w, "Invalid or expired rating token", http.StatusBadRequest)
 		return
 	}
-
-	// Get ticket
-	var ticket models.Ticket
-	if err := config.DB.Preload("CreatedBy").Preload("Department").
-		Where("id = ? AND created_by_id = ? AND status = ?", ticketID, claims.UserID, models.StatusClosed).
-		First(&ticket).Error; err != nil {
-		http.Error(w, "Ticket not found or not eligible for rating", http.StatusNotFound)
-		return
-	}
-
-	// Check if already rated
-	var existingRating models.TicketRating
-	hasRated := config.DB.Where("ticket_id = ?", ticketID).First(&existingRating).Error == nil
-
-	// Get success message from query
-	successMsg := r.URL.Query().Get("success")
-
 	data := map[string]interface{}{
-		"title":      "Rating Pengalaman - Portal Ticketing",
-		"ticket":     &ticket,
-		"token":      token,
-		"has_rated":  hasRated,
-		"rating":     existingRating,
-		"success":    successMsg,
+		"title":     "Rating Pengalaman - Portal Ticketing",
+		"ticket":    formData.Ticket,
+		"token":     token,
+		"has_rated": formData.HasRated,
+		"rating":    formData.Rating,
+		"success":   r.URL.Query().Get("success"),
 	}
-
 	RenderTemplate(w, "tickets/rating", data)
 }
 
@@ -498,71 +261,32 @@ func (h *TicketHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
 	r.ParseForm()
-
-	// Extract ticket ID from URL
 	path := strings.TrimPrefix(r.URL.Path, "/rating/")
 	ticketID, err := strconv.Atoi(path)
 	if err != nil {
 		http.Error(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
-
-	// Get token and validate
 	token := r.FormValue("token")
 	if token == "" {
 		http.Error(w, "Rating token required", http.StatusBadRequest)
 		return
 	}
-
-	jwtService := utils.NewJWTService(h.cfg)
-	claims, err := jwtService.ValidateToken(token)
-	if err != nil || claims.Purpose != "rate_ticket" {
-		http.Error(w, "Invalid or expired rating token", http.StatusBadRequest)
-		return
-	}
-
-	// Get rating and comment
-	ratingStr := r.FormValue("rating")
-	comment := r.FormValue("comment")
-
-	rating, err := strconv.Atoi(ratingStr)
+	rating, err := strconv.Atoi(r.FormValue("rating"))
 	if err != nil || rating < 1 || rating > 5 {
 		http.Error(w, "Invalid rating. Please select 1-5 stars", http.StatusBadRequest)
 		return
 	}
-
-	// Verify ticket exists and belongs to user
-	var ticket models.Ticket
-	if err := config.DB.Where("id = ? AND created_by_id = ? AND status = ?", ticketID, claims.UserID, models.StatusClosed).
-		First(&ticket).Error; err != nil {
-		http.Error(w, "Ticket not found or not eligible for rating", http.StatusNotFound)
-		return
-	}
-
-	// Check if already rated - rating cannot be edited once submitted
-	var existingRating models.TicketRating
-	if config.DB.Where("ticket_id = ?", ticketID).First(&existingRating).Error == nil {
-		// Rating already exists, cannot be edited
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error=Rating+sudah+diberikan+dan+tidak+bisa+diubah", http.StatusSeeOther)
-		return
-	}
-
-	// Create new rating
-	newRating := models.TicketRating{
-		TicketID:  uint(ticketID),
-		Rating:    rating,
-		Comment:   comment,
-		RatedByID: claims.UserID,
-		RatedAt:   time.Now(),
-	}
-	if err := config.DB.Create(&newRating).Error; err != nil {
+	comment := r.FormValue("comment")
+	if err := h.ticketService.SubmitRating(ticketID, token, rating, comment); err != nil {
+		if err.Error() == "already rated" {
+			http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error=Rating+sudah+diberikan+dan+tidak+bisa+diubah", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Failed to save rating", http.StatusInternalServerError)
 		return
 	}
-
-	// Redirect back to ticket detail page
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?success=Rating+berhasil+disimpan", http.StatusSeeOther)
 }
 
