@@ -118,8 +118,9 @@ body {
     flex-direction: column;
     position: fixed;
     height: 100vh;
+    overflow-x: hidden;
     overflow-y: auto;
-    transition: var(--transition);
+    transition: width 0.26s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
 }
 
@@ -326,13 +327,14 @@ body {
 }
 
 .sidebar.collapsed .user-actions {
-    flex-direction: row;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     gap: 0.375rem;
 }
 .sidebar.collapsed .user-action-btn {
     flex: 0;
     min-width: 2.5rem;
+    width: 2.5rem;
     padding: 0.5rem;
 }
 .sidebar.collapsed .user-action-btn span {
@@ -351,7 +353,7 @@ body {
     margin-left: 260px;
     display: flex;
     flex-direction: column;
-    transition: var(--transition);
+    transition: margin-left 0.26s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar.collapsed ~ .main-content {
