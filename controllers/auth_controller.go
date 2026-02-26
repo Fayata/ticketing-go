@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"net/http"
+	"time"
+
 	"ticketing/config"
 	"ticketing/services"
 	"ticketing/utils"
@@ -49,6 +51,10 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+
+		now := time.Now()
+		config.DB.Model(user).Update("last_login", now)
+		user.LastLogin = &now
 
 		sess, _ := config.Store.Get(r, "session")
 		sess.Values["user_id"] = user.ID
