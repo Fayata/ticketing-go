@@ -98,20 +98,22 @@ func (h *DashboardHandler) ShowKBArticle(w http.ResponseWriter, r *http.Request)
 	if article.CategoryID != 0 {
 		catID = &article.CategoryID
 	}
-	relatedArticles := h.kbService.GetRelatedArticles(article.ID, catID, 6)
+	relatedByCategory := h.kbService.GetRelatedArticles(article.ID, catID, 8)
+	popularExcludeCurrent := h.kbService.GetRelatedArticles(article.ID, nil, 8)
 	unreadCount, _ := models.GetUnreadCount(config.DB, user.ID)
 
 	data := AddBaseData(r, map[string]interface{}{
-		"title":                article.Title + " — Knowledge Base",
-		"page_title":           article.Title,
-		"page_subtitle":        "Knowledge Base",
-		"nav_active":           "kb",
-		"template_name":        "tickets/kb_article",
-		"user":                 user,
-		"active_tickets_count": activeTicketsCount,
-		"unread_count":         unreadCount,
-		"article":              article,
-		"related_articles":     relatedArticles,
+		"title":                     article.Title + " — Knowledge Base",
+		"page_title":                article.Title,
+		"page_subtitle":             "Knowledge Base",
+		"nav_active":                "kb",
+		"template_name":             "tickets/kb_article",
+		"user":                      user,
+		"active_tickets_count":      activeTicketsCount,
+		"unread_count":              unreadCount,
+		"article":                   article,
+		"related_articles":          relatedByCategory,
+		"popular_articles_sidebar":  popularExcludeCurrent,
 	})
 
 	RenderTemplate(w, "tickets/kb_article", data)

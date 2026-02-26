@@ -1,70 +1,108 @@
 {{define "tickets/kb_article_content"}}
-<div class="content kb-article-content" style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: start;">
-    <div class="card" style="max-width: 800px; flex: 1 1 100%;">
-        <div class="card-header" style="display: block;">
-            <a href="knowledge-base" class="view-all-link" style="margin-bottom: 0.5rem; display: inline-flex;">← Kembali ke Knowledge Base</a>
-            {{if .article.Category}}<span class="article-cat-badge {{.article.Category.ColorClass}}" style="margin-left: 0.5rem;">{{.article.Category.Name}}</span>{{end}}
-            <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-top: 0.75rem;">{{.article.Title}}</h1>
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                <span id="articleViewsCount">{{.article.Views}}</span> views · Diperbarui {{date .article.UpdatedAt}}
+<div class="content kb-article-content kb-article-layout">
+    <div class="kb-article-main">
+        <div class="card">
+            <div class="card-header" style="display: block;">
+                <a href="knowledge-base" class="view-all-link" style="margin-bottom: 0.5rem; display: inline-flex;">← Kembali ke Knowledge Base</a>
+                {{if .article.Category}}<span class="article-cat-badge {{.article.Category.ColorClass}}" style="margin-left: 0.5rem;">{{.article.Category.Name}}</span>{{end}}
+                <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-top: 0.75rem;">{{.article.Title}}</h1>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    <span id="articleViewsCount">{{.article.Views}}</span> views · Diperbarui {{date .article.UpdatedAt}}
+                </div>
+            </div>
+            <div class="card-body" style="padding: 1.5rem 1.4rem;">
+                <div class="kb-article-body" id="kbArticleBody">{{linebreaks .article.Content}}</div>
             </div>
         </div>
-        <div class="card-body" style="padding: 1.5rem 1.4rem;">
-            <div class="kb-article-body" id="kbArticleBody">{{linebreaks .article.Content}}</div>
-        </div>
     </div>
-    {{if .related_articles}}
-    <div class="card" style="min-width: 280px; max-width: 320px; flex: 1 1 280px;">
-        <div class="card-header">
-            <span class="card-title">Artikel terkait</span>
-        </div>
-        <div class="card-body" style="padding: 0.75rem;">
-            <div class="article-list">
-                {{range .related_articles}}
-                <a class="article-item" href="knowledge-base/article/{{.ID}}" style="display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border-color);text-decoration:none;color:inherit;">
-                    <div class="article-body" style="flex:1;min-width:0;">
-                        <div class="article-title" style="font-size:0.9rem;">{{.Title}}</div>
-                        <div class="article-meta" style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.2rem;">
-                            {{if .Category}}<span class="article-cat-badge {{.Category.ColorClass}}">{{.Category.Name}}</span>{{end}}
-                            <span>{{.Views}} views</span>
-                        </div>
+    <aside class="kb-article-sidebar">
+        <div class="card">
+            <div class="card-header kb-sidebar-tabs">
+                <button type="button" class="kb-tab active" data-tab="related" aria-pressed="true">Artikel terkait</button>
+                <button type="button" class="kb-tab" data-tab="popular" aria-pressed="false">Artikel populer</button>
+            </div>
+            <div class="card-body" style="padding: 0.75rem;">
+                <div id="kbTabRelated" class="kb-tab-pane">
+                    <div class="article-list">
+                        {{range .related_articles}}
+                        <a class="article-item" href="knowledge-base/article/{{.ID}}">
+                            <div class="article-body" style="flex:1;min-width:0;">
+                                <div class="article-title" style="font-size:0.9rem;">{{.Title}}</div>
+                                <div class="article-meta" style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.2rem;">
+                                    {{if .Category}}<span class="article-cat-badge {{.Category.ColorClass}}">{{.Category.Name}}</span>{{end}}
+                                    <span>{{.Views}} views</span>
+                                </div>
+                            </div>
+                            <span class="article-arrow">›</span>
+                        </a>
+                        {{end}}
+                        {{if not .related_articles}}
+                        <p class="kb-sidebar-empty">Tidak ada artikel lain dalam kategori ini.</p>
+                        {{end}}
                     </div>
-                    <span style="color:var(--text-light);">›</span>
-                </a>
-                {{end}}
+                </div>
+                <div id="kbTabPopular" class="kb-tab-pane" hidden>
+                    <div class="article-list">
+                        {{range .popular_articles_sidebar}}
+                        <a class="article-item" href="knowledge-base/article/{{.ID}}">
+                            <div class="article-body" style="flex:1;min-width:0;">
+                                <div class="article-title" style="font-size:0.9rem;">{{.Title}}</div>
+                                <div class="article-meta" style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.2rem;">
+                                    {{if .Category}}<span class="article-cat-badge {{.Category.ColorClass}}">{{.Category.Name}}</span>{{end}}
+                                    <span>{{.Views}} views</span>
+                                </div>
+                            </div>
+                            <span class="article-arrow">›</span>
+                        </a>
+                        {{end}}
+                        {{if not .popular_articles_sidebar}}
+                        <p class="kb-sidebar-empty">Belum ada artikel populer.</p>
+                        {{end}}
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-    {{end}}
+    </aside>
 </div>
 <script>
 (function(){
     var articleId = {{.article.ID}};
     var viewRecorded = false;
     var body = document.getElementById('kbArticleBody');
-    if (!body) return;
-    function checkScroll() {
-        if (viewRecorded) return;
-        var rect = body.getBoundingClientRect();
-        var bottom = rect.bottom;
-        var winH = window.innerHeight;
-        if (bottom <= winH + 50) {
-            viewRecorded = true;
-            fetch('api/kb/article/view', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ article_id: articleId })
-            }).then(function(r){ return r.json(); }).then(function(data){
-                if (data && data.ok) {
-                    var el = document.getElementById('articleViewsCount');
-                    if (el) el.textContent = parseInt(el.textContent, 10) + 1;
-                }
-            }).catch(function(){});
+    if (body) {
+        function checkScroll() {
+            if (viewRecorded) return;
+            var rect = body.getBoundingClientRect();
+            if (rect.bottom <= window.innerHeight + 50) {
+                viewRecorded = true;
+                fetch('api/kb/article/view', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ article_id: articleId })
+                }).then(function(r){ return r.json(); }).then(function(data){
+                    if (data && data.ok) {
+                        var el = document.getElementById('articleViewsCount');
+                        if (el) el.textContent = parseInt(el.textContent, 10) + 1;
+                    }
+                }).catch(function(){});
+            }
         }
+        window.addEventListener('scroll', checkScroll, { passive: true });
+        window.addEventListener('resize', checkScroll, { passive: true });
+        checkScroll();
     }
-    window.addEventListener('scroll', checkScroll, { passive: true });
-    window.addEventListener('resize', checkScroll, { passive: true });
-    checkScroll();
+    // Tab: Artikel terkait / Artikel populer
+    var tabs = document.querySelectorAll('.kb-tab');
+    var panes = { related: document.getElementById('kbTabRelated'), popular: document.getElementById('kbTabPopular') };
+    tabs.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var t = this.getAttribute('data-tab');
+            tabs.forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+            this.classList.add('active'); this.setAttribute('aria-pressed', 'true');
+            if (panes.related) { panes.related.hidden = t !== 'related'; }
+            if (panes.popular) { panes.popular.hidden = t !== 'popular'; }
+        });
+    });
 })();
 </script>
 {{end}}
