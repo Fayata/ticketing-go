@@ -124,7 +124,19 @@ func main() {
 	var handler http.Handler = loggedMux
 	if config.AppBasePath != "" && config.AppBasePath != "/" {
 		prefix := strings.TrimRight(config.AppBasePath, "/")
-		handler = http.StripPrefix(prefix, loggedMux)
+		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, prefix) {
+				oldPath := r.URL.Path
+				r.URL.Path = strings.TrimPrefix(r.URL.Path, prefix)
+				if r.URL.Path == "" {
+					r.URL.Path = "/"
+				}
+				loggedMux.ServeHTTP(w, r)
+				r.URL.Path = oldPath
+			} else {
+				loggedMux.ServeHTTP(w, r)
+			}
+		})
 	}
 	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
 		log.Fatal(err)
