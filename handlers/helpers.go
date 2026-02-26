@@ -18,7 +18,7 @@ import (
 var templates *template.Template
 
 func init() {
-	// Fungsi untuk template (slice, date, status, dll.)
+	// helper buat dipake di template (slice, date, status, dll.)
 	funcMap := template.FuncMap{
 		"slice": func(s string, start, end int) string {
 			if start < 0 || end > len(s) || start > end {

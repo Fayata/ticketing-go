@@ -42,7 +42,7 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 		Where("created_by_id = ?", user.ID).
 		Count(&totalCount)
 
-	// Get recent tickets
+	// tiket terbaru user
 	var recentTickets []*models.Ticket
 	config.DB.Preload("Department").
 		Preload("Replies").
@@ -51,10 +51,10 @@ func (h *DashboardHandler) ShowDashboard(w http.ResponseWriter, r *http.Request)
 		Limit(5).
 		Find(&recentTickets)
 
-	// Get unread notification count
+	// buat badge notif
 	unreadCount, _ := models.GetUnreadCount(config.DB, user.ID)
 
-	// Artikel populer dari Knowledge Base (urut views desc)
+	// artikel KB yang paling banyak dilihat
 	var popularArticles []*models.KBArticle
 	config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true).
 		Order("views DESC").Limit(6).Find(&popularArticles)

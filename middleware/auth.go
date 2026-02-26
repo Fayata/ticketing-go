@@ -18,7 +18,7 @@ const (
 	ActiveTicketsCountKey contextKey = "active_tickets_count"
 )
 
-// AuthRequired: wajib login, user dimuat ke context.
+// Cek session, load user ke context. Kalo belum login -> redirect login.
 func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sess, err := config.Store.Get(r, "session")
@@ -54,7 +54,7 @@ func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// PortalUserRequired: hanya user portal (bukan staff/admin). Staff/admin diarahkan ke area masing-masing.
+// Buat halaman user aja (dashboard, tiket, settings). Staff/admin jangan masuk sini — mereka punya tempat sendiri.
 func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -63,7 +63,7 @@ func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Akses ini khusus untuk akun pengguna portal.", http.StatusForbidden)
 			return
 		}
-		// Staff/admin tidak akses halaman user
+		// staff/admin -> redirect ke area mereka
 		if user.IsSuperAdmin {
 			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
 			return
@@ -77,14 +77,13 @@ func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// GuestOnly: hanya untuk yang belum login. Sudah login di-redirect sesuai role.
+// Halaman buat yang belum login (login, register). Kalo udah login -> redirect ke dashboard/departemen/admin sesuai role.
 func GuestOnly(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sess, err := config.Store.Get(r, "session")
 		if err == nil {
 			userID := sess.Values["user_id"]
 			if userID != nil {
-				// Redirect sesuai role
 				var user models.User
 				if err := config.DB.Select("is_staff", "is_super_admin").First(&user, userID).Error; err == nil {
 					if user.IsSuperAdmin {
@@ -105,7 +104,7 @@ func GuestOnly(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// SetUserLocals: isi context dengan user untuk template.
+// Isi context dengan user (buat dipakai di template).
 func SetUserLocals(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sess, err := config.Store.Get(r, "session")
@@ -135,7 +134,7 @@ func SetUserLocals(next http.Handler) http.Handler {
 	})
 }
 
-// LoggingMiddleware: log hanya request yang mengubah data (login, POST user, CUD admin/staff). GET tidak dicatat.
+// Log cuma POST/PUT/DELETE/PATCH biar terminal ga penuh. GET (baca halaman) ga perlu dicatat.
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -147,7 +146,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// DepartmentRequired: hanya staff. User diarahkan ke dashboard.
+// Halaman departemen cuma buat staff. User biasa -> redirect ke dashboard.
 func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -161,7 +160,7 @@ func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// SuperAdminRequired: hanya super admin. Lainnya diarahkan ke dashboard/departemen.
+// Halaman admin (users, departments) cuma super admin. Yang lain -> redirect.
 func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -179,7 +178,7 @@ func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// StaffOrSuperAdminRequired: staff atau super admin saja (mis. KB admin).
+// Buat akses KB admin dll — cukup staff atau super admin.
 func StaffOrSuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)

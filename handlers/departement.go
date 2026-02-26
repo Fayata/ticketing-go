@@ -24,7 +24,7 @@ func NewDepartmentHandler(cfg *config.Config, emailService *utils.EmailService) 
 	}
 }
 
-// Helper untuk data standar Department
+// bantu isi data base buat halaman departemen
 func (h *DepartmentHandler) addDepartmentData(r *http.Request, data map[string]interface{}) map[string]interface{} {
 	baseData := AddBaseData(r, data)
 	baseData["is_department_page"] = true
@@ -37,17 +37,17 @@ type MonthlyStat struct {
 	Height     string
 }
 
-// ShowDashboard
+// Dashboard staff: statistik, tiket saya, pool, chart
 func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
-	// Pastikan staff memiliki DepartmentID
+	// staff harus punya departemen
 	if user.DepartmentID == nil {
 		http.Error(w, "Akun staff belum memiliki departemen. Hubungi admin.", http.StatusForbidden)
 		return
 	}
 
-	// --- Statistik Card Atas ---
+	// card statistik (waiting, in progress, closed)
 	var waitingCount, inProgressCount, closedCount int64
 	config.DB.Model(&models.Ticket{}).
 		Where("status = ? AND department_id = ?", models.StatusWaiting, user.DepartmentID).
@@ -59,14 +59,14 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		Where("status = ? AND department_id = ?", models.StatusClosed, user.DepartmentID).
 		Count(&closedCount)
 
-	// --- Tiket Aktif Saya ---
+	// tiket yang di-assign ke staff ini
 	var myActiveTickets []*models.Ticket
 	config.DB.Preload("Department").Preload("CreatedBy").
 		Where("assigned_to_id = ? AND status != ?", user.ID, models.StatusClosed).
 		Order("updated_at DESC").
 		Find(&myActiveTickets)
 
-	// --- Pool Tiket ---
+	// tiket yang belum diambil
 	var ticketPool []*models.Ticket
 	config.DB.Preload("Department").Preload("CreatedBy").
 		Where("assigned_to_id IS NULL AND status != ? AND (department_id = ? OR department_id IS NULL)", models.StatusClosed, user.DepartmentID).
@@ -74,7 +74,7 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		Order("created_at ASC").
 		Find(&ticketPool)
 
-	// --- Chart Logic
+	// data buat chart
 	currentYear := time.Now().Year()
 	activityMap := make(map[int]map[uint]bool)
 	for i := 1; i <= 12; i++ {

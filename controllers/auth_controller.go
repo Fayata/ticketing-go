@@ -22,7 +22,7 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			"query_next": r.URL.Query().Get("next"),
 		}
 
-		// Ambil pesan dari URL query parameter jika ada
+		// pesan sukses/error dari query string (misal setelah verifikasi email)
 		if successMsg := r.URL.Query().Get("success"); successMsg != "" {
 			data["success"] = successMsg
 		}
@@ -59,7 +59,7 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, config.Path(nextParam), http.StatusSeeOther)
 			return
 		}
-		// Redirect sesuai role: admin / staff / user
+		// setelah login: admin -> admin, staff -> departemen, user -> dashboard
 		if user.IsSuperAdmin {
 			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
 		} else if user.IsStaff {

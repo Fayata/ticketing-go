@@ -35,7 +35,7 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Migrasi model DB
+	// migrate tabel kalo belum ada
 	if err := config.AutoMigrate(
 		&models.User{},
 		&models.Group{},
@@ -58,11 +58,11 @@ func main() {
 	departementHandler := handlers.NewDepartmentHandler(cfg, emailService)
 	notificationHandler := handlers.NewNotificationHandler(cfg)
 
-	// Static: css, js, images di bawah ./static
+	// file static (css, js, gambar)
 	fs := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// Rute publik
+	// rute yang ga perlu login
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -78,7 +78,7 @@ func main() {
 	mux.HandleFunc("/forgot-password", middleware.GuestOnly(authController.ForgotPassword))
 	mux.HandleFunc("/reset-password", middleware.GuestOnly(authController.ResetPassword))
 
-	// Rute admin (super admin) & staff (departemen)
+	// admin & staff
 	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard)))
 	mux.HandleFunc("/admin/users", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListUsers)))
 	mux.HandleFunc("/admin/users/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateUserForm)))
@@ -98,18 +98,18 @@ func main() {
 	mux.HandleFunc("/department/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
 	mux.HandleFunc("/department/all-tickets", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets)))
 
-	// Rute user (portal)
+	// user portal (dashboard, tiket, settings, dll)
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard)))
 	mux.HandleFunc("/tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowMyTickets)))
 	mux.HandleFunc("/tiket/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleTicketDetail)))
 	mux.HandleFunc("/kirim-tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleCreateTicket)))
 	mux.HandleFunc("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowTicketSuccess)))
-	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // rating pakai token
+	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // akses pake token di URL
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
 	mux.HandleFunc("/knowledge-base", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKnowledgeBase)))
 	mux.HandleFunc("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKBArticle)))
 	
-	// API notifikasi
+	// API buat panel notifikasi
 	mux.HandleFunc("/api/notifications", middleware.AuthRequired(notificationHandler.GetNotifications))
 	mux.HandleFunc("/api/notifications/read", middleware.AuthRequired(notificationHandler.MarkAsRead))
 	mux.HandleFunc("/api/notifications/read-all", middleware.AuthRequired(notificationHandler.MarkAllAsRead))

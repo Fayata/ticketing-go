@@ -32,7 +32,7 @@ func (Notification) TableName() string {
 	return "notifications"
 }
 
-// CreateNotification creates a new notification
+// Buat notif baru (dipake pas ada tiket/balasan/status berubah)
 func CreateNotification(db *gorm.DB, userID uint, notifType NotificationType, title, message string, ticketID *uint) error {
 	notif := Notification{
 		UserID:  userID,
@@ -45,7 +45,7 @@ func CreateNotification(db *gorm.DB, userID uint, notifType NotificationType, ti
 	return db.Create(&notif).Error
 }
 
-// MarkAsRead marks notification as read
+// Tandai notif ini sudah dibaca
 func (n *Notification) MarkAsRead(db *gorm.DB) error {
 	now := time.Now()
 	return db.Model(n).Updates(map[string]interface{}{
@@ -54,7 +54,7 @@ func (n *Notification) MarkAsRead(db *gorm.DB) error {
 	}).Error
 }
 
-// MarkAllAsRead marks all notifications for a user as read
+// Tandai semua notif user sebagai dibaca
 func MarkAllAsRead(db *gorm.DB, userID uint) error {
 	now := time.Now()
 	return db.Model(&Notification{}).
@@ -65,7 +65,7 @@ func MarkAllAsRead(db *gorm.DB, userID uint) error {
 		}).Error
 }
 
-// GetUnreadCount returns count of unread notifications for a user
+// Hitung notif belum dibaca (buat badge)
 func GetUnreadCount(db *gorm.DB, userID uint) (int64, error) {
 	var count int64
 	err := db.Model(&Notification{}).
