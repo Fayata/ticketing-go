@@ -57,13 +57,23 @@ func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// PortalUserRequired middleware untuk memastikan user memiliki akses portal
+// PortalUserRequired middleware: hanya untuk pengguna portal (bukan staff).
+// Staff selalu diarahkan ke dashboard departemen agar tampilan tidak tercampur dengan user.
 func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
 
 		if !user.HasPortalAccess() {
 			http.Error(w, "Akses ini khusus untuk akun pengguna portal.", http.StatusForbidden)
+			return
+		}
+		// Staff & Admin jangan akses halaman user — staff ke departemen, admin ke area admin
+		if user.IsSuperAdmin {
+			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
+			return
+		}
+		if user.IsStaff {
+			http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
 			return
 		}
 
@@ -78,6 +88,18 @@ func GuestOnly(next http.HandlerFunc) http.HandlerFunc {
 		if err == nil {
 			userID := sess.Values["user_id"]
 			if userID != nil {
+				// Redirect sesuai role: admin -> area admin, staff -> dashboard departemen, user -> dashboard
+				var user models.User
+				if err := config.DB.Select("is_staff", "is_super_admin").First(&user, userID).Error; err == nil {
+					if user.IsSuperAdmin {
+						http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
+						return
+					}
+					if user.IsStaff {
+						http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
+						return
+					}
+				}
 				http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
 				return
 			}
@@ -129,6 +151,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	
 }
 
+// DepartmentRequired: hanya staff yang boleh akses. User biasa tidak bisa akses area staff/departemen.
 func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -142,6 +165,7 @@ func DepartmentRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// SuperAdminRequired: hanya super admin yang boleh akses. User biasa dan staff tidak bisa akses area admin.
 func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)
@@ -159,7 +183,7 @@ func SuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// StaffOrSuperAdminRequired allows akses untuk staff atau super admin (mis. kelola Knowledge Base)
+// StaffOrSuperAdminRequired: hanya staff atau super admin. User biasa tidak bisa akses (mis. KB admin).
 func StaffOrSuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := r.Context().Value(UserKey).(*models.User)

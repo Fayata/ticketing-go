@@ -62,9 +62,10 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Jika tidak ada 'next', cek role user
-		// Staff & Admin masuk ke Dashboard Departemen, User biasa ke Dashboard User
-		if user.IsStaff || user.IsSuperAdmin {
+		// Jika tidak ada 'next', cek role: Admin -> area admin, Staff -> dashboard departemen, User -> dashboard
+		if user.IsSuperAdmin {
+			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
+		} else if user.IsStaff {
 			http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
 		} else {
 			http.Redirect(w, r, config.Path("/dashboard"), http.StatusSeeOther)
