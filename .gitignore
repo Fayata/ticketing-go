@@ -3,3 +3,4 @@ app_ticketing
 .gitignore
 ticketing.exe
 docs/PERFORMA_PRODUCTION.md
+app.log
