@@ -74,10 +74,13 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		Order("updated_at DESC").
 		Find(&myActiveTickets)
 
-	// pool: tiket belum di-claim untuk departemen saya atau umum
+	// pool: tiket belum di-claim (assigned_to_id NULL, status WAITING), dept saya atau umum
 	var ticketPool []*models.Ticket
-	config.DB.Preload("Department").Preload("CreatedBy").
-		Where(poolCondition, models.StatusWaiting, deptID).
+	config.DB.Model(&models.Ticket{}).
+		Preload("Department").Preload("CreatedBy").
+		Where("assigned_to_id IS NULL").
+		Where("status = ?", models.StatusWaiting).
+		Where("(department_id = ? OR department_id IS NULL)", deptID).
 		Order("created_at ASC").
 		Find(&ticketPool)
 
@@ -454,12 +457,12 @@ func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request
 		Where("ticket_id = ? AND staff_id = ? AND released_at IS NULL", ticketID, user.ID).
 		Update("released_at", &now)
 
-	// Update tiket di DB: assigned_to_id = NULL, status = WAITING (pakai Updates agar NULL benar-benar tersimpan)
-	if err := config.DB.Model(&ticket).Updates(map[string]interface{}{
-		"assigned_to_id": nil,
-		"status":         models.StatusWaiting,
-		"updated_at":     now,
-	}).Error; err != nil {
+	// Update tiket: assigned_to_id = NULL, status = WAITING — pakai Exec agar NULL pasti tersimpan (GORM Updates kadang mengabaikan nil)
+	res := config.DB.Exec(
+		"UPDATE tickets SET assigned_to_id = NULL, status = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+		models.StatusWaiting, now, ticket.ID,
+	)
+	if res.Error != nil || res.RowsAffected == 0 {
 		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Gagal+melepas+tiket", http.StatusSeeOther)
 		return
 	}
