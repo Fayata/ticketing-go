@@ -71,7 +71,7 @@
                         </span>
                         
                         <a href="department/tiket/release/{{.ID}}" 
-                           onclick="event.stopPropagation(); event.preventDefault(); showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', function(){ window.location.href='department/tiket/release/{{.ID}}'; }); return false;" 
+                           onclick="event.stopPropagation(); event.preventDefault(); showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{.ID}}'; }); return false;" 
                            style="font-size:0.75rem; background:#fee2e2; color:#dc2626; padding:4px 8px; border-radius:4px; text-decoration:none; font-weight:600; border:1px solid #fecaca; z-index: 2;">
                             Lepas ke Pool ↩
                         </a>

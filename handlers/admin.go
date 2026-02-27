@@ -342,6 +342,18 @@ func slugify(s string) string {
 	return s
 }
 
+// parseKBIDFromPath mengambil ID dari segment terakhir path (r.URL.Path sudah tanpa base path dari middleware).
+// Contoh: "/admin/knowledge-base/categories/edit/5" -> 5
+func parseKBIDFromPath(path string) int {
+	path = strings.Trim(path, "/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 {
+		return 0
+	}
+	id, _ := strconv.Atoi(parts[len(parts)-1])
+	return id
+}
+
 func (h *AdminHandler) ListKBAdmin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -525,11 +537,8 @@ func (h *AdminHandler) CreateKBArticlePost(w http.ResponseWriter, r *http.Reques
 
 // EditKBCategory menampilkan form edit (GET) atau menyimpan perubahan (POST). Path: .../categories/edit/<id>
 func (h *AdminHandler) EditKBCategory(w http.ResponseWriter, r *http.Request) {
-	base := config.Path("/admin/knowledge-base/categories/edit/")
-	idStr := strings.TrimPrefix(r.URL.Path, base)
-	idStr = strings.Trim(idStr, "/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
+	id := parseKBIDFromPath(r.URL.Path)
+	if id <= 0 {
 		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+kategori+tidak+valid", http.StatusSeeOther)
 		return
 	}
@@ -555,7 +564,7 @@ func (h *AdminHandler) EditKBCategory(w http.ResponseWriter, r *http.Request) {
 			colorClass = "green"
 		}
 		if name == "" {
-			http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/edit/")+idStr+"?error=Nama+wajib+diisi", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/edit/")+strconv.Itoa(id)+"?error=Nama+wajib+diisi", http.StatusSeeOther)
 			return
 		}
 		slug := slugify(name)
@@ -571,7 +580,7 @@ func (h *AdminHandler) EditKBCategory(w http.ResponseWriter, r *http.Request) {
 		cat.Icon = icon
 		cat.ColorClass = colorClass
 		if err := config.DB.Save(&cat).Error; err != nil {
-			http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/edit/")+idStr+"?error=Gagal+menyimpan", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/edit/")+strconv.Itoa(id)+"?error=Gagal+menyimpan", http.StatusSeeOther)
 			return
 		}
 		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Kategori+berhasil+diperbarui", http.StatusSeeOther)
@@ -602,10 +611,8 @@ func (h *AdminHandler) DeleteKBCategory(w http.ResponseWriter, r *http.Request) 
 		http.Redirect(w, r, config.Path("/admin/knowledge-base"), http.StatusSeeOther)
 		return
 	}
-	base := config.Path("/admin/knowledge-base/categories/delete/")
-	idStr := strings.Trim(strings.TrimPrefix(r.URL.Path, base), "/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
+	id := parseKBIDFromPath(r.URL.Path)
+	if id <= 0 {
 		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+tidak+valid", http.StatusSeeOther)
 		return
 	}
@@ -623,11 +630,8 @@ func (h *AdminHandler) DeleteKBCategory(w http.ResponseWriter, r *http.Request) 
 
 // EditKBArticle menampilkan form edit (GET) atau menyimpan perubahan (POST). Path: .../articles/edit/<id>
 func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
-	base := config.Path("/admin/knowledge-base/articles/edit/")
-	idStr := strings.TrimPrefix(r.URL.Path, base)
-	idStr = strings.Trim(idStr, "/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
+	id := parseKBIDFromPath(r.URL.Path)
+	if id <= 0 {
 		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+artikel+tidak+valid", http.StatusSeeOther)
 		return
 	}
@@ -650,7 +654,7 @@ func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
 		categoryIDStr := r.FormValue("category_id")
 		readTimeStr := strings.TrimSpace(r.FormValue("read_time_minutes"))
 		if title == "" || categoryIDStr == "" {
-			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+idStr+"?error=Judul+dan+kategori+wajib", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+strconv.Itoa(id)+"?error=Judul+dan+kategori+wajib", http.StatusSeeOther)
 			return
 		}
 		catID, _ := strconv.Atoi(categoryIDStr)
@@ -668,7 +672,7 @@ func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
 		art.Content = content
 		art.ReadTimeMinutes = readTime
 		if err := config.DB.Save(&art).Error; err != nil {
-			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+idStr+"?error=Gagal+menyimpan", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+strconv.Itoa(id)+"?error=Gagal+menyimpan", http.StatusSeeOther)
 			return
 		}
 		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Artikel+berhasil+diperbarui", http.StatusSeeOther)
@@ -702,10 +706,8 @@ func (h *AdminHandler) DeleteKBArticle(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, config.Path("/admin/knowledge-base"), http.StatusSeeOther)
 		return
 	}
-	base := config.Path("/admin/knowledge-base/articles/delete/")
-	idStr := strings.Trim(strings.TrimPrefix(r.URL.Path, base), "/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil || id <= 0 {
+	id := parseKBIDFromPath(r.URL.Path)
+	if id <= 0 {
 		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+tidak+valid", http.StatusSeeOther)
 		return
 	}

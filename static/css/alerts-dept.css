@@ -1,122 +1,120 @@
-/* Modal alert (halaman departemen — tema amber/merah) */
+/* Modal konfirmasi (halaman departemen) — tema sama dengan Department Area: hijau-teal, kartu putih */
 .custom-alert-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
-    z-index: 9999;
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: fadeIn 0.2s ease;
+    padding: 1rem;
+    animation: deptFadeIn 0.2s ease;
 }
 
 .custom-alert-box {
-    background: #FFFFFF;
+    background: #ffffff;
     border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1);
-    padding: 24px;
-    max-width: 420px;
-    width: 90%;
-    animation: slideUp 0.3s ease;
-    border: 1px solid #E4E6EB;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(5, 150, 105, 0.08);
+    padding: 1.5rem 1.75rem;
+    max-width: 400px;
+    width: 100%;
+    animation: deptSlideUp 0.25s ease;
+    border: 1px solid #e5e7eb;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .custom-alert-icon {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #d1fae5 0%, #ccfbf1 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 16px;
-    border: 2px solid #FBBF24;
+    margin: 0 auto 1rem;
+    border: 2px solid #0d9488;
 }
 
 .custom-alert-icon svg {
-    width: 24px;
-    height: 24px;
-    color: #B45309;
+    width: 26px;
+    height: 26px;
+    color: #0f766e;
 }
 
 .custom-alert-title {
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 700;
-    color: #111318;
+    color: #0f172a;
     text-align: center;
-    margin-bottom: 8px;
-    letter-spacing: -0.3px;
+    margin-bottom: 0.5rem;
 }
 
 .custom-alert-message {
-    font-size: 14px;
-    color: #5A6070;
+    font-size: 0.875rem;
+    color: #475569;
     text-align: center;
     line-height: 1.6;
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem;
 }
 
 .custom-alert-button {
     width: 100%;
-    padding: 10px 20px;
-    background: #C0392B;
-    color: #FFFFFF;
+    padding: 0.625rem 1rem;
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
     font-family: inherit;
 }
 
-.custom-alert-button:hover {
-    background: #96281B;
-    box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
-}
-
 .custom-alert-button:active {
     transform: scale(0.98);
 }
 
-/* Konfirmasi: dua tombol (staff/admin) */
+/* Konfirmasi: dua tombol — Batal (outline) & Lanjutkan (teal) */
 .custom-confirm-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 20px;
+    gap: 0.75rem;
+    margin-top: 1rem;
 }
 .custom-confirm-actions .custom-alert-button {
     flex: 1;
 }
 .custom-confirm-cancel {
-    background: #f1f5f9 !important;
+    background: #f8fafc !important;
     color: #475569 !important;
+    border: 1px solid #e2e8f0 !important;
 }
 .custom-confirm-cancel:hover {
-    background: #e2e8f0 !important;
+    background: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
     box-shadow: none !important;
 }
 .custom-confirm-ok {
-    background: #0d9488 !important;
+    background: linear-gradient(135deg, #0d9488 0%, #059669 100%) !important;
     color: #fff !important;
+    border: 1px solid #0f766e !important;
 }
 .custom-confirm-ok:hover {
-    background: #0f766e !important;
+    background: linear-gradient(135deg, #0f766e 0%, #047857 100%) !important;
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.35) !important;
 }
 .custom-confirm-icon svg {
     color: #0d9488;
 }
 
-@keyframes fadeIn {
+@keyframes deptFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-@keyframes slideUp {
+@keyframes deptSlideUp {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(12px);
     }
     to {
         opacity: 1;

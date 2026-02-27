@@ -112,7 +112,7 @@ func main() {
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
 	mux.HandleFunc("/knowledge-base", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKnowledgeBase)))
 	mux.HandleFunc("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKBArticle)))
-	
+
 	// API buat panel notifikasi
 	mux.HandleFunc("/api/notifications", middleware.AuthRequired(notificationHandler.GetNotifications))
 	mux.HandleFunc("/api/notifications/read", middleware.AuthRequired(notificationHandler.MarkAsRead))
@@ -122,8 +122,8 @@ func main() {
 
 	seedDefaultData()
 
-	log.Printf("🚀 Server starting on port %s", cfg.Port)
-	log.Printf("🌐 Visit: http://localhost:%s", cfg.Port)
+	log.Printf("Server starting on port %s", cfg.Port)
+	log.Printf("Visit: http://localhost:%s", cfg.Port)
 
 	loggedMux := middleware.LoggingMiddleware(mux)
 	var handler http.Handler = loggedMux

@@ -232,7 +232,7 @@
                 </div>
                 {{end}}
                 {{if .is_owner}}
-                <button type="button" class="pool-btn" onclick="showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; });">Lepas ke Pool</button>
+                <button type="button" class="pool-btn" onclick="showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; });">Lepas ke Pool</button>
                 {{end}}
             </div>
             {{end}}

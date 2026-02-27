@@ -176,7 +176,7 @@
             {{if .is_owner}}
             <div class="card" style="margin-top: 1rem;">
                 <div class="card-body">
-                    <a href="department/tiket/release/{{$ticket.ID}}" onclick="event.preventDefault(); showCustomConfirm('Kembalikan tiket ke pool? Tiket akan bisa diambil lagi oleh staff lain.', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; }); return false;" style="display:block; text-align:center; color:#dc2626; font-weight:600; text-decoration:none; padding:0.5rem; border:1px solid #fecaca; border-radius:6px; background:#fef2f2;">
+                    <a href="department/tiket/release/{{$ticket.ID}}" onclick="event.preventDefault(); showCustomConfirm('Kembalikan tiket ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; }); return false;" style="display:block; text-align:center; color:#dc2626; font-weight:600; text-decoration:none; padding:0.5rem; border:1px solid #fecaca; border-radius:6px; background:#fef2f2;">
                         Lepas ke Pool
                     </a>
                 </div>
