@@ -53,12 +53,12 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	}
 	deptID := *dbUser.DepartmentID
 
-	// Kondisi pool: belum di-claim (assigned_to_id NULL, status WAITING), departemen saya ATAU umum (department_id NULL)
-	poolCondition := "assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)"
+	// Pool = semua tiket yang belum di-claim (assigned_to_id NULL, status WAITING) — tanpa filter departemen agar tiket yang baru dilepas pasti muncul
+	poolCondition := "assigned_to_id IS NULL AND status = ?"
 
-	// Card "Menunggu (Pool)": jumlah tiket di pool (belum di-claim) untuk dept saya + umum
+	// Card "Menunggu (Pool)": jumlah tiket di pool (belum di-claim)
 	var waitingCount int64
-	config.DB.Raw("SELECT COUNT(*) FROM tickets WHERE "+poolCondition+" AND deleted_at IS NULL", models.StatusWaiting, deptID).Scan(&waitingCount)
+	config.DB.Raw("SELECT COUNT(*) FROM tickets WHERE "+poolCondition+" AND deleted_at IS NULL", models.StatusWaiting).Scan(&waitingCount)
 
 	// Card "Sedang Dikerjakan": jumlah tiket yang SEDANG STAFF INI kerjakan (bukan total dept)
 	var inProgressCount int64
@@ -74,13 +74,12 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		Order("updated_at DESC").
 		Find(&myActiveTickets)
 
-	// pool: tiket belum di-claim (assigned_to_id NULL, status WAITING), dept saya atau umum
+	// pool: semua tiket belum di-claim (assigned_to_id NULL, status WAITING) — tiket yang dilepas pasti masuk sini
 	var ticketPool []*models.Ticket
 	config.DB.Model(&models.Ticket{}).
 		Preload("Department").Preload("CreatedBy").
 		Where("assigned_to_id IS NULL").
 		Where("status = ?", models.StatusWaiting).
-		Where("(department_id = ? OR department_id IS NULL)", deptID).
 		Order("created_at ASC").
 		Find(&ticketPool)
 
