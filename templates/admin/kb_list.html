@@ -32,7 +32,7 @@
                         <td>{{.Name}}</td><td class="text-muted">{{.Slug}}</td><td><span class="article-cat-badge {{.ColorClass}}">{{.ColorClass}}</span></td>
                         <td>
                             <a href="admin/knowledge-base/categories/edit/{{.ID}}" class="view-all-link" style="margin-right:0.5rem;">Edit</a>
-                            <form method="post" action="admin/knowledge-base/categories/delete/{{.ID}}" style="display:inline;" onsubmit="return confirm('Hapus kategori ini? Artikel dalam kategori ini tidak dihapus.');">
+                            <form method="post" action="admin/knowledge-base/categories/delete/{{.ID}}" style="display:inline;" class="kb-delete-form" onsubmit="var f=this; event.preventDefault(); showCustomConfirm('Artikel dalam kategori ini tidak dihapus. Yakin hapus kategori ini?', 'Hapus Kategori', function(){ f.submit(); }); return false;">
                                 <button type="submit" class="btn-link-danger" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:0;font-size:inherit;">Hapus</button>
                             </form>
                         </td>
@@ -58,7 +58,7 @@
                         <td><a href="knowledge-base/article/{{.ID}}" class="view-all-link">{{.Title}}</a></td><td>{{if .Category}}{{.Category.Name}}{{else}}-{{end}}</td><td>{{.Views}}</td><td class="text-muted">{{dateShort .UpdatedAt}}</td>
                         <td>
                             <a href="admin/knowledge-base/articles/edit/{{.ID}}" class="view-all-link" style="margin-right:0.5rem;">Edit</a>
-                            <form method="post" action="admin/knowledge-base/articles/delete/{{.ID}}" style="display:inline;" onsubmit="return confirm('Hapus artikel ini?');">
+                            <form method="post" action="admin/knowledge-base/articles/delete/{{.ID}}" style="display:inline;" class="kb-delete-form" onsubmit="var f=this; event.preventDefault(); showCustomConfirm('Artikel ini akan dihapus permanen. Yakin hapus?', 'Hapus Artikel', function(){ f.submit(); }); return false;">
                                 <button type="submit" class="btn-link-danger" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:0;font-size:inherit;">Hapus</button>
                             </form>
                         </td>
