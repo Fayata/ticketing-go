@@ -41,22 +41,28 @@ type MonthlyStat struct {
 func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
-	// staff harus punya departemen
-	if user.DepartmentID == nil {
+	// Pastikan department_id ter-load dari DB (kadang context user kurang lengkap)
+	var dbUser models.User
+	if err := config.DB.Select("id", "department_id").First(&dbUser, user.ID).Error; err != nil {
+		http.Error(w, "User tidak ditemukan.", http.StatusInternalServerError)
+		return
+	}
+	if dbUser.DepartmentID == nil {
 		http.Error(w, "Akun staff belum memiliki departemen. Hubungi admin.", http.StatusForbidden)
 		return
 	}
+	deptID := *dbUser.DepartmentID
 
 	// card statistik: waiting = pool (belum di-claim), in progress, closed
 	var waitingCount, inProgressCount, closedCount int64
 	config.DB.Model(&models.Ticket{}).
-		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, user.DepartmentID).
+		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, deptID).
 		Count(&waitingCount)
 	config.DB.Model(&models.Ticket{}).
-		Where("status = ? AND department_id = ?", models.StatusInProgress, user.DepartmentID).
+		Where("status = ? AND department_id = ?", models.StatusInProgress, deptID).
 		Count(&inProgressCount)
 	config.DB.Model(&models.Ticket{}).
-		Where("status = ? AND department_id = ?", models.StatusClosed, user.DepartmentID).
+		Where("status = ? AND department_id = ?", models.StatusClosed, deptID).
 		Count(&closedCount)
 
 	// tiket yang di-assign ke staff ini
@@ -69,7 +75,7 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	// pool = tiket yang belum di-claim (assigned_to_id NULL, status WAITING) untuk departemen saya atau umum
 	var ticketPool []*models.Ticket
 	config.DB.Preload("Department").Preload("CreatedBy").
-		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, user.DepartmentID).
+		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, deptID).
 		Order("created_at ASC").
 		Find(&ticketPool)
 
@@ -366,10 +372,25 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/department/tiket/%d", ticketID)), http.StatusSeeOther)
 }
 
+// parseTicketIDFromPath mengambil ID tiket dari path (misal "/department/tiket/release/123" -> 123)
+func parseTicketIDFromPath(urlPath, prefix string) int {
+	path := strings.TrimPrefix(urlPath, prefix)
+	path = strings.Trim(path, "/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 {
+		return 0
+	}
+	id, _ := strconv.Atoi(parts[0])
+	return id
+}
+
 func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	path := strings.TrimPrefix(r.URL.Path, "/department/tiket/claim/")
-	ticketID, _ := strconv.Atoi(path)
+	ticketID := parseTicketIDFromPath(r.URL.Path, "/department/tiket/claim/")
+	if ticketID <= 0 {
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=ID+tiket+tidak+valid", http.StatusSeeOther)
+		return
+	}
 
 	var ticket models.Ticket
 	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err == nil {
@@ -407,8 +428,11 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 
 func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	path := strings.TrimPrefix(r.URL.Path, "/department/tiket/release/")
-	ticketID, _ := strconv.Atoi(path)
+	ticketID := parseTicketIDFromPath(r.URL.Path, "/department/tiket/release/")
+	if ticketID <= 0 {
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=ID+tiket+tidak+valid", http.StatusSeeOther)
+		return
+	}
 
 	var ticket models.Ticket
 	if err := config.DB.Where("id = ? AND assigned_to_id = ?", ticketID, user.ID).First(&ticket).Error; err == nil {
@@ -428,15 +452,21 @@ func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request
 		ticket.AssignedToID = nil
 		ticket.Status = models.StatusWaiting
 		ticket.UpdatedAt = time.Now()
-		config.DB.Save(&ticket)
+		if err := config.DB.Save(&ticket).Error; err != nil {
+			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Gagal+melepas+tiket", http.StatusSeeOther)
+			return
+		}
 	}
-	http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
+	http.Redirect(w, r, config.Path("/departement/dashboard")+"?success=Tiket+berhasil+dikembalikan+ke+pool", http.StatusSeeOther)
 }
 
 func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	path := strings.TrimPrefix(r.URL.Path, "/department/tiket/close/")
-	ticketID, _ := strconv.Atoi(path)
+	ticketID := parseTicketIDFromPath(r.URL.Path, "/department/tiket/close/")
+	if ticketID <= 0 {
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=ID+tiket+tidak+valid", http.StatusSeeOther)
+		return
+	}
 
 	var ticket models.Ticket
 	if err := config.DB.Preload("CreatedBy").Where("id = ? AND assigned_to_id = ?", ticketID, user.ID).First(&ticket).Error; err == nil {
