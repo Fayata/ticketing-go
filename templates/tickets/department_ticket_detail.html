@@ -161,7 +161,7 @@
                         <p>Masalah Sudah Selesai?</p>
                         <span>Tandai tiket sebagai selesai dan tutup sesi ini</span>
                     </div>
-                    <a href="department/tiket/close/{{$ticket.ID}}" onclick="return confirm('Yakin tutup tiket ini?')" class="btn btn-green">
+                    <a href="department/tiket/close/{{$ticket.ID}}" onclick="event.preventDefault(); showCustomConfirm('Yakin tutup tiket ini? Tiket akan ditandai selesai dan tidak bisa dibalas lagi.', function(){ window.location.href='department/tiket/close/{{$ticket.ID}}'; }); return false;" class="btn btn-green">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                             <polyline points="22 4 12 14.01 9 11.01"/>
@@ -232,7 +232,7 @@
                 </div>
                 {{end}}
                 {{if .is_owner}}
-                <button class="pool-btn" onclick="if(confirm('Kembalikan tiket ke pool?')) window.location.href='department/tiket/release/{{$ticket.ID}}'">Lepas ke Pool</button>
+                <button type="button" class="pool-btn" onclick="showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; });">Lepas ke Pool</button>
                 {{end}}
             </div>
             {{end}}

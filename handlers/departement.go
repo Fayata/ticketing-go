@@ -47,10 +47,10 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// card statistik (waiting, in progress, closed)
+	// card statistik: waiting = pool (belum di-claim), in progress, closed
 	var waitingCount, inProgressCount, closedCount int64
 	config.DB.Model(&models.Ticket{}).
-		Where("status = ? AND department_id = ?", models.StatusWaiting, user.DepartmentID).
+		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, user.DepartmentID).
 		Count(&waitingCount)
 	config.DB.Model(&models.Ticket{}).
 		Where("status = ? AND department_id = ?", models.StatusInProgress, user.DepartmentID).
@@ -66,11 +66,10 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		Order("updated_at DESC").
 		Find(&myActiveTickets)
 
-	// tiket yang belum diambil
+	// pool = tiket yang belum di-claim (assigned_to_id NULL, status WAITING) untuk departemen saya atau umum
 	var ticketPool []*models.Ticket
 	config.DB.Preload("Department").Preload("CreatedBy").
-		Where("assigned_to_id IS NULL AND status != ? AND (department_id = ? OR department_id IS NULL)", models.StatusClosed, user.DepartmentID).
-		Order("priority = 'HIGH' DESC").
+		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, user.DepartmentID).
 		Order("created_at ASC").
 		Find(&ticketPool)
 

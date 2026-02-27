@@ -22,21 +22,47 @@
         </div>
         <div class="dept-stat-value">{{.progress_count}}</div>
     </div>
-    <!-- <div class="dept-card">
-        <div class="dept-card-header">
-            <span style="color:#4b5563;">Selesai (Total)</span>
-            <div class="dept-icon-wrapper bg-green-soft">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </div>
+    <div class="dept-card dept-pool-card">
+        <div class="dept-pool-header">
+            <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:#991b1b;">Pool Tiket (Masuk)</h3>
+            <span style="font-size:0.875rem; color:#6b7280;">{{len .ticket_pool}} tiket menunggu</span>
         </div>
-        <div class="dept-stat-value">{{.closed_count}}</div>
-    </div> -->
+        <div class="dept-pool-body">
+            {{range .ticket_pool}}
+            <div class="ticket-item-card" onclick="window.location.href='department/tiket/{{.ID}}'">
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                    <span style="font-weight:700; color:#1f2937;">{{.GetTicketNumber}}</span>
+                    <span class="badge priority-{{.Priority}}">{{.Priority}}</span>
+                </div>
+                <div style="font-size:0.875rem; color:#4b5563; margin-bottom:0.25rem;">
+                    <span>{{.CreatedBy.Username}}</span>
+                    <span style="color:#dc2626; background:#fee2e2; padding:0 6px; border-radius:4px; font-size:0.75rem; float:right;">
+                        To: {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
+                    </span>
+                </div>
+                <div style="font-size:0.9rem; font-weight:500; color:#1f2937; margin-bottom:0.75rem;">{{.Title}}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="badge status-{{.Status}}">{{.GetStatusDisplay}}</span>
+                    <span style="font-size:0.75rem; color:#6b7280;">{{timeSince .CreatedAt}}</span>
+                </div>
+                <a href="department/tiket/claim/{{.ID}}" 
+                   onclick="event.stopPropagation();" 
+                   style="display:block; text-align:center; background:#dc2626; color:white; padding:0.5rem; border-radius:0.3rem; text-decoration:none; margin-top:0.75rem; font-weight:600; font-size:0.9rem; transition: background 0.2s;">
+                    Ambil Tiket Ini
+                </a>
+            </div>
+            {{else}}
+            <div style="text-align:center; padding:3rem 1rem; color:#9ca3af;">
+                <svg style="width:40px; height:40px; margin:0 auto 10px; opacity:0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                <p>Tidak ada tiket baru di pool.</p>
+            </div>
+            {{end}}
+        </div>
+    </div>
 </div>
 
 <div class="dept-layout-grid">
-    
     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-        
         <div class="dept-card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="font-size:1.125rem; font-weight:700; margin:0;">Aktivitas Kinerja Saya (Tahun Ini)</h3>
@@ -82,7 +108,7 @@
                         </span>
                         
                         <a href="department/tiket/release/{{.ID}}" 
-                           onclick="event.stopPropagation(); return confirm('Kembalikan tiket ini ke pool?')" 
+                           onclick="event.stopPropagation(); event.preventDefault(); showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', function(){ window.location.href='department/tiket/release/{{.ID}}'; }); return false;" 
                            style="font-size:0.75rem; background:#fee2e2; color:#dc2626; padding:4px 8px; border-radius:4px; text-decoration:none; font-weight:600; border:1px solid #fecaca; z-index: 2;">
                             Lepas ke Pool ↩
                         </a>
@@ -107,46 +133,5 @@
             </div>
         </div>
     </div>
-
-    <div class="dept-card dept-pool-card">
-        <div class="dept-pool-header">
-            <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:#991b1b;">Pool Tiket (Masuk)</h3>
-            <span style="font-size:0.875rem; color:#6b7280;">{{len .ticket_pool}} tiket menunggu</span>
-        </div>
-
-        <div class="dept-pool-body">
-            {{range .ticket_pool}}
-            <div class="ticket-item-card" onclick="window.location.href='department/tiket/{{.ID}}'">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                    <span style="font-weight:700; color:#1f2937;">{{.GetTicketNumber}}</span>
-                    <span class="badge priority-{{.Priority}}">{{.Priority}}</span>
-                </div>
-                <div style="font-size:0.875rem; color:#4b5563; margin-bottom:0.25rem;">
-                    <span>{{.CreatedBy.Username}}</span>
-                    <span style="color:#dc2626; background:#fee2e2; padding:0 6px; border-radius:4px; font-size:0.75rem; float:right;">
-                        To: {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
-                    </span>
-                </div>
-                <div style="font-size:0.9rem; font-weight:500; color:#1f2937; margin-bottom:0.75rem;">{{.Title}}</div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="badge status-{{.Status}}">{{.GetStatusDisplay}}</span>
-                    <span style="font-size:0.75rem; color:#6b7280;">{{timeSince .CreatedAt}}</span>
-                </div>
-                
-                <a href="department/tiket/claim/{{.ID}}" 
-                   onclick="event.stopPropagation();" 
-                   style="display:block; text-align:center; background:#dc2626; color:white; padding:0.5rem; border-radius:0.3rem; text-decoration:none; margin-top:0.75rem; font-weight:600; font-size:0.9rem; transition: background 0.2s;">
-                    Ambil Tiket Ini
-                </a>
-            </div>
-            {{else}}
-            <div style="text-align:center; padding:3rem 1rem; color:#9ca3af;">
-                <svg style="width:40px; height:40px; margin:0 auto 10px; opacity:0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                <p>Tidak ada tiket baru di pool.</p>
-            </div>
-            {{end}}
-        </div>
-    </div>
-
 </div>
 {{end}}

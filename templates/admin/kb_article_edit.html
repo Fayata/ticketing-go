@@ -1,0 +1,48 @@
+{{define "admin/kb_article_edit"}}
+{{template "base" .}}
+{{end}}
+
+{{define "department_kb_article_edit"}}
+{{template "department_base" .}}
+{{end}}
+
+{{define "admin/kb_article_edit_content"}}
+<div class="kb-admin">
+<div class="content">
+    <a href="admin/knowledge-base" class="view-all-link" style="margin-bottom: 1rem; display: inline-flex; align-items: center;">← Kembali ke Kelola Knowledge Base</a>
+    <div class="card kb-admin-form-card kb-admin-form-card--wide">
+        <div class="card-header"><h2>Edit Artikel</h2></div>
+        <div class="card-body">
+            {{if .error}}<div class="alert alert-error">{{.error}}</div>{{end}}
+            <form method="post" action="admin/knowledge-base/articles/edit/{{.article.ID}}">
+                <div class="form-group">
+                    <label class="form-label">Judul *</label>
+                    <input type="text" name="title" class="form-input" required placeholder="Judul artikel" value="{{.article.Title}}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kategori *</label>
+                    <select name="category_id" class="form-input" required>
+                        <option value="">-- Pilih kategori --</option>
+                        {{range .categories}}
+                        <option value="{{.ID}}" {{if eq .ID $.article.CategoryID}}selected{{end}}>{{.Name}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Isi (teks atau HTML)</label>
+                    <textarea name="content" class="form-input" rows="12" placeholder="Konten artikel...">{{.article.Content}}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Estimasi baca (menit)</label>
+                    <input type="number" name="read_time_minutes" class="form-input" value="{{.article.ReadTimeMinutes}}" min="0">
+                </div>
+                <div class="kb-form-actions">
+                    <button type="submit" class="btn-primary">Simpan Perubahan</button>
+                    <a href="admin/knowledge-base" class="btn-outline-teal">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+{{end}}

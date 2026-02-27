@@ -522,3 +522,201 @@ func (h *AdminHandler) CreateKBArticlePost(w http.ResponseWriter, r *http.Reques
 	}
 	http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Artikel+berhasil+ditambah", http.StatusSeeOther)
 }
+
+// EditKBCategory menampilkan form edit (GET) atau menyimpan perubahan (POST). Path: .../categories/edit/<id>
+func (h *AdminHandler) EditKBCategory(w http.ResponseWriter, r *http.Request) {
+	base := config.Path("/admin/knowledge-base/categories/edit/")
+	idStr := strings.TrimPrefix(r.URL.Path, base)
+	idStr = strings.Trim(idStr, "/")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+kategori+tidak+valid", http.StatusSeeOther)
+		return
+	}
+	var cat models.KBCategory
+	if config.DB.First(&cat, id).Error != nil {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=Kategori+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+	userVal := GetUserFromContext(r)
+	var user *models.User
+	if userVal != nil {
+		if u, ok := userVal.(*models.User); ok {
+			user = u
+		}
+	}
+
+	if r.Method == http.MethodPost {
+		name := strings.TrimSpace(r.FormValue("name"))
+		desc := strings.TrimSpace(r.FormValue("description"))
+		icon := strings.TrimSpace(r.FormValue("icon"))
+		colorClass := strings.TrimSpace(r.FormValue("color_class"))
+		if colorClass == "" {
+			colorClass = "green"
+		}
+		if name == "" {
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/edit/")+idStr+"?error=Nama+wajib+diisi", http.StatusSeeOther)
+			return
+		}
+		slug := slugify(name)
+		if slug != cat.Slug {
+			var existing models.KBCategory
+			if config.DB.Where("slug = ? AND id != ?", slug, id).First(&existing).Error == nil {
+				slug = slug + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+			}
+			cat.Slug = slug
+		}
+		cat.Name = name
+		cat.Description = desc
+		cat.Icon = icon
+		cat.ColorClass = colorClass
+		if err := config.DB.Save(&cat).Error; err != nil {
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/categories/edit/")+idStr+"?error=Gagal+menyimpan", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Kategori+berhasil+diperbarui", http.StatusSeeOther)
+		return
+	}
+
+	errMsg := r.URL.Query().Get("error")
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         "Edit Kategori KB",
+		"page_title":    "Edit Kategori",
+		"nav_active":    "admin_kb",
+		"template_name": "admin/kb_category_edit",
+		"category":      cat,
+		"error":         errMsg,
+	})
+	if user != nil && user.IsStaff {
+		data["nav_active"] = "kb_admin"
+		data["template_name"] = "department_kb_category_edit"
+		RenderTemplate(w, "department_kb_category_edit", data)
+		return
+	}
+	RenderTemplate(w, "admin/kb_category_edit", data)
+}
+
+// DeleteKBCategory menghapus kategori (POST). Artikel di kategori ini tidak dihapus, category_id bisa dibiarkan atau perlu di-handle.
+func (h *AdminHandler) DeleteKBCategory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base"), http.StatusSeeOther)
+		return
+	}
+	base := config.Path("/admin/knowledge-base/categories/delete/")
+	idStr := strings.Trim(strings.TrimPrefix(r.URL.Path, base), "/")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+tidak+valid", http.StatusSeeOther)
+		return
+	}
+	result := config.DB.Delete(&models.KBCategory{}, id)
+	if result.Error != nil {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=Gagal+menghapus+kategori", http.StatusSeeOther)
+		return
+	}
+	if result.RowsAffected == 0 {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=Kategori+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Kategori+berhasil+dihapus", http.StatusSeeOther)
+}
+
+// EditKBArticle menampilkan form edit (GET) atau menyimpan perubahan (POST). Path: .../articles/edit/<id>
+func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
+	base := config.Path("/admin/knowledge-base/articles/edit/")
+	idStr := strings.TrimPrefix(r.URL.Path, base)
+	idStr = strings.Trim(idStr, "/")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+artikel+tidak+valid", http.StatusSeeOther)
+		return
+	}
+	var art models.KBArticle
+	if config.DB.Preload("Category").First(&art, id).Error != nil {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=Artikel+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+	userVal := GetUserFromContext(r)
+	var user *models.User
+	if userVal != nil {
+		if u, ok := userVal.(*models.User); ok {
+			user = u
+		}
+	}
+
+	if r.Method == http.MethodPost {
+		title := strings.TrimSpace(r.FormValue("title"))
+		content := r.FormValue("content")
+		categoryIDStr := r.FormValue("category_id")
+		readTimeStr := strings.TrimSpace(r.FormValue("read_time_minutes"))
+		if title == "" || categoryIDStr == "" {
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+idStr+"?error=Judul+dan+kategori+wajib", http.StatusSeeOther)
+			return
+		}
+		catID, _ := strconv.Atoi(categoryIDStr)
+		readTime, _ := strconv.Atoi(readTimeStr)
+		slug := slugify(title)
+		if slug != art.Slug {
+			var existing models.KBArticle
+			if config.DB.Where("slug = ? AND id != ?", slug, id).First(&existing).Error == nil {
+				slug = slug + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+			}
+			art.Slug = slug
+		}
+		art.CategoryID = uint(catID)
+		art.Title = title
+		art.Content = content
+		art.ReadTimeMinutes = readTime
+		if err := config.DB.Save(&art).Error; err != nil {
+			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+idStr+"?error=Gagal+menyimpan", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Artikel+berhasil+diperbarui", http.StatusSeeOther)
+		return
+	}
+
+	var categories []models.KBCategory
+	config.DB.Order("sort_order ASC, name ASC").Find(&categories)
+	errMsg := r.URL.Query().Get("error")
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         "Edit Artikel KB",
+		"page_title":    "Edit Artikel",
+		"nav_active":    "admin_kb",
+		"template_name": "admin/kb_article_edit",
+		"article":       art,
+		"categories":    categories,
+		"error":         errMsg,
+	})
+	if user != nil && user.IsStaff {
+		data["nav_active"] = "kb_admin"
+		data["template_name"] = "department_kb_article_edit"
+		RenderTemplate(w, "department_kb_article_edit", data)
+		return
+	}
+	RenderTemplate(w, "admin/kb_article_edit", data)
+}
+
+// DeleteKBArticle menghapus artikel (POST).
+func (h *AdminHandler) DeleteKBArticle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base"), http.StatusSeeOther)
+		return
+	}
+	base := config.Path("/admin/knowledge-base/articles/delete/")
+	idStr := strings.Trim(strings.TrimPrefix(r.URL.Path, base), "/")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=ID+tidak+valid", http.StatusSeeOther)
+		return
+	}
+	result := config.DB.Delete(&models.KBArticle{}, id)
+	if result.Error != nil {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=Gagal+menghapus+artikel", http.StatusSeeOther)
+		return
+	}
+	if result.RowsAffected == 0 {
+		http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?error=Artikel+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Artikel+berhasil+dihapus", http.StatusSeeOther)
+}

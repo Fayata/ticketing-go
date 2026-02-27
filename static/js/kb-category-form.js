@@ -34,7 +34,9 @@
         if (colorSample) colorSample.style.background = colorMap[cls] || colorMap.green;
         document.querySelectorAll('.kb-color-cell').forEach(function(el){ el.classList.toggle('selected', el.getAttribute('data-class') === cls); });
     }
-    setColor('green');
+    var initialColor = (colorInput && colorInput.value) ? colorInput.value : 'green';
+    setColor(initialColor);
+    if (iconInput.value && emojiPreview) emojiPreview.textContent = iconInput.value;
     document.querySelectorAll('.kb-color-cell').forEach(function(el){
         el.addEventListener('click', function(){ setColor(el.getAttribute('data-class')); if (colorDropdown) colorDropdown.style.display = 'none'; });
     });

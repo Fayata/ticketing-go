@@ -256,6 +256,10 @@
                     {{template "admin/kb_category_form_content" .}}
                 {{else if eq .template_name "admin/kb_article_form"}}
                     {{template "admin/kb_article_form_content" .}}
+                {{else if eq .template_name "admin/kb_category_edit"}}
+                    {{template "admin/kb_category_edit_content" .}}
+                {{else if eq .template_name "admin/kb_article_edit"}}
+                    {{template "admin/kb_article_edit_content" .}}
                 {{else if eq .template_name "tickets/knowledge_base"}}
                     {{template "tickets/knowledge_base_content" .}}
                 {{else if eq .template_name "tickets/kb_article"}}

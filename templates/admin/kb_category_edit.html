@@ -1,0 +1,72 @@
+{{define "admin/kb_category_edit"}}
+{{template "base" .}}
+{{end}}
+
+{{define "department_kb_category_edit"}}
+{{template "department_base" .}}
+{{end}}
+
+{{define "admin/kb_category_edit_content"}}
+<div class="kb-admin">
+<div class="content">
+    <a href="admin/knowledge-base" class="view-all-link" style="margin-bottom: 1rem; display: inline-flex; align-items: center;">← Kembali ke Kelola Knowledge Base</a>
+    <div class="card kb-admin-form-card">
+        <div class="card-header"><h2>Edit Kategori</h2></div>
+        <div class="card-body">
+            {{if .error}}<div class="alert alert-error">{{.error}}</div>{{end}}
+            <form method="post" action="admin/knowledge-base/categories/edit/{{.category.ID}}" id="kbCategoryForm">
+                <div class="form-group">
+                    <label class="form-label">Nama kategori *</label>
+                    <input type="text" name="name" class="form-input" required placeholder="Contoh: Technical Support" value="{{.category.Name}}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Deskripsi</label>
+                    <textarea name="description" class="form-input" rows="2" placeholder="Deskripsi singkat">{{.category.Description}}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Icon (emoji)</label>
+                    <div class="kb-picker-wrap">
+                        <input type="hidden" name="icon" id="kb_icon" value="{{.category.Icon}}">
+                        <button type="button" class="kb-emoji-trigger form-input" id="emojiTrigger">
+                            <span id="emojiPreview" class="kb-emoji-preview">{{if .category.Icon}}{{.category.Icon}}{{else}}Pilih emoji{{end}}</span>
+                        </button>
+                        <div class="kb-emoji-dropdown" id="emojiDropdown" style="display:none;">
+                            <div class="kb-emoji-grid" id="emojiGrid"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Warna</label>
+                    <div class="kb-picker-wrap">
+                        <input type="hidden" name="color_class" id="kb_color_class" value="{{if .category.ColorClass}}{{.category.ColorClass}}{{else}}green{{end}}">
+                        <button type="button" class="kb-color-trigger form-input" id="colorTrigger">
+                            <span class="kb-color-swatch" id="colorPreview"></span>
+                            <span id="colorLabel">{{if .category.ColorClass}}{{.category.ColorClass}}{{else}}green{{end}}</span>
+                        </button>
+                        <div class="kb-color-dropdown" id="colorDropdown" style="display:none;">
+                            <div class="kb-color-palette" id="colorPalette">
+                                <button type="button" class="kb-color-cell" data-class="green" style="background:#d1fae5;" title="green"></button>
+                                <button type="button" class="kb-color-cell" data-class="cyan" style="background:#cffafe;" title="cyan"></button>
+                                <button type="button" class="kb-color-cell" data-class="indigo" style="background:#e0e7ff;" title="indigo"></button>
+                                <button type="button" class="kb-color-cell" data-class="amber" style="background:#fef3c7;" title="amber"></button>
+                                <button type="button" class="kb-color-cell" data-class="rose" style="background:#ffe4e6;" title="rose"></button>
+                                <button type="button" class="kb-color-cell" data-class="violet" style="background:#ede9fe;" title="violet"></button>
+                            </div>
+                            <div class="kb-color-sample-wrap">
+                                <span class="kb-color-sample-label">Sample</span>
+                                <div class="kb-color-sample" id="colorSample"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="kb-form-actions">
+                    <button type="submit" class="btn-primary">Simpan Perubahan</button>
+                    <a href="admin/knowledge-base" class="btn-outline-teal">Batal</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+<script src="static/js/kb-category-form.js"></script>
+{{end}}

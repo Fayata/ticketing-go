@@ -25,10 +25,18 @@
         <div class="card-body">
             {{if .categories}}
             <table class="kb-admin-table">
-                <thead><tr><th>Nama</th><th>Slug</th><th>Warna</th></tr></thead>
+                <thead><tr><th>Nama</th><th>Slug</th><th>Warna</th><th>Aksi</th></tr></thead>
                 <tbody>
                     {{range .categories}}
-                    <tr><td>{{.Name}}</td><td class="text-muted">{{.Slug}}</td><td><span class="article-cat-badge {{.ColorClass}}">{{.ColorClass}}</span></td></tr>
+                    <tr>
+                        <td>{{.Name}}</td><td class="text-muted">{{.Slug}}</td><td><span class="article-cat-badge {{.ColorClass}}">{{.ColorClass}}</span></td>
+                        <td>
+                            <a href="admin/knowledge-base/categories/edit/{{.ID}}" class="view-all-link" style="margin-right:0.5rem;">Edit</a>
+                            <form method="post" action="admin/knowledge-base/categories/delete/{{.ID}}" style="display:inline;" onsubmit="return confirm('Hapus kategori ini? Artikel dalam kategori ini tidak dihapus.');">
+                                <button type="submit" class="btn-link-danger" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:0;font-size:inherit;">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
                     {{end}}
                 </tbody>
             </table>
@@ -43,10 +51,18 @@
         <div class="card-body">
             {{if .articles}}
             <table class="kb-admin-table">
-                <thead><tr><th>Judul</th><th>Kategori</th><th>Views</th><th>Updated</th></tr></thead>
+                <thead><tr><th>Judul</th><th>Kategori</th><th>Views</th><th>Updated</th><th>Aksi</th></tr></thead>
                 <tbody>
                     {{range .articles}}
-                    <tr><td><a href="knowledge-base/article/{{.ID}}" class="view-all-link">{{.Title}}</a></td><td>{{if .Category}}{{.Category.Name}}{{else}}-{{end}}</td><td>{{.Views}}</td><td class="text-muted">{{dateShort .UpdatedAt}}</td></tr>
+                    <tr>
+                        <td><a href="knowledge-base/article/{{.ID}}" class="view-all-link">{{.Title}}</a></td><td>{{if .Category}}{{.Category.Name}}{{else}}-{{end}}</td><td>{{.Views}}</td><td class="text-muted">{{dateShort .UpdatedAt}}</td>
+                        <td>
+                            <a href="admin/knowledge-base/articles/edit/{{.ID}}" class="view-all-link" style="margin-right:0.5rem;">Edit</a>
+                            <form method="post" action="admin/knowledge-base/articles/delete/{{.ID}}" style="display:inline;" onsubmit="return confirm('Hapus artikel ini?');">
+                                <button type="submit" class="btn-link-danger" style="background:none;border:none;cursor:pointer;color:#dc2626;padding:0;font-size:inherit;">Hapus</button>
+                            </form>
+                        </td>
+                    </tr>
                     {{end}}
                 </tbody>
             </table>

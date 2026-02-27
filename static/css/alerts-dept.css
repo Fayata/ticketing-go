@@ -80,6 +80,34 @@
     transform: scale(0.98);
 }
 
+/* Konfirmasi: dua tombol (staff/admin) */
+.custom-confirm-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.custom-confirm-actions .custom-alert-button {
+    flex: 1;
+}
+.custom-confirm-cancel {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+}
+.custom-confirm-cancel:hover {
+    background: #e2e8f0 !important;
+    box-shadow: none !important;
+}
+.custom-confirm-ok {
+    background: #0d9488 !important;
+    color: #fff !important;
+}
+.custom-confirm-ok:hover {
+    background: #0f766e !important;
+}
+.custom-confirm-icon svg {
+    color: #0d9488;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }

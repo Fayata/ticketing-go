@@ -169,12 +169,13 @@
     overflow-y: auto;
 }
 
-/* Stats Cards */
+/* Stats Cards + Pool Tiket sejajar di satu baris */
 .dept-stats-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr 1fr 1.5fr;
     gap: 1.5rem;
     margin-bottom: 1.25rem;
+    align-items: start;
 }
 
 .dept-card {
@@ -207,23 +208,20 @@
     color: #1f2937;
 }
 
-/* Chart & Layout Grid */
+/* Chart & Tiket Saya — full width di bawah baris stat */
 .dept-layout-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr; /* 2/3 and 1/3 */
-    gap: 1.5rem;
-    align-items: start;
+    display: block;
 }
 
-/* Pool Tiket — kurangi ruang kosong di atas agar pool sedikit naik */
+/* Pool Tiket — sejajar dengan card Menunggu & Sedang Dikerjakan */
 .dept-pool-card {
     display: flex;
     flex-direction: column;
-    max-height: 850px;
+    min-height: 140px;
+    max-height: 70vh;
     padding: 0;
     overflow: hidden;
     border-top: 4px solid #dc2626;
-    margin-top: -0.25rem;
 }
 .dept-pool-header {
     padding: 0.75rem 1.25rem;
