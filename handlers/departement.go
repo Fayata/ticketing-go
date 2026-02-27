@@ -47,8 +47,8 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		http.Error(w, "User tidak ditemukan.", http.StatusInternalServerError)
 		return
 	}
-	if dbUser.DepartmentID == nil {
-		http.Error(w, "Akun staff belum memiliki departemen. Hubungi admin.", http.StatusForbidden)
+	if dbUser.DepartmentID == nil || *dbUser.DepartmentID == 0 {
+		http.Error(w, "Akun staff belum memiliki departemen. Hubungi admin untuk assign departemen.", http.StatusForbidden)
 		return
 	}
 	deptID := *dbUser.DepartmentID
@@ -56,11 +56,16 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	// Kondisi pool: belum di-claim (assigned_to_id NULL, status WAITING), departemen saya ATAU umum (department_id NULL)
 	poolCondition := "assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)"
 
-	// card statistik: waiting = pool, in progress, closed (pakai Raw agar konsisten dengan DB)
-	var waitingCount, inProgressCount, closedCount int64
+	// Card "Menunggu (Pool)": jumlah tiket di pool (belum di-claim) untuk dept saya + umum
+	var waitingCount int64
 	config.DB.Raw("SELECT COUNT(*) FROM tickets WHERE "+poolCondition+" AND deleted_at IS NULL", models.StatusWaiting, deptID).Scan(&waitingCount)
-	config.DB.Model(&models.Ticket{}).Where("status = ? AND department_id = ?", models.StatusInProgress, deptID).Count(&inProgressCount)
-	config.DB.Model(&models.Ticket{}).Where("status = ? AND department_id = ?", models.StatusClosed, deptID).Count(&closedCount)
+
+	// Card "Sedang Dikerjakan": jumlah tiket yang SEDANG STAFF INI kerjakan (bukan total dept)
+	var inProgressCount int64
+	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", user.ID, models.StatusInProgress).Count(&inProgressCount)
+
+	var closedCount int64
+	config.DB.Model(&models.Ticket{}).Where("status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusClosed, deptID).Count(&closedCount)
 
 	// tiket yang di-assign ke staff ini
 	var myActiveTickets []*models.Ticket
