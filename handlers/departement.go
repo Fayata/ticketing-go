@@ -53,17 +53,14 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	}
 	deptID := *dbUser.DepartmentID
 
-	// card statistik: waiting = pool (belum di-claim), in progress, closed
+	// Kondisi pool: belum di-claim (assigned_to_id NULL, status WAITING), departemen saya ATAU umum (department_id NULL)
+	poolCondition := "assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)"
+
+	// card statistik: waiting = pool, in progress, closed (pakai Raw agar konsisten dengan DB)
 	var waitingCount, inProgressCount, closedCount int64
-	config.DB.Model(&models.Ticket{}).
-		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, deptID).
-		Count(&waitingCount)
-	config.DB.Model(&models.Ticket{}).
-		Where("status = ? AND department_id = ?", models.StatusInProgress, deptID).
-		Count(&inProgressCount)
-	config.DB.Model(&models.Ticket{}).
-		Where("status = ? AND department_id = ?", models.StatusClosed, deptID).
-		Count(&closedCount)
+	config.DB.Raw("SELECT COUNT(*) FROM tickets WHERE "+poolCondition+" AND deleted_at IS NULL", models.StatusWaiting, deptID).Scan(&waitingCount)
+	config.DB.Model(&models.Ticket{}).Where("status = ? AND department_id = ?", models.StatusInProgress, deptID).Count(&inProgressCount)
+	config.DB.Model(&models.Ticket{}).Where("status = ? AND department_id = ?", models.StatusClosed, deptID).Count(&closedCount)
 
 	// tiket yang di-assign ke staff ini
 	var myActiveTickets []*models.Ticket
@@ -72,10 +69,10 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		Order("updated_at DESC").
 		Find(&myActiveTickets)
 
-	// pool = tiket yang belum di-claim (assigned_to_id NULL, status WAITING) untuk departemen saya atau umum
+	// pool: tiket belum di-claim untuk departemen saya atau umum
 	var ticketPool []*models.Ticket
 	config.DB.Preload("Department").Preload("CreatedBy").
-		Where("assigned_to_id IS NULL AND status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusWaiting, deptID).
+		Where(poolCondition, models.StatusWaiting, deptID).
 		Order("created_at ASC").
 		Find(&ticketPool)
 
@@ -435,28 +432,33 @@ func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request
 	}
 
 	var ticket models.Ticket
-	if err := config.DB.Where("id = ? AND assigned_to_id = ?", ticketID, user.ID).First(&ticket).Error; err == nil {
-		systemReply := models.TicketReply{
-			TicketID: ticket.ID,
-			UserID:   user.ID,
-			Message:  "⚠️ Tiket dikembalikan ke pool (Released).",
-		}
-		config.DB.Create(&systemReply)
-
-		// Update assignment history - mark as released
-		now := time.Now()
-		config.DB.Model(&models.TicketAssignmentHistory{}).
-			Where("ticket_id = ? AND staff_id = ? AND released_at IS NULL", ticketID, user.ID).
-			Update("released_at", &now)
-
-		ticket.AssignedToID = nil
-		ticket.Status = models.StatusWaiting
-		ticket.UpdatedAt = time.Now()
-		if err := config.DB.Save(&ticket).Error; err != nil {
-			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Gagal+melepas+tiket", http.StatusSeeOther)
-			return
-		}
+	if err := config.DB.Where("id = ? AND assigned_to_id = ?", ticketID, user.ID).First(&ticket).Error; err != nil {
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tiket+tidak+ditemukan+atau+bukan+milik+Anda", http.StatusSeeOther)
+		return
 	}
+
+	systemReply := models.TicketReply{
+		TicketID: ticket.ID,
+		UserID:   user.ID,
+		Message:  "⚠️ Tiket dikembalikan ke pool (Released).",
+	}
+	config.DB.Create(&systemReply)
+
+	now := time.Now()
+	config.DB.Model(&models.TicketAssignmentHistory{}).
+		Where("ticket_id = ? AND staff_id = ? AND released_at IS NULL", ticketID, user.ID).
+		Update("released_at", &now)
+
+	// Update tiket di DB: assigned_to_id = NULL, status = WAITING (pakai Updates agar NULL benar-benar tersimpan)
+	if err := config.DB.Model(&ticket).Updates(map[string]interface{}{
+		"assigned_to_id": nil,
+		"status":         models.StatusWaiting,
+		"updated_at":     now,
+	}).Error; err != nil {
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Gagal+melepas+tiket", http.StatusSeeOther)
+		return
+	}
+
 	http.Redirect(w, r, config.Path("/departement/dashboard")+"?success=Tiket+berhasil+dikembalikan+ke+pool", http.StatusSeeOther)
 }
 
