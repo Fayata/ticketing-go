@@ -3,29 +3,29 @@
 {{end}}
 
 {{define "tickets/department_dashboard_content"}}
-<div class="dept-dashboard-grid">
-    <div class="dept-left-col">
-        <div class="dept-stats-grid">
-            <div class="dept-card">
-                <div class="dept-card-header">
-                    <span style="color:#4b5563;">Menunggu (Pool)</span>
-                    <div class="dept-icon-wrapper bg-orange-soft">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    </div>
-                </div>
-                <div class="dept-stat-value">{{.waiting_count}}</div>
-            </div>
-            <div class="dept-card">
-                <div class="dept-card-header">
-                    <span style="color:#4b5563;">Sedang Dikerjakan</span>
-                    <div class="dept-icon-wrapper bg-blue-soft">
-                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    </div>
-                </div>
-                <div class="dept-stat-value">{{.progress_count}}</div>
+<div class="dept-stats-grid">
+    <div class="dept-card">
+        <div class="dept-card-header">
+            <span style="color:#4b5563;">Menunggu (Pool)</span>
+            <div class="dept-icon-wrapper bg-orange-soft">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             </div>
         </div>
+        <div class="dept-stat-value">{{.waiting_count}}</div>
+    </div>
+    <div class="dept-card">
+        <div class="dept-card-header">
+            <span style="color:#4b5563;">Sedang Dikerjakan</span>
+            <div class="dept-icon-wrapper bg-blue-soft">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+        </div>
+        <div class="dept-stat-value">{{.progress_count}}</div>
+    </div>
+</div>
 
+<div class="dept-layout-grid">
+    <div class="dept-left-col">
         <div class="dept-card">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="font-size:1.125rem; font-weight:700; margin:0;">Aktivitas Kinerja Saya (Tahun Ini)</h3>
@@ -97,7 +97,8 @@
         </div>
     </div>
 
-    <div class="dept-card dept-pool-card">
+    <div class="dept-pool-wrap">
+        <div class="dept-card dept-pool-card">
         <div class="dept-pool-header">
             <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:#991b1b;">Pool Tiket (Masuk)</h3>
             <span style="font-size:0.875rem; color:#6b7280;">{{len .ticket_pool}} tiket menunggu</span>
@@ -134,6 +135,7 @@
                 <p>Tidak ada tiket baru di pool.</p>
             </div>
             {{end}}
+        </div>
         </div>
     </div>
 </div>

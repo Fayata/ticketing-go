@@ -169,8 +169,16 @@
     overflow-y: auto;
 }
 
-/* Dashboard grid: kiri = stat + aktivitas + tiket saya, kanan = pool (sejajar dari atas) */
-.dept-dashboard-grid {
+/* Baris stat: Menunggu + Sedang Dikerjakan (full width) */
+.dept-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Baris bawah: kiri = Aktivitas + Tiket Saya, kanan = Pool */
+.dept-layout-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 1.5rem;
@@ -183,11 +191,9 @@
     gap: 1.5rem;
 }
 
-/* Stats Cards — 2 kolom (Menunggu + Sedang Dikerjakan) */
-.dept-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
+/* Pembungkus pool: dinaikkan sedikit agar tidak ada space kosong di atasnya */
+.dept-pool-wrap {
+    margin-top: -1.25rem;
 }
 
 .dept-card {
@@ -220,7 +226,7 @@
     color: #1f2937;
 }
 
-/* Pool Tiket — sejajar dengan card Menunggu & Sedang Dikerjakan (di kolom kanan) */
+/* Pool Tiket — di samping Aktivitas Kinerja, card dinaikkan via .dept-pool-wrap */
 .dept-pool-card {
     display: flex;
     flex-direction: column;
@@ -611,8 +617,9 @@
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
-    .dept-stats-grid { grid-template-columns: 1fr; gap: 0.75rem; }
-    .dept-dashboard-grid { grid-template-columns: 1fr; }
+    .dept-stats-grid { grid-template-columns: 1fr; gap: 0.75rem; margin-bottom: 1rem; }
+    .dept-layout-grid { grid-template-columns: 1fr; }
+    .dept-pool-wrap { margin-top: 0; }
     .dept-card { overflow: hidden; }
     .kb-admin .kb-admin-table { display: block; overflow-x: auto; }
     .kb-admin .kb-admin-header { flex-direction: column; align-items: flex-start; }
@@ -641,6 +648,6 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
-    .dept-dashboard-grid { grid-template-columns: 1fr; }
+    .dept-layout-grid { grid-template-columns: 1fr; }
     .dept-stats-grid { grid-template-columns: 1fr; }
 }
