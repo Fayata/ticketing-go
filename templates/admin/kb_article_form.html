@@ -13,7 +13,7 @@
         <div class="card-header"><h2>Tambah Artikel</h2></div>
         <div class="card-body">
             {{if .error}}<div class="alert alert-error">{{.error}}</div>{{end}}
-            <form method="post" action="admin/knowledge-base/articles/create/post">
+            <form method="post" action="admin/knowledge-base/articles/create/post" enctype="multipart/form-data" id="kbArticleForm">
                 <div class="form-group">
                     <label class="form-label">Judul *</label>
                     <input type="text" name="title" class="form-input" required placeholder="Judul artikel">
@@ -28,9 +28,17 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Isi (teks atau HTML)</label>
-                    <textarea name="content" class="form-input" rows="12" placeholder="Konten artikel..."></textarea>
+                    <label class="form-label">Isi pengantar (teks atau HTML)</label>
+                    <textarea name="content" class="form-input" rows="6" placeholder="Konten pengantar artikel (opsional jika menggunakan sub judul)..."></textarea>
                 </div>
+
+                <div class="form-group kb-sections-wrap">
+                    <label class="form-label">Sub judul &amp; konten (opsional)</label>
+                    <p class="form-hint">Tambahkan section dengan sub judul, teks, dan foto. Layout gambar: penuh, setengah, atau thumbnail.</p>
+                    <div id="kbSectionsContainer"></div>
+                    <button type="button" class="btn-outline-teal kb-add-section-btn" id="kbAddSection">+ Tambah sub judul</button>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Estimasi baca (menit)</label>
                     <input type="number" name="read_time_minutes" class="form-input" value="5" min="0">
@@ -44,4 +52,62 @@
     </div>
 </div>
 </div>
+<script>
+(function(){
+    var sectionIndex = 0;
+    var container = document.getElementById('kbSectionsContainer');
+    var addBtn = document.getElementById('kbAddSection');
+
+    function layoutOptions(selected) {
+        var opts = [
+            { value: 'full', label: 'Gambar penuh (lebar 100%)' },
+            { value: 'half', label: 'Setengah lebar (50%)' },
+            { value: 'thumb', label: 'Thumbnail (kecil)' }
+        ];
+        var h = '<select name="section_' + sectionIndex + '_layout" class="form-input kb-section-layout">';
+        opts.forEach(function(o) {
+            h += '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' + o.label + '</option>';
+        });
+        h += '</select>';
+        return h;
+    }
+
+    function addSection(data) {
+        data = data || {};
+        var idx = sectionIndex++;
+        var div = document.createElement('div');
+        div.className = 'kb-section-block';
+        div.dataset.index = idx;
+        div.innerHTML =
+            '<div class="kb-section-header">' +
+                '<span class="kb-section-title">Sub judul ' + (idx + 1) + '</span>' +
+                '<button type="button" class="kb-section-remove btn-outline-teal" aria-label="Hapus section">Hapus</button>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label class="form-label">Sub judul</label>' +
+                '<input type="text" name="section_' + idx + '_subtitle" class="form-input" placeholder="Judul section" value="' + (data.subtitle || '').replace(/"/g, '&quot;') + '">' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label class="form-label">Konten</label>' +
+                '<textarea name="section_' + idx + '_content" class="form-input" rows="4" placeholder="Teks section...">' + (data.content || '').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</textarea>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label class="form-label">Gambar (opsional)</label>' +
+                '<input type="file" name="section_' + idx + '_image" class="form-input kb-section-image" accept="image/jpeg,image/png,image/gif,image/webp">' +
+                '<span class="form-hint">Maks. 5 MB. JPG, PNG, GIF, WebP.</span>' +
+            '</div>' +
+            '<div class="form-group">' +
+                '<label class="form-label">Layout gambar</label>' +
+                layoutOptions(data.image_layout || 'full') +
+            '</div>';
+        container.appendChild(div);
+        div.querySelector('.kb-section-remove').addEventListener('click', function() {
+            div.remove();
+        });
+    }
+
+    addBtn.addEventListener('click', function() { addSection(); });
+    addSection();
+})();
+</script>
 {{end}}

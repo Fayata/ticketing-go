@@ -94,6 +94,10 @@ func (h *DashboardHandler) ShowKBArticle(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, config.Path("/knowledge-base"), http.StatusSeeOther)
 		return
 	}
+	var articleSections []models.KBArticleSection
+	if article.Sections != "" {
+		_ = json.Unmarshal([]byte(article.Sections), &articleSections)
+	}
 	var catID *uint
 	if article.CategoryID != 0 {
 		catID = &article.CategoryID
@@ -112,6 +116,7 @@ func (h *DashboardHandler) ShowKBArticle(w http.ResponseWriter, r *http.Request)
 		"active_tickets_count":      activeTicketsCount,
 		"unread_count":              unreadCount,
 		"article":                   article,
+		"article_sections":          articleSections,
 		"related_articles":          relatedByCategory,
 		"popular_articles_sidebar":  popularExcludeCurrent,
 	})

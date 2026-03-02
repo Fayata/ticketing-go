@@ -27,6 +27,15 @@ func (KBCategory) TableName() string {
 	return "kb_categories"
 }
 
+// KBArticleSection satu blok sub-judul + konten + gambar (layout) di dalam artikel.
+// Disimpan sebagai JSON array di KBArticle.Sections.
+type KBArticleSection struct {
+	Subtitle   string `json:"subtitle"`    // sub judul
+	Content    string `json:"content"`    // teks/HTML per section
+	ImagePath  string `json:"image_path"` // path relatif ke static, mis. uploads/kb/xxx.jpg
+	ImageLayout string `json:"image_layout"` // "full" | "half" | "thumb" untuk tampilan responsif
+}
+
 // KBArticle untuk artikel Knowledge Base
 type KBArticle struct {
 	ID               uint           `gorm:"primarykey" json:"id"`
@@ -34,6 +43,7 @@ type KBArticle struct {
 	Title            string         `gorm:"size:255;not null" json:"title"`
 	Slug             string         `gorm:"size:255;index;not null" json:"slug"`
 	Content          string         `gorm:"type:text;not null" json:"content"`
+	Sections         string         `gorm:"type:text" json:"-"` // JSON array of KBArticleSection
 	Views            int            `gorm:"default:0" json:"views"`
 	ReadTimeMinutes  int            `gorm:"default:0" json:"read_time_minutes"`
 	Published        bool           `gorm:"default:true" json:"published"`

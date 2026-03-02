@@ -1,7 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -10,6 +15,14 @@ import (
 	"ticketing/config"
 	"ticketing/models"
 	"ticketing/utils"
+)
+
+const (
+	kbUploadDir       = "static/uploads/kb"
+	maxKBImageSize    = 5 << 20 // 5 MB
+	kbImageLayoutFull = "full"
+	kbImageLayoutHalf = "half"
+	kbImageLayoutThumb = "thumb"
 )
 
 type AdminHandler struct {
@@ -500,6 +513,101 @@ func (h *AdminHandler) CreateKBArticleForm(w http.ResponseWriter, r *http.Reques
 	RenderTemplate(w, "admin/kb_article_form", data)
 }
 
+// parseArticleSectionsFromRequest parses multipart form untuk section_0_subtitle, section_0_content, section_0_image, section_0_layout, ...
+// existingImagePaths: untuk edit, map index -> path yang sudah ada (jika tidak ada upload baru).
+func parseArticleSectionsFromRequest(r *http.Request, articleID uint, existingImagePaths map[int]string) (string, error) {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		return "[]", nil
+	}
+	form := r.MultipartForm
+	if form == nil {
+		return "[]", nil
+	}
+	var indices []int
+	for key := range form.Value {
+		if strings.HasPrefix(key, "section_") && strings.HasSuffix(key, "_subtitle") {
+			mid := strings.TrimPrefix(strings.TrimSuffix(key, "_subtitle"), "section_")
+			if i, err := strconv.Atoi(mid); err == nil {
+				indices = append(indices, i)
+			}
+		}
+	}
+	sort.Ints(indices)
+	if len(indices) == 0 {
+		return "[]", nil
+	}
+	_ = os.MkdirAll(kbUploadDir, 0755)
+	var sections []models.KBArticleSection
+	for _, i := range indices {
+		prefix := "section_" + strconv.Itoa(i) + "_"
+		subtitle := strings.TrimSpace(firstFormValue(form.Value, prefix+"subtitle"))
+		content := firstFormValue(form.Value, prefix+"content")
+		layout := strings.TrimSpace(firstFormValue(form.Value, prefix+"layout"))
+		if layout != kbImageLayoutHalf && layout != kbImageLayoutThumb {
+			layout = kbImageLayoutFull
+		}
+		imagePath := existingImagePaths[i]
+		if p := firstFormValue(form.Value, prefix+"image_path"); p != "" {
+			imagePath = strings.TrimSpace(p)
+		}
+		if fhs := form.File[prefix+"image"]; len(fhs) > 0 {
+			fh := fhs[0]
+			if fh.Size > 0 && fh.Size <= maxKBImageSize {
+				ext := strings.ToLower(filepath.Ext(fh.Filename))
+				if ext == "" {
+					ext = ".jpg"
+				}
+				allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".gif": true, ".webp": true}
+				if allowed[ext] {
+					baseID := int(articleID)
+					name := strconv.Itoa(baseID) + "_" + strconv.Itoa(i) + "_" + strconv.FormatInt(time.Now().UnixNano(), 10) + ext
+					dstPath := filepath.Join(kbUploadDir, name)
+					if saveUploadedFile(fh, dstPath) == nil {
+						imagePath = "uploads/kb/" + name
+					}
+				}
+			}
+		}
+		sections = append(sections, models.KBArticleSection{
+			Subtitle:    subtitle,
+			Content:      content,
+			ImagePath:    imagePath,
+			ImageLayout:  layout,
+		})
+	}
+	b, err := json.Marshal(sections)
+	if err != nil {
+		return "[]", err
+	}
+	return string(b), nil
+}
+
+func firstFormValue(v map[string][]string, key string) string {
+	if v == nil {
+		return ""
+	}
+	vals := v[key]
+	if len(vals) == 0 {
+		return ""
+	}
+	return vals[0]
+}
+
+func saveUploadedFile(fh *multipart.FileHeader, dstPath string) error {
+	src, err := fh.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+	_, err = io.Copy(dst, src)
+	return err
+}
+
 func (h *AdminHandler) CreateKBArticlePost(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, config.Path("/admin/knowledge-base"), http.StatusSeeOther)
@@ -513,6 +621,7 @@ func (h *AdminHandler) CreateKBArticlePost(w http.ResponseWriter, r *http.Reques
 		http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/create")+"?error=Judul+dan+kategori+wajib", http.StatusSeeOther)
 		return
 	}
+	sectionsJSON, _ := parseArticleSectionsFromRequest(r, 0, nil)
 	catID, _ := strconv.Atoi(categoryIDStr)
 	readTime, _ := strconv.Atoi(readTimeStr)
 	slug := slugify(title)
@@ -525,6 +634,7 @@ func (h *AdminHandler) CreateKBArticlePost(w http.ResponseWriter, r *http.Reques
 		Title:           title,
 		Slug:            slug,
 		Content:         content,
+		Sections:        sectionsJSON,
 		ReadTimeMinutes: readTime,
 		Published:      true,
 	}
@@ -657,6 +767,17 @@ func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+strconv.Itoa(id)+"?error=Judul+dan+kategori+wajib", http.StatusSeeOther)
 			return
 		}
+		existingImagePaths := make(map[int]string)
+		if art.Sections != "" {
+			var existing []models.KBArticleSection
+			_ = json.Unmarshal([]byte(art.Sections), &existing)
+			for i, s := range existing {
+				if s.ImagePath != "" {
+					existingImagePaths[i] = s.ImagePath
+				}
+			}
+		}
+		sectionsJSON, _ := parseArticleSectionsFromRequest(r, art.ID, existingImagePaths)
 		catID, _ := strconv.Atoi(categoryIDStr)
 		readTime, _ := strconv.Atoi(readTimeStr)
 		slug := slugify(title)
@@ -670,6 +791,7 @@ func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
 		art.CategoryID = uint(catID)
 		art.Title = title
 		art.Content = content
+		art.Sections = sectionsJSON
 		art.ReadTimeMinutes = readTime
 		if err := config.DB.Save(&art).Error; err != nil {
 			http.Redirect(w, r, config.Path("/admin/knowledge-base/articles/edit/")+strconv.Itoa(id)+"?error=Gagal+menyimpan", http.StatusSeeOther)
@@ -681,15 +803,21 @@ func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
 
 	var categories []models.KBCategory
 	config.DB.Order("sort_order ASC, name ASC").Find(&categories)
+	var articleSections []models.KBArticleSection
+	if art.Sections != "" {
+		_ = json.Unmarshal([]byte(art.Sections), &articleSections)
+	}
 	errMsg := r.URL.Query().Get("error")
 	data := AddBaseData(r, map[string]interface{}{
-		"title":         "Edit Artikel KB",
-		"page_title":    "Edit Artikel",
-		"nav_active":    "admin_kb",
-		"template_name": "admin/kb_article_edit",
-		"article":       art,
-		"categories":    categories,
-		"error":         errMsg,
+		"title":                     "Edit Artikel KB",
+		"page_title":                "Edit Artikel",
+		"nav_active":                "admin_kb",
+		"template_name":             "admin/kb_article_edit",
+		"article":                   art,
+		"categories":                categories,
+		"article_sections":          articleSections,
+		"article_sections_next_index": len(articleSections),
+		"error":                     errMsg,
 	})
 	if user != nil && user.IsStaff {
 		data["nav_active"] = "kb_admin"

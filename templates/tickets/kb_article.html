@@ -11,7 +11,24 @@
                 </div>
             </div>
             <div class="card-body" style="padding: 1.5rem 1.4rem;">
-                <div class="kb-article-body" id="kbArticleBody">{{linebreaks .article.Content}}</div>
+                <div class="kb-article-body" id="kbArticleBody">
+                    {{if .article_sections}}
+                    {{if .article.Content}}<div class="kb-article-intro">{{linebreaks .article.Content}}</div>{{end}}
+                    {{range .article_sections}}
+                    <section class="kb-article-section">
+                        {{if .Subtitle}}<h2 class="kb-section-title">{{.Subtitle}}</h2>{{end}}
+                        {{if .Content}}<div class="kb-section-content">{{linebreaks .Content}}</div>{{end}}
+                        {{if .ImagePath}}
+                        <div class="kb-section-image-wrap kb-section-image--{{.ImageLayout}}">
+                            <img src="static/{{.ImagePath}}" alt="{{.Subtitle}}" class="kb-section-img" loading="lazy">
+                        </div>
+                        {{end}}
+                    </section>
+                    {{end}}
+                    {{else}}
+                    {{linebreaks .article.Content}}
+                    {{end}}
+                </div>
             </div>
         </div>
     </div>

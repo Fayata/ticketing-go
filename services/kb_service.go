@@ -44,6 +44,7 @@ func (s *KBService) GetKBPageData() (*KBPageData, error) {
 	config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true).
 		Order("views DESC").Limit(6).Find(&popularArticles)
 
+	// Baru Diperbarui: urutkan hanya berdasarkan updated_at (kapan artikel diedit), bukan dari penambahan view
 	var recentArticles []models.KBArticle
 	config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true).
 		Order("updated_at DESC").Limit(5).Find(&recentArticles)
@@ -70,10 +71,10 @@ func (s *KBService) GetKBArticleByID(id uint) (*models.KBArticle, error) {
 	return &article, nil
 }
 
-// RecordArticleView increments view count for the article (call when user has scrolled to end).
+// RecordArticleView increments view count only; tidak mengubah updated_at agar "Baru Diperbarui" tetap berdasarkan edit artikel.
 func (s *KBService) RecordArticleView(articleID uint) error {
 	return config.DB.Model(&models.KBArticle{}).Where("id = ? AND published = ? AND deleted_at IS NULL", articleID, true).
-		Update("views", gorm.Expr("views + 1")).Error
+		UpdateColumn("views", gorm.Expr("views + 1")).Error
 }
 
 // GetRelatedArticles returns articles from the same category (or popular) excluding the given article.

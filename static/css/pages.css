@@ -108,3 +108,83 @@
     }
 }
 
+/* --- KB Article: form sections (admin) --- */
+.kb-sections-wrap .form-hint {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #6b7280);
+    margin-bottom: 0.75rem;
+}
+.kb-section-block {
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    background: var(--bg-secondary, #f9fafb);
+}
+.kb-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+.kb-section-title {
+    font-weight: 600;
+    color: var(--text-primary, #111827);
+}
+.kb-add-section-btn {
+    margin-top: 0.5rem;
+}
+
+/* --- KB Article view: sections + image layout (user) --- */
+.kb-article-intro {
+    margin-bottom: 1.5rem;
+}
+.kb-article-section {
+    margin-bottom: 2rem;
+}
+.kb-article-section .kb-section-title {
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary, #111827);
+}
+.kb-section-content {
+    margin-bottom: 1rem;
+}
+.kb-section-image-wrap {
+    margin-top: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.kb-section-image-wrap .kb-section-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+/* full: lebar 100% */
+.kb-section-image--full .kb-section-img {
+    max-width: 100%;
+}
+/* half: 50% lebar, responsif jadi full di mobile */
+.kb-section-image--half {
+    max-width: 480px;
+}
+.kb-section-image--half .kb-section-img {
+    max-width: 100%;
+}
+@media (max-width: 640px) {
+    .kb-section-image--half {
+        max-width: 100%;
+    }
+}
+/* thumb: kecil */
+.kb-section-image--thumb .kb-section-img {
+    max-width: 200px;
+    width: auto;
+}
+@media (max-width: 640px) {
+    .kb-section-image--thumb .kb-section-img {
+        max-width: 160px;
+    }
+}
+

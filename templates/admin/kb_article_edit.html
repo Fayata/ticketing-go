@@ -14,7 +14,7 @@
         <div class="card-header"><h2>Edit Artikel</h2></div>
         <div class="card-body">
             {{if .error}}<div class="alert alert-error">{{.error}}</div>{{end}}
-            <form method="post" action="admin/knowledge-base/articles/edit/{{.article.ID}}">
+            <form method="post" action="admin/knowledge-base/articles/edit/{{.article.ID}}" enctype="multipart/form-data" id="kbArticleForm">
                 <div class="form-group">
                     <label class="form-label">Judul *</label>
                     <input type="text" name="title" class="form-input" required placeholder="Judul artikel" value="{{.article.Title}}">
@@ -29,9 +29,47 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Isi (teks atau HTML)</label>
-                    <textarea name="content" class="form-input" rows="12" placeholder="Konten artikel...">{{.article.Content}}</textarea>
+                    <label class="form-label">Isi pengantar (teks atau HTML)</label>
+                    <textarea name="content" class="form-input" rows="6" placeholder="Konten pengantar...">{{.article.Content}}</textarea>
                 </div>
+
+                <div class="form-group kb-sections-wrap">
+                    <label class="form-label">Sub judul &amp; konten</label>
+                    <p class="form-hint">Layout gambar: penuh, setengah, atau thumbnail.</p>
+                    <div id="kbSectionsContainer" data-next-index="{{.article_sections_next_index}}">
+                        {{range $i, $s := .article_sections}}
+                        <div class="kb-section-block" data-index="{{$i}}">
+                            <div class="kb-section-header">
+                                <span class="kb-section-title">Sub judul {{add $i 1}}</span>
+                                <button type="button" class="kb-section-remove btn-outline-teal" aria-label="Hapus section">Hapus</button>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Sub judul</label>
+                                <input type="text" name="section_{{$i}}_subtitle" class="form-input" placeholder="Judul section" value="{{$s.Subtitle}}">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Konten</label>
+                                <textarea name="section_{{$i}}_content" class="form-input" rows="4" placeholder="Teks section...">{{$s.Content}}</textarea>
+                            </div>
+                            {{if $s.ImagePath}}<input type="hidden" name="section_{{$i}}_image_path" value="{{$s.ImagePath}}"><p class="form-hint">Gambar saat ini: {{$s.ImagePath}}. Upload file baru untuk mengganti.</p>{{end}}
+                            <div class="form-group">
+                                <label class="form-label">Gambar (opsional)</label>
+                                <input type="file" name="section_{{$i}}_image" class="form-input kb-section-image" accept="image/jpeg,image/png,image/gif,image/webp">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Layout gambar</label>
+                                <select name="section_{{$i}}_layout" class="form-input kb-section-layout">
+                                    <option value="full" {{if eq $s.ImageLayout "full"}}selected{{end}}>Gambar penuh (lebar 100%)</option>
+                                    <option value="half" {{if eq $s.ImageLayout "half"}}selected{{end}}>Setengah lebar (50%)</option>
+                                    <option value="thumb" {{if eq $s.ImageLayout "thumb"}}selected{{end}}>Thumbnail (kecil)</option>
+                                </select>
+                            </div>
+                        </div>
+                        {{end}}
+                    </div>
+                    <button type="button" class="btn-outline-teal kb-add-section-btn" id="kbAddSection">+ Tambah sub judul</button>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Estimasi baca (menit)</label>
                     <input type="number" name="read_time_minutes" class="form-input" value="{{.article.ReadTimeMinutes}}" min="0">
@@ -45,4 +83,65 @@
     </div>
 </div>
 </div>
+<script>
+(function(){
+    var container = document.getElementById('kbSectionsContainer');
+    var addBtn = document.getElementById('kbAddSection');
+    var sectionIndex = container ? parseInt(container.getAttribute('data-next-index') || '0', 10) : 0;
+
+    function layoutOptions(selected) {
+        selected = selected || 'full';
+        var opts = [
+            { value: 'full', label: 'Gambar penuh (lebar 100%)' },
+            { value: 'half', label: 'Setengah lebar (50%)' },
+            { value: 'thumb', label: 'Thumbnail (kecil)' }
+        ];
+        var h = '<select name="section_' + sectionIndex + '_layout" class="form-input kb-section-layout">';
+        opts.forEach(function(o) {
+            h += '<option value="' + o.value + '"' + (o.value === selected ? ' selected' : '') + '>' + o.label + '</option>';
+        });
+        h += '</select>';
+        return h;
+    }
+
+    if (addBtn && container) {
+        addBtn.addEventListener('click', function() {
+            var idx = sectionIndex++;
+            var div = document.createElement('div');
+            div.className = 'kb-section-block';
+            div.dataset.index = idx;
+            div.innerHTML =
+                '<div class="kb-section-header">' +
+                    '<span class="kb-section-title">Sub judul ' + (idx + 1) + '</span>' +
+                    '<button type="button" class="kb-section-remove btn-outline-teal" aria-label="Hapus section">Hapus</button>' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Sub judul</label>' +
+                    '<input type="text" name="section_' + idx + '_subtitle" class="form-input" placeholder="Judul section">' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Konten</label>' +
+                    '<textarea name="section_' + idx + '_content" class="form-input" rows="4" placeholder="Teks section..."></textarea>' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Gambar (opsional)</label>' +
+                    '<input type="file" name="section_' + idx + '_image" class="form-input kb-section-image" accept="image/jpeg,image/png,image/gif,image/webp">' +
+                '</div>' +
+                '<div class="form-group">' +
+                    '<label class="form-label">Layout gambar</label>' +
+                    layoutOptions('full') +
+                '</div>';
+            container.appendChild(div);
+            div.querySelector('.kb-section-remove').addEventListener('click', function() {
+                div.remove();
+            });
+        });
+        container.querySelectorAll('.kb-section-remove').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                this.closest('.kb-section-block').remove();
+            });
+        });
+    }
+})();
+</script>
 {{end}}
