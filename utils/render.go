@@ -276,6 +276,10 @@ func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interf
 	if data["unread_replies_count"] == nil {
 		data["unread_replies_count"] = 0
 	}
+	// Base URL untuk asset static (gambar KB, dll) — pakai path absolut agar gambar selalu benar
+	if data["static_base"] == nil {
+		data["static_base"] = config.Path("/static")
+	}
 
 	return data
 }

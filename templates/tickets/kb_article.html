@@ -20,7 +20,7 @@
                         {{if .Content}}<div class="kb-section-content">{{linebreaks .Content}}</div>{{end}}
                         {{if .ImagePath}}
                         <div class="kb-section-image-wrap kb-section-image--{{.ImageLayout}}">
-                            <img src="static/{{.ImagePath}}" alt="{{.Subtitle}}" class="kb-section-img" loading="lazy">
+                            <img src="{{$.static_base}}/{{.ImagePath}}" alt="{{.Subtitle}}" class="kb-section-img" loading="lazy">
                         </div>
                         {{end}}
                     </section>
