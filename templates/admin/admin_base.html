@@ -1,0 +1,107 @@
+{{define "admin_base"}}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <base href="/Ticketing/">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .title}}{{.title}}{{else}}Admin — Ticketing{{end}}</title>
+    <link rel="stylesheet" href="static/css/department_dashboard.css">
+    <link rel="stylesheet" href="static/css/pages.css">
+    <link rel="stylesheet" href="static/css/alerts-dept.css">
+</head>
+<body>
+    <div class="department-layout">
+        <aside class="dept-sidebar" id="deptSidebar">
+            <div class="dept-sidebar-header">
+                <h1 class="dept-logo">Ticketing Admin</h1>
+                <button type="button" class="dept-sidebar-toggle" id="deptSidebarToggle" aria-label="Toggle sidebar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+            </div>
+
+            <nav class="dept-nav">
+                <a href="admin/users" class="dept-nav-item {{if eq .nav_active "admin_users"}}active{{end}}">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span class="dept-nav-label">Manajemen User</span>
+                </a>
+
+                <a href="admin/departments" class="dept-nav-item {{if eq .nav_active "admin_departments"}}active{{end}}">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <span class="dept-nav-label">Manajemen Departemen</span>
+                </a>
+
+                <a href="admin/knowledge-base" class="dept-nav-item {{if eq .nav_active "admin_kb"}}active{{end}}">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8"/><path d="M8 11h8"/></svg>
+                    <span class="dept-nav-label">Kelola Knowledge Base</span>
+                </a>
+            </nav>
+
+            <div class="dept-profile-section">
+                <div class="dept-profile-card">
+                    <div class="dept-avatar-circle">
+                        {{if .user}}{{slice .user.Username 0 2 | upper}}{{else}}AD{{end}}
+                    </div>
+                    <div class="dept-profile-details">
+                        <div class="dept-profile-name">{{if .user}}{{getFullName .user}}{{else}}Admin{{end}}</div>
+                        <div class="dept-profile-badge">Admin</div>
+                    </div>
+                </div>
+
+                <a href="logout" class="dept-nav-item dept-logout-btn" style="color:#0d9488;">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span class="dept-nav-label">Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="dept-main">
+            <header class="dept-header">
+                <button type="button" class="dept-header-mobile-menu" id="deptMobileMenuToggle" aria-label="Buka menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <div>
+                    <h2 style="font-size:1.5rem; font-weight:700; margin:0;">{{if .page_title}}{{.page_title}}{{else}}Admin{{end}}</h2>
+                    <p style="color:#6b7280; margin:0.25rem 0 0 0;">{{if .page_subtitle}}{{.page_subtitle}}{{else}}Kelola sistem ticketing{{end}}</p>
+                </div>
+            </header>
+
+            <div class="dept-content-scrollable" style="padding: 2rem; overflow-y: auto; height: 100%;">
+                {{if .messages}}
+                <div class="messages-container" style="margin-bottom: 1rem;">
+                    {{range .messages}}
+                    <div class="alert alert-success">{{.}}</div>
+                    {{end}}
+                </div>
+                {{end}}
+                {{if eq .template_name "admin/users_list"}}
+                    {{template "admin/users_list_content" .}}
+                {{else if eq .template_name "admin/user_form"}}
+                    {{template "admin/user_form_content" .}}
+                {{else if eq .template_name "admin/departments_list"}}
+                    {{template "admin/departments_list_content" .}}
+                {{else if eq .template_name "admin/department_form"}}
+                    {{template "admin/department_form_content" .}}
+                {{else if eq .template_name "admin/staff_assign_form"}}
+                    {{template "admin/staff_assign_form_content" .}}
+                {{else if eq .template_name "admin/kb_list"}}
+                    {{template "admin/kb_list_content" .}}
+                {{else if eq .template_name "admin/kb_category_form"}}
+                    {{template "admin/kb_category_form_content" .}}
+                {{else if eq .template_name "admin/kb_article_form"}}
+                    {{template "admin/kb_article_form_content" .}}
+                {{else if eq .template_name "admin/kb_category_edit"}}
+                    {{template "admin/kb_category_edit_content" .}}
+                {{else if eq .template_name "admin/kb_article_edit"}}
+                    {{template "admin/kb_article_edit_content" .}}
+                {{else}}
+                    {{template "admin/users_list_content" .}}
+                {{end}}
+            </div>
+        </main>
+    </div>
+    <script src="static/js/alerts.js"></script>
+    <script src="static/js/department-base.js"></script>
+</body>
+</html>
+{{end}}
