@@ -56,7 +56,8 @@ func main() {
 	dashboardHandler := handlers.NewDashboardHandler(cfg, dashboardService, kbService)
 	ticketHandler := handlers.NewTicketHandler(cfg, emailService, ticketService)
 	settingsHandler := handlers.NewSettingsHandler(cfg, settingsService)
-	departementHandler := handlers.NewDepartmentHandler(cfg, emailService)
+	staffDashboardService := services.NewStaffDashboardService()
+	departementHandler := handlers.NewDepartmentHandler(cfg, emailService, staffDashboardService)
 	notificationHandler := handlers.NewNotificationHandler(cfg, notificationService)
 
 	// file static (css, js, gambar)

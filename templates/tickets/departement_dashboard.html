@@ -3,140 +3,292 @@
 {{end}}
 
 {{define "tickets/department_dashboard_content"}}
-<div class="dept-stats-grid">
-    <div class="dept-card">
-        <div class="dept-card-header">
-            <span style="color:#4b5563;">Menunggu (Pool)</span>
-            <div class="dept-icon-wrapper bg-orange-soft">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            </div>
-        </div>
-        <div class="dept-stat-value">{{.waiting_count}}</div>
-    </div>
-    <div class="dept-card">
-        <div class="dept-card-header">
-            <span style="color:#4b5563;">Sedang Dikerjakan</span>
-            <div class="dept-icon-wrapper bg-blue-soft">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-        </div>
-        <div class="dept-stat-value">{{.progress_count}}</div>
-    </div>
+<link rel="stylesheet" href="static/css/staff_dashboard.css">
+<div class="staff-dash">
+	<div class="staff-dash-header">
+		<div>
+			<h1 class="staff-dash-title">{{.page_title}}</h1>
+			<p class="staff-dash-subtitle">{{if .page_subtitle}}{{.page_subtitle}}{{else}}Staff Area{{end}}</p>
+		</div>
+		<div class="staff-dash-online">
+			<span class="staff-dash-dot"></span>
+			<span>Online</span>
+		</div>
+	</div>
+
+	{{if .success}}<div class="alert alert-success">{{.success}}</div>{{end}}
+
+	{{$d := .dashboard}}
+	{{if not $d}}{{$d = nil}}{{end}}
+
+	{{if $d}}
+	<!-- KPI Row (5 cards) -->
+	<div class="staff-kpi-grid">
+		<div class="staff-kpi-card staff-kpi-amber">
+			<div class="staff-kpi-value">{{$d.WaitingCount}}</div>
+			<div class="staff-kpi-label">Menunggu (Pool)</div>
+			<div class="staff-kpi-sub">Belum di-claim</div>
+		</div>
+		<div class="staff-kpi-card staff-kpi-blue">
+			<div class="staff-kpi-value">{{$d.ProgressCount}}</div>
+			<div class="staff-kpi-label">Sedang Dikerjakan</div>
+			<div class="staff-kpi-sub">Tiket aktif saya</div>
+		</div>
+		<div class="staff-kpi-card staff-kpi-green staff-kpi-highlight">
+			<div class="staff-kpi-value">{{$d.ClosedTodayCount}}</div>
+			<div class="staff-kpi-label">Selesai Hari Ini</div>
+			<div class="staff-kpi-sub">Tiket saya, closed</div>
+			{{if $d.TrendClosedPct}}<span class="staff-kpi-trend">↑ {{$d.TrendClosedPct}}%</span>{{end}}
+		</div>
+		<div class="staff-kpi-card staff-kpi-sky">
+			<div class="staff-kpi-value">{{$d.ClosedMonthCount}}</div>
+			<div class="staff-kpi-label">Selesai Bulan Ini</div>
+			<div class="staff-kpi-sub">Bulan ini</div>
+			{{if $d.TrendMonthPct}}<span class="staff-kpi-trend">↑ {{$d.TrendMonthPct}}%</span>{{end}}
+		</div>
+		<div class="staff-kpi-card staff-kpi-purple">
+			<div class="staff-kpi-value">{{printf "%.1f" $d.AvgRating}} ★</div>
+			<div class="staff-kpi-label">Rating Saya</div>
+			<div class="staff-kpi-sub">Dari {{$d.RatedCount}} penilaian</div>
+		</div>
+	</div>
+
+	<!-- Charts Row -->
+	<div class="staff-chart-row staff-chart-row-3">
+		<div class="staff-card staff-card-wide">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg></span>
+				<span class="staff-card-title">Tren Kinerja Saya — 10 Hari Terakhir</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-chart-wrap staff-chart-trend"><canvas id="staffChartTrend" height="188"></canvas></div>
+			</div>
+		</div>
+		<div class="staff-card">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/><path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12"/></svg></span>
+				<span class="staff-card-title">Aktivitas Bulanan</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-chart-wrap staff-chart-bar"><canvas id="staffChartMonthly" height="188"></canvas></div>
+			</div>
+		</div>
+		<div class="staff-card">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5v2 M15 11v2 M15 17v2 M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg></span>
+				<span class="staff-card-title">Status Tiket Saya</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-chart-wrap staff-chart-donut"><canvas id="staffChartDonut" height="126"></canvas></div>
+				<div class="staff-legend-list">
+					{{range $d.DonutData}}
+					<div class="staff-legend-item">
+						<span class="staff-legend-dot" style="background:{{.Color}}"></span>
+						<span class="staff-legend-label">{{.Name}}</span>
+						<span class="staff-legend-value">{{.Value}}</span>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Work Area: Tiket Saya + Pool -->
+	<div class="staff-work-row">
+		<div class="staff-card staff-card-accent-blue">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+				<span class="staff-card-title">Tiket Saya (Sedang Dikerjakan)</span>
+				<span class="staff-card-badge">{{len $d.MyActiveTickets}}</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-ticket-list">
+					{{range $d.MyActiveTickets}}
+					<div class="staff-ticket-item" onclick="window.location.href='department/tiket/{{.ID}}';">
+						<div class="staff-ticket-bar staff-priority-{{.Priority}}"></div>
+						<div class="staff-ticket-inner">
+							<div class="staff-ticket-meta">
+								<span class="staff-ticket-id">{{.GetTicketNumber}}</span>
+								<span class="staff-badge staff-badge-{{.Priority}}">{{.GetPriorityDisplay}}</span>
+							</div>
+							<div class="staff-ticket-title">{{.Title}}</div>
+							<div class="staff-ticket-dept">{{if .Department}}{{.Department.Name}}{{else}}—{{end}}</div>
+							<div class="staff-ticket-actions">
+								<span class="staff-ticket-date">{{timeSince .UpdatedAt}}</span>
+								<a href="department/tiket/release/{{.ID}}" class="staff-btn staff-btn-release" onclick="event.stopPropagation(); event.preventDefault(); showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{.ID}}'; }); return false;">Lepas ke Pool</a>
+							</div>
+						</div>
+					</div>
+					{{end}}
+					{{if not $d.MyActiveTickets}}
+					<div class="staff-empty-state">
+						<p>Anda tidak sedang mengerjakan tiket.</p>
+						<p class="staff-empty-hint">Ambil tiket dari pool di sebelah.</p>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
+		<div class="staff-card staff-card-accent-amber">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/></svg></span>
+				<span class="staff-card-title">Pool Tiket (Masuk)</span>
+				<span class="staff-card-badge">{{len $d.TicketPool}}</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-ticket-list">
+					{{range $d.TicketPool}}
+					<div class="staff-ticket-item staff-pool-item" onclick="window.location.href='department/tiket/{{.ID}}';">
+						<div class="staff-ticket-bar staff-priority-{{.Priority}}"></div>
+						<div class="staff-ticket-inner">
+							<div class="staff-ticket-meta">
+								<span class="staff-ticket-id">{{.GetTicketNumber}}</span>
+								<span class="staff-badge staff-badge-{{.Priority}}">{{.GetPriorityDisplay}}</span>
+								<span class="staff-ticket-dept-inline">{{if .Department}}{{.Department.Name}}{{else}}—{{end}}</span>
+							</div>
+							<div class="staff-ticket-title">{{.Title}}</div>
+							<div class="staff-ticket-meta-footer">
+								<span>{{.CreatedBy.Username}}</span>
+								<span class="staff-ticket-time">{{timeSince .CreatedAt}}</span>
+							</div>
+							<a href="department/tiket/claim/{{.ID}}" class="staff-btn staff-btn-claim" onclick="event.stopPropagation();">Ambil Tiket</a>
+						</div>
+					</div>
+					{{end}}
+					{{if not $d.TicketPool}}
+					<div class="staff-empty-state">
+						<svg class="staff-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7"/></svg>
+						<p>Tidak ada tiket baru di pool.</p>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Bottom: Tiket Terbaru di Pool + Belum Di-rate -->
+	<div class="staff-bottom-row">
+		<div class="staff-card">
+			<div class="staff-card-head staff-card-head-action">
+				<span class="staff-card-title">Tiket Terbaru di Pool</span>
+				<a href="department/all-tickets" class="staff-card-link">Lihat Semua <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-mini-list">
+					{{range $i, $t := $d.TicketPool}}
+					{{if lt $i 3}}
+					<div class="staff-mini-item" onclick="window.location.href='department/tiket/{{$t.ID}}';">
+						<div class="staff-mini-icon staff-priority-{{$t.Priority}}">
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5v2 M15 11v2 M15 17v2 M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg>
+						</div>
+						<div class="staff-mini-body">
+							<div class="staff-mini-title">{{$t.Title}}</div>
+							<div class="staff-mini-meta">{{if $t.Department}}{{$t.Department.Name}}{{else}}—{{end}} · {{timeSince $t.CreatedAt}}</div>
+						</div>
+						<span class="staff-badge staff-badge-{{$t.Priority}}">{{$t.GetPriorityDisplay}}</span>
+					</div>
+					{{end}}
+					{{end}}
+					{{if not $d.TicketPool}}
+					<p class="staff-mini-empty">Tidak ada tiket di pool.</p>
+					{{end}}
+				</div>
+			</div>
+		</div>
+		<div class="staff-card">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+				<span class="staff-card-title">Tiket Belum Di-rate</span>
+			</div>
+			<div class="staff-card-body">
+				{{if $d.UnratedTickets}}
+				<div class="staff-unrated-list">
+					{{range $d.UnratedTickets}}
+					<div class="staff-unrated-item" onclick="window.location.href='department/tiket/{{.ID}}';">
+						<div class="staff-unrated-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+						<div class="staff-unrated-body">
+							<div class="staff-unrated-title">{{.Title}}</div>
+							<div class="staff-unrated-meta">{{.GetTicketNumber}} · Closed {{dateShort .UpdatedAt}}</div>
+						</div>
+						<span class="staff-unrated-badge">Menunggu rating</span>
+					</div>
+					{{end}}
+				</div>
+				<div class="staff-unrated-notice">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+					<span>{{len $d.UnratedTickets}} tiket selesai belum mendapat penilaian dari user.</span>
+				</div>
+				{{else}}
+				<div class="staff-empty-state staff-empty-center">
+					<svg class="staff-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+					<p>Semua tiket sudah di-rate</p>
+				</div>
+				{{end}}
+			</div>
+		</div>
+	</div>
+	{{else}}
+	<div class="staff-dash-empty">Data dashboard tidak tersedia.</div>
+	{{end}}
 </div>
 
-<div class="dept-layout-grid">
-    <div class="dept-left-col">
-        <div class="dept-card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="font-size:1.125rem; font-weight:700; margin:0;">Aktivitas Kinerja Saya (Tahun Ini)</h3>
-                
-                <div style="font-size:0.875rem; color:{{.trend_color}}; font-weight:600;">
-                    {{.trend_label}}
-                </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+	var trendData = {{.trend_data_json}};
+	var monthlyData = {{.monthly_data_json}};
+	var donutData = {{.donut_data_json}};
+	if (typeof trendData === 'undefined') trendData = [];
+	if (typeof monthlyData === 'undefined') monthlyData = [];
+	if (typeof donutData === 'undefined') donutData = [];
 
-            </div>
-            <div class="dept-chart-container">
-                {{range .chart_data}}
-                <div class="chart-bar-col">
-                    <div class="chart-track">
-                        <div class="chart-fill
-                        " style="height: {{.Height}};">
-                            {{if gt .Count 0}}
-                            <span class="chart-value-label">{{.Count}}</span>
-                            {{end}}
-                        </div>
-                    </div>
-                    <span style="margin-top:0.5rem; font-size:0.875rem; color:#4b5563;">{{.MonthLabel}}</span>
-                </div>
-                {{end}}
-            </div>
-        </div>
+	var T = { blue: 'rgb(59, 130, 246)', green: 'rgb(16, 185, 129)', amber: 'rgb(245, 158, 11)', gray: 'rgb(243, 244, 246)' };
 
-        <div class="dept-card" style="border-top: 4px solid #3b82f6; flex: 1;">
-            <div style="padding-bottom:1rem; border-bottom:1px solid #e5e7eb; margin-bottom: 1rem; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:#1e3a8a;">Tiket Saya (Sedang Dikerjakan)</h3>
-                    <span style="font-size:0.875rem; color:#6b7280;">Tiket yang anda handle saat ini</span>
-                </div>
-                <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:12px; font-size:0.8rem; font-weight:bold;">{{len .my_active_tickets}}</span>
-            </div>
-
-            <div style="max-height: 400px; overflow-y:auto;">
-                {{range .my_active_tickets}}
-                <div class="ticket-item-card" style="border-left: 3px solid #3b82f6;" onclick="window.location.href='department/tiket/{{.ID}}'">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                        <span style="font-weight:700; color:#1f2937;">{{.GetTicketNumber}}</span>
-                        <span style="background:#eff6ff; color:#1e40af; padding:0 8px; border-radius:4px; font-size:0.75rem; font-weight:600; border:1px solid #dbeafe;">
-                            {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
-                        </span>
-                        
-                        <a href="department/tiket/release/{{.ID}}" 
-                           onclick="event.stopPropagation(); event.preventDefault(); showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{.ID}}'; }); return false;" 
-                           style="font-size:0.75rem; background:#fee2e2; color:#dc2626; padding:4px 8px; border-radius:4px; text-decoration:none; font-weight:600; border:1px solid #fecaca; z-index: 2;">
-                            Lepas ke Pool ↩
-                        </a>
-                    </div>
-                    <div style="font-size:0.9rem; font-weight:600; color:#1f2937; margin-bottom:0.5rem;">
-                        {{.Title}}
-                    </div>
-                    <div style="font-size:0.875rem; color:#4b5563; margin-bottom:0.5rem;">
-                        User: {{.CreatedBy.Username}}
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="badge status-{{.Status}}">{{.GetStatusDisplay}}</span>
-                        <span style="font-size:0.8rem; color:#3b82f6; font-weight:500;">Klik untuk detail & balas →</span>
-                    </div>
-                </div>
-                {{else}}
-                <div style="text-align:center; padding:2rem; color:#9ca3af; border: 2px dashed #e5e7eb; border-radius: 8px;">
-                    <p>Anda tidak sedang mengerjakan tiket apapun.</p>
-                    <p style="font-size:0.8rem;">Silakan ambil tiket dari pool di sebelah kanan.</p>
-                </div>
-                {{end}}
-            </div>
-        </div>
-    </div>
-
-    <div class="dept-pool-wrap">
-        <div class="dept-card dept-pool-card">
-        <div class="dept-pool-header">
-            <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:#991b1b;">Pool Tiket (Masuk)</h3>
-            <span style="font-size:0.875rem; color:#6b7280;">{{len .ticket_pool}} tiket menunggu</span>
-        </div>
-
-        <div class="dept-pool-body">
-            {{range .ticket_pool}}
-            <div class="ticket-item-card" onclick="window.location.href='department/tiket/{{.ID}}'">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                    <span style="font-weight:700; color:#1f2937;">{{.GetTicketNumber}}</span>
-                    <span class="badge priority-{{.Priority}}">{{.Priority}}</span>
-                </div>
-                <div style="font-size:0.875rem; color:#4b5563; margin-bottom:0.25rem;">
-                    <span>{{.CreatedBy.Username}}</span>
-                    <span style="color:#dc2626; background:#fee2e2; padding:0 6px; border-radius:4px; font-size:0.75rem; float:right;">
-                        To: {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
-                    </span>
-                </div>
-                <div style="font-size:0.9rem; font-weight:500; color:#1f2937; margin-bottom:0.75rem;">{{.Title}}</div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span class="badge status-{{.Status}}">{{.GetStatusDisplay}}</span>
-                    <span style="font-size:0.75rem; color:#6b7280;">{{timeSince .CreatedAt}}</span>
-                </div>
-                
-                <a href="department/tiket/claim/{{.ID}}" 
-                   onclick="event.stopPropagation();" 
-                   style="display:block; text-align:center; background:#dc2626; color:white; padding:0.5rem; border-radius:0.3rem; text-decoration:none; margin-top:0.75rem; font-weight:600; font-size:0.9rem; transition: background 0.2s;">
-                    Ambil Tiket Ini
-                </a>
-            </div>
-            {{else}}
-            <div style="text-align:center; padding:3rem 1rem; color:#9ca3af;">
-                <svg style="width:40px; height:40px; margin:0 auto 10px; opacity:0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
-                <p>Tidak ada tiket baru di pool.</p>
-            </div>
-            {{end}}
-        </div>
-        </div>
-    </div>
-</div>
+	function initCharts() {
+		if (!window.Chart) return;
+		var ctx;
+		ctx = document.getElementById('staffChartTrend');
+		if (ctx) {
+			var labels = trendData.length ? trendData.map(function(d){ return d.d; }) : [];
+			var ambil = trendData.length ? trendData.map(function(d){ return d.ambil; }) : [];
+			var selesai = trendData.length ? trendData.map(function(d){ return d.selesai; }) : [];
+			new Chart(ctx, {
+				type: 'line',
+				data: {
+					labels: labels,
+					datasets: [
+						{ label: 'Tiket Diambil', data: ambil, borderColor: T.blue, backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.3 },
+						{ label: 'Tiket Diselesaikan', data: selesai, borderColor: T.green, backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.3 }
+					]
+				},
+				options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: T.gray } } }
+			});
+		}
+		ctx = document.getElementById('staffChartMonthly');
+		if (ctx && monthlyData.length) {
+			new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: monthlyData.map(function(d){ return d.b; }),
+					datasets: [{ label: 'Tiket Selesai', data: monthlyData.map(function(d){ return d.v; }), backgroundColor: monthlyData.map(function(d){ return d.v > 0 ? 'rgb(16, 185, 129)' : 'rgb(243, 244, 246)'; }) }]
+				},
+				options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
+			});
+		}
+		ctx = document.getElementById('staffChartDonut');
+		if (ctx && donutData.length) {
+			new Chart(ctx, {
+				type: 'doughnut',
+				data: {
+					labels: donutData.map(function(d){ return d.name; }),
+					datasets: [{ data: donutData.map(function(d){ return d.value; }), backgroundColor: donutData.map(function(d){ return d.color; }) }]
+				},
+				options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
+			});
+		}
+	}
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initCharts);
+	else initCharts();
+})();
+</script>
 {{end}}

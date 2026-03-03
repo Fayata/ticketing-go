@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,18 +11,21 @@ import (
 
 	"ticketing/config"
 	"ticketing/models"
+	"ticketing/services"
 	"ticketing/utils"
 )
 
 type DepartmentHandler struct {
-	cfg          *config.Config
-	emailService *utils.EmailService
+	cfg                 *config.Config
+	emailService        *utils.EmailService
+	staffDashboardService *services.StaffDashboardService
 }
 
-func NewDepartmentHandler(cfg *config.Config, emailService *utils.EmailService) *DepartmentHandler {
+func NewDepartmentHandler(cfg *config.Config, emailService *utils.EmailService, staffDashboardService *services.StaffDashboardService) *DepartmentHandler {
 	return &DepartmentHandler{
-		cfg:          cfg,
-		emailService: emailService,
+		cfg:                 cfg,
+		emailService:        emailService,
+		staffDashboardService: staffDashboardService,
 	}
 }
 
@@ -37,11 +42,10 @@ type MonthlyStat struct {
 	Height     string
 }
 
-// Dashboard staff: statistik, tiket saya, pool, chart
+// Dashboard staff: KPI, tren kinerja, tiket saya, pool, belum di-rate (via staff dashboard service)
 func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
-	// Pastikan department_id ter-load dari DB (kadang context user kurang lengkap)
 	var dbUser models.User
 	if err := config.DB.Select("id", "department_id").First(&dbUser, user.ID).Error; err != nil {
 		http.Error(w, "User tidak ditemukan.", http.StatusInternalServerError)
@@ -53,123 +57,35 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	}
 	deptID := *dbUser.DepartmentID
 
-	// Pool = semua tiket yang belum di-claim (assigned_to_id NULL, status WAITING) — tanpa filter departemen agar tiket yang baru dilepas pasti muncul
-	poolCondition := "assigned_to_id IS NULL AND status = ?"
-
-	// Card "Menunggu (Pool)": jumlah tiket di pool (belum di-claim)
-	var waitingCount int64
-	config.DB.Raw("SELECT COUNT(*) FROM tickets WHERE "+poolCondition+" AND deleted_at IS NULL", models.StatusWaiting).Scan(&waitingCount)
-
-	// Card "Sedang Dikerjakan": jumlah tiket yang SEDANG STAFF INI kerjakan (bukan total dept)
-	var inProgressCount int64
-	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", user.ID, models.StatusInProgress).Count(&inProgressCount)
-
-	var closedCount int64
-	config.DB.Model(&models.Ticket{}).Where("status = ? AND (department_id = ? OR department_id IS NULL)", models.StatusClosed, deptID).Count(&closedCount)
-
-	// tiket yang di-assign ke staff ini
-	var myActiveTickets []*models.Ticket
-	config.DB.Preload("Department").Preload("CreatedBy").
-		Where("assigned_to_id = ? AND status != ?", user.ID, models.StatusClosed).
-		Order("updated_at DESC").
-		Find(&myActiveTickets)
-
-	// pool: semua tiket belum di-claim (assigned_to_id NULL, status WAITING) — tiket yang dilepas pasti masuk sini
-	var ticketPool []*models.Ticket
-	config.DB.Model(&models.Ticket{}).
-		Preload("Department").Preload("CreatedBy").
-		Where("assigned_to_id IS NULL").
-		Where("status = ?", models.StatusWaiting).
-		Order("created_at ASC").
-		Find(&ticketPool)
-
-	// data buat chart
-	currentYear := time.Now().Year()
-	activityMap := make(map[int]map[uint]bool)
-	for i := 1; i <= 12; i++ {
-		activityMap[i] = make(map[uint]bool)
+	if h.staffDashboardService == nil {
+		http.Error(w, "Dashboard service not configured", http.StatusInternalServerError)
+		return
 	}
 
-	var replies []models.TicketReply
-	config.DB.Where("user_id = ? AND EXTRACT(YEAR FROM created_at) = ?", user.ID, currentYear).Find(&replies)
-
-	for _, reply := range replies {
-		month := int(reply.CreatedAt.Month())
-		activityMap[month][reply.TicketID] = true
+	dash, err := h.staffDashboardService.GetStaffDashboardData(user.ID, deptID)
+	if err != nil {
+		http.Error(w, "Gagal memuat dashboard", http.StatusInternalServerError)
+		return
 	}
 
-	months := []string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"}
-	var chartData []MonthlyStat
-	maxCount := 0
-	for i := 1; i <= 12; i++ {
-		if len(activityMap[i]) > maxCount {
-			maxCount = len(activityMap[i])
-		}
-	}
-
-	for i, monthName := range months {
-		count := len(activityMap[i+1])
-		height := "0%"
-		if maxCount > 0 {
-			pct := (float64(count) / float64(maxCount)) * 100
-			if pct > 0 && pct < 5 {
-				pct = 5
-			}
-			height = fmt.Sprintf("%.0f%%", pct)
-		}
-		chartData = append(chartData, MonthlyStat{MonthLabel: monthName, Count: count, Height: height})
-	}
-
-	// Trend Analysis
-	thisMonth := int(time.Now().Month())
-	lastMonth := thisMonth - 1
-	thisMonthCount := len(activityMap[thisMonth])
-	lastMonthCount := 0
-	if lastMonth > 0 {
-		lastMonthCount = len(activityMap[lastMonth])
-	}
-
-	var trendLabel, trendColor string
-	if lastMonthCount == 0 {
-		if thisMonthCount > 0 {
-			trendLabel = "+100% dari bulan lalu"
-			trendColor = "#16a34a"
-		} else {
-			trendLabel = "0% dari bulan lalu"
-			trendColor = "#6b7280"
-		}
-	} else {
-		diff := float64(thisMonthCount - lastMonthCount)
-		pct := (diff / float64(lastMonthCount)) * 100
-		if pct > 0 {
-			trendLabel = fmt.Sprintf("+%.0f%% dari bulan lalu", pct)
-			trendColor = "#16a34a"
-		} else if pct < 0 {
-			trendLabel = fmt.Sprintf("%.0f%% dari bulan lalu", pct)
-			trendColor = "#dc2626"
-		} else {
-			trendLabel = "0% dari bulan lalu"
-			trendColor = "#6b7280"
-		}
-	}
+	trendJSON, _ := json.Marshal(dash.TrendData)
+	monthlyJSON, _ := json.Marshal(dash.MonthlyData)
+	donutJSON, _ := json.Marshal(dash.DonutData)
 
 	successMsg := r.URL.Query().Get("success")
 
 	data := h.addDepartmentData(r, map[string]interface{}{
-		"title":             "Dashboard Departemen",
-		"page_title":        "Department Area",
-		"nav_active":        "dept_dashboard",
-		"template_name":     "tickets/department_dashboard",
-		"user":              user,
-		"waiting_count":     waitingCount,
-		"progress_count":    inProgressCount,
-		"closed_count":      closedCount,
-		"ticket_pool":       ticketPool,
-		"my_active_tickets": myActiveTickets,
-		"chart_data":        chartData,
-		"trend_label":       trendLabel,
-		"trend_color":       trendColor,
-		"success":           successMsg,
+		"title":              "Dashboard Departemen",
+		"page_title":         "Department Area",
+		"page_subtitle":      dash.DepartmentName,
+		"nav_active":         "dept_dashboard",
+		"template_name":      "tickets/department_dashboard",
+		"user":               user,
+		"dashboard":          dash,
+		"success":            successMsg,
+		"trend_data_json":    template.JS(trendJSON),
+		"monthly_data_json":  template.JS(monthlyJSON),
+		"donut_data_json":    template.JS(donutJSON),
 	})
 
 	RenderTemplate(w, "tickets/department_dashboard", data)
