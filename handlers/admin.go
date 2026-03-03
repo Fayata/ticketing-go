@@ -36,7 +36,7 @@ func NewAdminHandler(cfg *config.Config, adminDashService *services.AdminDashboa
 	return &AdminHandler{cfg: cfg, adminDashService: adminDashService}
 }
 
-// ShowAdminDashboard menampilkan dashboard admin (KPI, grafik, tiket terbaru, dll).
+// ShowAdminDashboard menampilkan halaman dashboard admin: KPI, grafik, tiket terbaru, menunggu terlama.
 func (h *AdminHandler) ShowAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -57,7 +57,6 @@ func (h *AdminHandler) ShowAdminDashboard(w http.ResponseWriter, r *http.Request
 	priorityJSON, _ := json.Marshal(dash.PriorityData)
 	ratingJSON, _ := json.Marshal(dash.RatingData)
 	staffJSON, _ := json.Marshal(dash.StaffData)
-	// Pakai template.JS agar JSON tidak di-escape HTML sehingga chart bisa di-render di script
 	data := AddBaseData(r, map[string]interface{}{
 		"title":             "Dashboard Admin — Ticketing",
 		"page_title":        "Dashboard",
@@ -75,7 +74,7 @@ func (h *AdminHandler) ShowAdminDashboard(w http.ResponseWriter, r *http.Request
 	RenderTemplate(w, "admin/admin_dashboard", data)
 }
 
-// ListUsers: Menampilkan daftar semua user
+// ListUsers menampilkan daftar user dengan filter role (user/staff) untuk admin.
 func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	filter := r.URL.Query().Get("role")
@@ -105,7 +104,7 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "admin/users_list", data)
 }
 
-// CreateUserForm: Menambah user baru
+// CreateUserForm menampilkan form tambah user (GET) atau menyimpan user baru (POST).
 func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		var departments []models.Department
@@ -149,7 +148,6 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 
 		if role == "staff" {
 			newUser.IsStaff = true
-			// Staff must have a department
 			if departmentID == nil {
 				http.Error(w, "Staff wajib memiliki departemen", http.StatusBadRequest)
 				return
@@ -157,7 +155,7 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 		} else if role == "admin" {
 			newUser.IsStaff = true
 			newUser.IsSuperAdmin = true
-			newUser.DepartmentID = nil // Admin tidak punya departmentgo run
+			newUser.DepartmentID = nil
 		}
 
 		if err := config.DB.Create(&newUser).Error; err != nil {
@@ -173,7 +171,7 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ToggleStatus
+// ToggleUserStatus mengaktifkan/nonaktifkan user (untuk admin).
 func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/admin/users/toggle/")
 	userID, _ := strconv.Atoi(path)
@@ -189,7 +187,7 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
 }
 
-// ToggleStaffRole
+// ToggleStaffRole mengubah user jadi staff (pilih dept) atau turunkan jadi user biasa.
 func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/admin/users/staff/")
 	userID, _ := strconv.Atoi(path)
@@ -200,13 +198,11 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Jangan ubah role untuk Super Admin lewat endpoint ini
 	if targetUser.IsSuperAdmin {
 		http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
 		return
 	}
 
-	// Jika sudah staff dan GET -> turunkan menjadi user biasa (hapus staff)
 	if r.Method == http.MethodGet && targetUser.IsStaff {
 		targetUser.IsStaff = false
 		targetUser.DepartmentID = nil
@@ -215,7 +211,6 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Jika belum staff dan GET -> tampilkan form pilih departemen
 	if r.Method == http.MethodGet && !targetUser.IsStaff {
 		var departments []models.Department
 		config.DB.Order("name ASC").Find(&departments)
@@ -234,7 +229,6 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// POST: simpan sebagai staff dengan departemen terpilih
 	if r.Method == http.MethodPost && !targetUser.IsStaff {
 		_ = r.ParseForm()
 		deptIDStr := r.FormValue("department_id")
@@ -259,12 +253,11 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
 }
 
-// ListDepartments: Menampilkan daftar semua department dengan statistik rating & kontribusi staff
+// ListDepartments menampilkan daftar departemen dengan statistik rating dan tiket selesai.
 func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 	var departments []models.Department
 	config.DB.Preload("Tickets").Find(&departments)
 
-	// Hitung statistik rating per departemen
 	type deptRatingAgg struct {
 		DepartmentID   uint
 		AvgRating      float64
@@ -273,7 +266,6 @@ func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 		CompletedCount int64
 	}
 
-	// Aggregate rating & ticket count
 	var ratingAggs []struct {
 		DepartmentID uint
 		AvgRating    float64
@@ -297,7 +289,6 @@ func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Aggregate completed tickets per department (berdasarkan TicketAssignmentHistory)
 	var completedAggs []struct {
 		DepartmentID uint
 		Completed    int64
@@ -316,22 +307,18 @@ func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 		stats[a.DepartmentID] = s
 	}
 
-	// Urutkan departemen: rating tertinggi dulu, lalu paling banyak tiket selesai, lalu nama
 	sort.Slice(departments, func(i, j int) bool {
 		di := departments[i]
 		dj := departments[j]
 		si := stats[di.ID]
 		sj := stats[dj.ID]
 
-		// Bandingkan rata-rata rating (descending)
 		if si.AvgRating != sj.AvgRating {
 			return si.AvgRating > sj.AvgRating
 		}
-		// Jika sama, bandingkan jumlah tiket selesai
 		if si.CompletedCount != sj.CompletedCount {
 			return si.CompletedCount > sj.CompletedCount
 		}
-		// Terakhir, urut alfabetis nama
 		return di.Name < dj.Name
 	})
 
@@ -348,7 +335,7 @@ func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "admin/departments_list", data)
 }
 
-// CreateDepartmentForm: Membuat department baru
+// CreateDepartmentForm menampilkan form tambah departemen (GET) atau menyimpan (POST).
 func (h *AdminHandler) CreateDepartmentForm(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		data := AddBaseData(r, map[string]interface{}{

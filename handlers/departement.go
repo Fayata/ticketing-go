@@ -29,7 +29,7 @@ func NewDepartmentHandler(cfg *config.Config, emailService *utils.EmailService, 
 	}
 }
 
-// bantu isi data base buat halaman departemen
+// addDepartmentData menambah data dasar (user, nav) untuk semua halaman staff/departemen.
 func (h *DepartmentHandler) addDepartmentData(r *http.Request, data map[string]interface{}) map[string]interface{} {
 	baseData := AddBaseData(r, data)
 	baseData["is_department_page"] = true
@@ -42,7 +42,7 @@ type MonthlyStat struct {
 	Height     string
 }
 
-// Dashboard staff: KPI, tren kinerja, tiket saya, pool, belum di-rate (via staff dashboard service)
+// ShowDashboard menampilkan halaman dashboard staff: KPI, grafik, tiket saya, pool, belum di-rate.
 func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
@@ -74,6 +74,17 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 
 	successMsg := r.URL.Query().Get("success")
 
+	kpi := map[string]interface{}{
+		"WaitingCount":     dash.WaitingCount,
+		"ProgressCount":    dash.ProgressCount,
+		"ClosedTodayCount": dash.ClosedTodayCount,
+		"ClosedMonthCount": dash.ClosedMonthCount,
+		"AvgRating":        dash.AvgRating,
+		"RatedCount":       dash.RatedCount,
+		"TrendClosedPct":   dash.TrendClosedPct,
+		"TrendMonthPct":    dash.TrendMonthPct,
+	}
+
 	data := h.addDepartmentData(r, map[string]interface{}{
 		"title":              "Dashboard Departemen",
 		"page_title":         "Department Area",
@@ -82,6 +93,7 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		"template_name":      "tickets/department_dashboard",
 		"user":               user,
 		"dashboard":          dash,
+		"kpi":                kpi,
 		"success":            successMsg,
 		"trend_data_json":    template.JS(trendJSON),
 		"monthly_data_json":  template.JS(monthlyJSON),
@@ -91,10 +103,10 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	RenderTemplate(w, "tickets/department_dashboard", data)
 }
 
+// ShowAllTickets menampilkan daftar semua tiket dengan filter status dan departemen (halaman staff).
 func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
-	// Ambil Parameter Filter
 	statusFilter := r.URL.Query().Get("status")
 	deptFilter := r.URL.Query().Get("department")
 	query := config.DB.Preload("Department").Preload("CreatedBy").Preload("AssignedTo").Model(&models.Ticket{})
@@ -110,7 +122,6 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 	var tickets []*models.Ticket
 	query.Order("created_at DESC").Find(&tickets)
 
-	// Load ratings for closed tickets
 	ticketIDs := make([]uint, 0, len(tickets))
 	for _, t := range tickets {
 		if t.Status == models.StatusClosed {
@@ -127,7 +138,6 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Ambil Data Departemen untuk Dropdown Filter
 	var departments []models.Department
 	config.DB.Find(&departments)
 
@@ -148,6 +158,7 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 	RenderTemplate(w, "tickets/department_all_tickets", data)
 }
 
+// HandleTicketDetail mengarahkan GET ke detail tiket, POST ke balas tiket.
 func (h *DepartmentHandler) HandleTicketDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		h.ShowTicketDetail(w, r)
@@ -156,6 +167,7 @@ func (h *DepartmentHandler) HandleTicketDetail(w http.ResponseWriter, r *http.Re
 	}
 }
 
+// ShowTicketDetail menampilkan halaman detail tiket untuk staff (balas, lepas, tutup).
 func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	path := strings.TrimPrefix(r.URL.Path, "/department/tiket/")
@@ -172,14 +184,11 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 		isOwner = true
 	}
 
-	// Check if ticket is locked (CLOSED or assigned to another staff)
 	isLocked := ticket.Status == models.StatusClosed || (ticket.AssignedToID != nil && *ticket.AssignedToID != user.ID)
 
-	// Load assignment history
 	var assignmentHistory []models.TicketAssignmentHistory
 	config.DB.Preload("Staff").Where("ticket_id = ?", ticketID).Order("assigned_at DESC").Find(&assignmentHistory)
 
-	// Load rating if ticket is closed (ignore record not found without logging error)
 	var rating models.TicketRating
 	hasRating := false
 	if ticket.Status == models.StatusClosed {
@@ -194,7 +203,6 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 	var waitingCount int64
 	config.DB.Model(&models.Ticket{}).Where("status = ?", models.StatusWaiting).Count(&waitingCount)
 
-	// Get error message from query parameter if any
 	errorMsg := r.URL.Query().Get("error")
 
 	data := map[string]interface{}{
@@ -218,6 +226,7 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 	RenderTemplate(w, "tickets/department_ticket_detail", data)
 }
 
+// DepartmentReply menyimpan balasan staff ke tiket dan mengirim notif + email ke user.
 func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	path := strings.TrimPrefix(r.URL.Path, "/department/tiket/")
@@ -230,7 +239,6 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	var ticket models.Ticket
 	config.DB.Preload("CreatedBy").First(&ticket, ticketID)
 
-	// Lock check: Prevent reply if ticket is CLOSED or assigned to another staff
 	if ticket.Status == models.StatusClosed {
 		http.Redirect(w, r, config.Path(fmt.Sprintf("/department/tiket/%d", ticketID))+"?error=Tiket+ini+sudah+ditutup+dan+tidak+bisa+dibalas", http.StatusSeeOther)
 		return
@@ -244,7 +252,6 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	reply := models.TicketReply{TicketID: ticket.ID, UserID: user.ID, Message: message}
 	config.DB.Create(&reply)
 	
-	// Load reply with user
 	config.DB.Preload("User").First(&reply, reply.ID)
 
 	oldStatus := ticket.Status
@@ -254,10 +261,8 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	ticket.UpdatedAt = time.Now()
 	config.DB.Save(&ticket)
 	
-	// Load ticket with relations
 	config.DB.Preload("CreatedBy").Preload("AssignedTo").First(&ticket, ticket.ID)
 
-	// Create notification for ticket owner
 	go func() {
 		models.CreateNotification(
 			config.DB,
@@ -268,7 +273,6 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 			&ticket.ID,
 		)
 		
-		// Create notification for status change
 		if ticket.Status == models.StatusClosed && oldStatus != models.StatusClosed {
 			models.CreateNotification(
 				config.DB,
@@ -292,7 +296,7 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/department/tiket/%d", ticketID)), http.StatusSeeOther)
 }
 
-// parseTicketIDFromPath mengambil ID tiket dari path (misal "/department/tiket/release/123" -> 123)
+// parseTicketIDFromPath mengurai ID tiket dari URL (contoh: /department/tiket/release/123 → 123).
 func parseTicketIDFromPath(urlPath, prefix string) int {
 	path := strings.TrimPrefix(urlPath, prefix)
 	path = strings.Trim(path, "/")
@@ -304,6 +308,7 @@ func parseTicketIDFromPath(urlPath, prefix string) int {
 	return id
 }
 
+// ClaimTicket mengassign tiket ke staff yang login dan mencatat history.
 func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	ticketID := parseTicketIDFromPath(r.URL.Path, "/department/tiket/claim/")
@@ -320,7 +325,6 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 		ticket.UpdatedAt = time.Now()
 		config.DB.Save(&ticket)
 
-		// Record assignment history
 		history := models.TicketAssignmentHistory{
 			TicketID:   ticket.ID,
 			StaffID:    user.ID,
@@ -328,7 +332,6 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 		}
 		config.DB.Create(&history)
 		
-		// Create notification for ticket owner
 		if wasUnassigned {
 			go func() {
 				models.CreateNotification(
@@ -346,6 +349,7 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, config.Path("/departement/dashboard")+"?success=Tiket+berhasil+diambil.+Silakan+cek+tab+'Tiket+Saya'.", http.StatusSeeOther)
 }
 
+// ReleaseTicket mengembalikan tiket ke pool (unassign) dan menandai history released.
 func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	ticketID := parseTicketIDFromPath(r.URL.Path, "/department/tiket/release/")
@@ -372,7 +376,6 @@ func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request
 		Where("ticket_id = ? AND staff_id = ? AND released_at IS NULL", ticketID, user.ID).
 		Update("released_at", &now)
 
-	// Update tiket: assigned_to_id = NULL, status = WAITING — pakai Exec agar NULL pasti tersimpan (GORM Updates kadang mengabaikan nil)
 	res := config.DB.Exec(
 		"UPDATE tickets SET assigned_to_id = NULL, status = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
 		models.StatusWaiting, now, ticket.ID,
@@ -385,6 +388,7 @@ func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, config.Path("/departement/dashboard")+"?success=Tiket+berhasil+dikembalikan+ke+pool", http.StatusSeeOther)
 }
 
+// CloseTicket menutup tiket, tandai history selesai, kirim notif dan email rating ke user.
 func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	ticketID := parseTicketIDFromPath(r.URL.Path, "/department/tiket/close/")
@@ -402,8 +406,6 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 		}
 		config.DB.Create(&systemReply)
 
-		// Mark all staff who worked on this ticket as completed
-		// This includes current staff and any previous staff who released it
 		config.DB.Model(&models.TicketAssignmentHistory{}).
 			Where("ticket_id = ? AND is_completed = false", ticketID).
 			Update("is_completed", true)
@@ -413,10 +415,8 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 		ticket.UpdatedAt = time.Now()
 		config.DB.Save(&ticket)
 		
-		// Load ticket with relations
 		config.DB.Preload("CreatedBy").Preload("AssignedTo").First(&ticket, ticket.ID)
 
-		// Create notification for status change
 		go func() {
 			if oldStatus != models.StatusClosed {
 				models.CreateNotification(
@@ -430,9 +430,7 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 			}
 		}()
 
-		// Send rating request email to user
 		go func() {
-			// Generate rating token (valid for 30 days)
 			jwtService := utils.NewJWTService(h.cfg)
 			ratingToken, err := jwtService.GenerateToken(ticket.CreatedByID, "rate_ticket", 30*24*time.Hour)
 			if err != nil {
@@ -440,7 +438,6 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 				return
 			}
 
-			// Get user email
 			targetEmail := ticket.ReplyToEmail
 			if targetEmail == "" {
 				targetEmail = ticket.CreatedBy.Email
@@ -463,9 +460,9 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
 }
 
+// LogoutAndRelease melepas semua tiket yang dikerjakan staff ke pool lalu redirect ke logout.
 func (h *DepartmentHandler) LogoutAndRelease(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	// Lepas semua tiket yang sedang dikerjakan staff ini ke pool (assigned_to_id = NULL, status = WAITING)
 	result := config.DB.Model(&models.Ticket{}).
 		Where("assigned_to_id = ? AND status = ?", user.ID, models.StatusInProgress).
 		Select("assigned_to_id", "status", "updated_at").
@@ -475,7 +472,6 @@ func (h *DepartmentHandler) LogoutAndRelease(w http.ResponseWriter, r *http.Requ
 			"updated_at":     time.Now(),
 		})
 	if result.RowsAffected > 0 {
-		// Tandai assignment history yang belum released
 		now := time.Now()
 		config.DB.Model(&models.TicketAssignmentHistory{}).
 			Where("staff_id = ? AND released_at IS NULL", user.ID).

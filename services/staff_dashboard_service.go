@@ -7,36 +7,30 @@ import (
 	"ticketing/models"
 )
 
-// StaffDashboardService provides data for the staff (department) dashboard.
+// StaffDashboardService menyediakan data untuk dashboard staff (KPI, grafik, pool, tiket saya).
 type StaffDashboardService struct{}
 
 func NewStaffDashboardService() *StaffDashboardService {
 	return &StaffDashboardService{}
 }
 
-// StaffDashboardData holds all data for the staff dashboard.
+// StaffDashboardData berisi semua data untuk halaman dashboard staff.
 type StaffDashboardData struct {
-	// KPI
-	WaitingCount     int     // pool
-	ProgressCount    int     // my in-progress
-	ClosedTodayCount int     // my closed today
-	ClosedMonthCount int     // my closed this month
-	AvgRating        float64 // avg rating on tickets I closed
-	RatedCount       int     // how many of my closed have rating
-	// Trend last N days: ambil (claimed), selesai (closed by me)
-	TrendData []StaffTrendPoint
-	// Monthly bar: tiket selesai per bulan (saya)
-	MonthlyData []StaffMonthlyPoint
-	// Donut: Di Pool, Saya Kerjakan, Selesai Milik Saya
-	DonutData []StaffDonutPoint
-	// Lists
-	MyActiveTickets []*models.Ticket
-	TicketPool      []*models.Ticket
-	UnratedTickets  []*models.Ticket // my closed, no rating yet
-	// Meta
-	DepartmentName string
-	TrendClosedPct int // % vs yesterday for "Selesai Hari Ini"
-	TrendMonthPct  int // % vs last month for "Selesai Bulan Ini"
+	WaitingCount     int
+	ProgressCount    int
+	ClosedTodayCount int
+	ClosedMonthCount int
+	AvgRating        float64
+	RatedCount       int
+	TrendData        []StaffTrendPoint
+	MonthlyData      []StaffMonthlyPoint
+	DonutData        []StaffDonutPoint
+	MyActiveTickets  []*models.Ticket
+	TicketPool       []*models.Ticket
+	UnratedTickets   []*models.Ticket
+	DepartmentName   string
+	TrendClosedPct   int
+	TrendMonthPct    int
 }
 
 type StaffTrendPoint struct {
@@ -46,8 +40,8 @@ type StaffTrendPoint struct {
 }
 
 type StaffMonthlyPoint struct {
-	B string `json:"b"` // month label
-	V int    `json:"v"` // count
+	B string `json:"b"`
+	V int    `json:"v"`
 }
 
 type StaffDonutPoint struct {
@@ -66,37 +60,31 @@ var (
 	staffColorGreen = "#10b981"
 )
 
-// GetStaffDashboardData returns full dashboard data for the given staff user.
+// GetStaffDashboardData mengumpulkan KPI, tren, bulanan, donut, tiket saya, pool, dan belum di-rate untuk satu staff.
 func (s *StaffDashboardService) GetStaffDashboardData(userID uint, deptID uint) (*StaffDashboardData, error) {
 	data := &StaffDashboardData{}
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
-	// Department name
 	var dept models.Department
 	if config.DB.First(&dept, deptID).Error == nil {
 		data.DepartmentName = dept.Name
 	}
 
-	// KPI: Pool count
 	var n64 int64
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id IS NULL AND status = ? AND deleted_at IS NULL", models.StatusWaiting).Count(&n64)
 	data.WaitingCount = int(n64)
 
-	// KPI: My in-progress
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", userID, models.StatusInProgress).Count(&n64)
 	data.ProgressCount = int(n64)
 
-	// KPI: My closed today
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ? AND updated_at >= ?", userID, models.StatusClosed, todayStart).Count(&n64)
 	data.ClosedTodayCount = int(n64)
 
-	// KPI: My closed this month
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ? AND updated_at >= ?", userID, models.StatusClosed, monthStart).Count(&n64)
 	data.ClosedMonthCount = int(n64)
 
-	// Rating: avg from ticket_ratings for tickets where I was the assignee (closed by me)
 	config.DB.Raw(`
 		SELECT COALESCE(AVG(r.rating), 0) FROM ticket_ratings r
 		INNER JOIN tickets t ON t.id = r.ticket_id AND t.assigned_to_id = ? AND t.status = 'CLOSED'
@@ -107,13 +95,9 @@ func (s *StaffDashboardService) GetStaffDashboardData(userID uint, deptID uint) 
 	`, userID).Scan(&n64)
 	data.RatedCount = int(n64)
 
-	// Trend data: last N days
 	data.TrendData = s.getStaffTrendData(userID, staffTrendDays)
-
-	// Monthly data: tickets I closed per month (this year)
 	data.MonthlyData = s.getStaffMonthlyData(userID, now.Year())
 
-	// Donut: Di Pool, Saya Kerjakan, Selesai Milik Saya
 	var poolCount, myClosedTotal int64
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id IS NULL AND status = ? AND deleted_at IS NULL", models.StatusWaiting).Count(&poolCount)
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", userID, models.StatusInProgress).Count(&n64)
@@ -125,31 +109,28 @@ func (s *StaffDashboardService) GetStaffDashboardData(userID uint, deptID uint) 
 		{Name: "Selesai Milik Saya", Value: int(myClosedTotal), Color: staffColorGreen},
 	}
 
-	// My active tickets
 	config.DB.Preload("Department").Preload("CreatedBy").
 		Where("assigned_to_id = ? AND status != ?", userID, models.StatusClosed).
 		Order("updated_at DESC").
 		Find(&data.MyActiveTickets)
 
-	// Pool
 	config.DB.Preload("Department").Preload("CreatedBy").
 		Where("assigned_to_id IS NULL AND status = ? AND deleted_at IS NULL", models.StatusWaiting).
 		Order("created_at ASC").
 		Find(&data.TicketPool)
 
-	// Unrated: my closed tickets that have no rating
 	config.DB.Preload("Department").
 		Where("assigned_to_id = ? AND status = ? AND deleted_at IS NULL", userID, models.StatusClosed).
 		Where("id NOT IN (SELECT ticket_id FROM ticket_ratings)").
 		Order("updated_at DESC").Limit(staffUnratedLimit).
 		Find(&data.UnratedTickets)
 
-	// Trend %
 	s.fillStaffTrendPct(data, userID)
 
 	return data, nil
 }
 
+// getStaffTrendData menghitung tiket diambil dan selesai per hari (N hari terakhir) untuk grafik tren.
 func (s *StaffDashboardService) getStaffTrendData(userID uint, days int) []StaffTrendPoint {
 	now := time.Now()
 	out := make([]StaffTrendPoint, 0, days)
@@ -174,6 +155,7 @@ func (s *StaffDashboardService) getStaffTrendData(userID uint, days int) []Staff
 	return out
 }
 
+// getStaffMonthlyData menghitung tiket selesai per bulan (tahun tertentu) untuk grafik batang.
 func (s *StaffDashboardService) getStaffMonthlyData(userID uint, year int) []StaffMonthlyPoint {
 	months := []string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"}
 	out := make([]StaffMonthlyPoint, 0, 12)
@@ -195,6 +177,7 @@ func (s *StaffDashboardService) getStaffMonthlyData(userID uint, year int) []Sta
 	return out
 }
 
+// fillStaffTrendPct mengisi persen tren Selesai Hari Ini vs kemarin dan Selesai Bulan Ini vs bulan lalu.
 func (s *StaffDashboardService) fillStaffTrendPct(data *StaffDashboardData, userID uint) {
 	now := time.Now()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())

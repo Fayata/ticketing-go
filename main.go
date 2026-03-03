@@ -37,7 +37,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// migrate tabel kalo belum ada
 	if err := config.AutoMigrate(
 		&models.User{},
 		&models.Group{},
@@ -60,11 +59,9 @@ func main() {
 	departementHandler := handlers.NewDepartmentHandler(cfg, emailService, staffDashboardService)
 	notificationHandler := handlers.NewNotificationHandler(cfg, notificationService)
 
-	// file static (css, js, gambar)
 	fs := http.FileServer(http.Dir("./static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// rute yang ga perlu login
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
@@ -80,7 +77,6 @@ func main() {
 	mux.HandleFunc("/forgot-password", middleware.GuestOnly(authController.ForgotPassword))
 	mux.HandleFunc("/reset-password", middleware.GuestOnly(authController.ResetPassword))
 
-	// admin & staff
 	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard)))
 	mux.HandleFunc("/admin/dashboard", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ShowAdminDashboard)))
 	mux.HandleFunc("/admin/users", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListUsers)))
@@ -105,18 +101,16 @@ func main() {
 	mux.HandleFunc("/department/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
 	mux.HandleFunc("/department/all-tickets", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets)))
 
-	// user portal (dashboard, tiket, settings, dll)
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard)))
 	mux.HandleFunc("/tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowMyTickets)))
 	mux.HandleFunc("/tiket/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleTicketDetail)))
 	mux.HandleFunc("/kirim-tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleCreateTicket)))
 	mux.HandleFunc("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowTicketSuccess)))
-	mux.HandleFunc("/rating/", ticketHandler.HandleRating) // akses pake token di URL
+		mux.HandleFunc("/rating/", ticketHandler.HandleRating)
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
 	mux.HandleFunc("/knowledge-base", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKnowledgeBase)))
 	mux.HandleFunc("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKBArticle)))
 
-	// API buat panel notifikasi
 	mux.HandleFunc("/api/notifications", middleware.AuthRequired(notificationHandler.GetNotifications))
 	mux.HandleFunc("/api/notifications/read", middleware.AuthRequired(notificationHandler.MarkAsRead))
 	mux.HandleFunc("/api/notifications/read-all", middleware.AuthRequired(notificationHandler.MarkAllAsRead))
@@ -151,6 +145,7 @@ func main() {
 	}
 }
 
+// seedDefaultData membuat group Portal Users, departemen default, dan user admin jika belum ada.
 func seedDefaultData() {
 	var portalGroup models.Group
 	config.DB.FirstOrCreate(&portalGroup, models.Group{Name: "Portal Users"})

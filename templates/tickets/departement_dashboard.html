@@ -3,7 +3,6 @@
 {{end}}
 
 {{define "tickets/department_dashboard_content"}}
-<link rel="stylesheet" href="static/css/staff_dashboard.css">
 <div class="staff-dash">
 	<div class="staff-dash-header">
 		<div>
@@ -19,39 +18,41 @@
 	{{if .success}}<div class="alert alert-success">{{.success}}</div>{{end}}
 
 	{{$d := .dashboard}}
+	{{$kpi := .kpi}}
 	{{if not $d}}{{$d = nil}}{{end}}
 
-	{{if $d}}
-	<!-- KPI Row (5 cards) -->
+	<!-- KPI Row (5 cards) — selalu tampil, pakai .kpi agar angka pasti terisi -->
 	<div class="staff-kpi-grid">
 		<div class="staff-kpi-card staff-kpi-amber">
-			<div class="staff-kpi-value">{{$d.WaitingCount}}</div>
+			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.WaitingCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Menunggu (Pool)</div>
 			<div class="staff-kpi-sub">Belum di-claim</div>
 		</div>
 		<div class="staff-kpi-card staff-kpi-blue">
-			<div class="staff-kpi-value">{{$d.ProgressCount}}</div>
+			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.ProgressCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Sedang Dikerjakan</div>
 			<div class="staff-kpi-sub">Tiket aktif saya</div>
 		</div>
 		<div class="staff-kpi-card staff-kpi-green staff-kpi-highlight">
-			<div class="staff-kpi-value">{{$d.ClosedTodayCount}}</div>
+			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.ClosedTodayCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Selesai Hari Ini</div>
 			<div class="staff-kpi-sub">Tiket saya, closed</div>
-			{{if $d.TrendClosedPct}}<span class="staff-kpi-trend">↑ {{$d.TrendClosedPct}}%</span>{{end}}
+			{{if $kpi}}{{if $kpi.TrendClosedPct}}<span class="staff-kpi-trend">↑ {{$kpi.TrendClosedPct}}%</span>{{end}}{{end}}
 		</div>
 		<div class="staff-kpi-card staff-kpi-sky">
-			<div class="staff-kpi-value">{{$d.ClosedMonthCount}}</div>
+			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.ClosedMonthCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Selesai Bulan Ini</div>
 			<div class="staff-kpi-sub">Bulan ini</div>
-			{{if $d.TrendMonthPct}}<span class="staff-kpi-trend">↑ {{$d.TrendMonthPct}}%</span>{{end}}
+			{{if $kpi}}{{if $kpi.TrendMonthPct}}<span class="staff-kpi-trend">↑ {{$kpi.TrendMonthPct}}%</span>{{end}}{{end}}
 		</div>
 		<div class="staff-kpi-card staff-kpi-purple">
-			<div class="staff-kpi-value">{{printf "%.1f" $d.AvgRating}} ★</div>
+			<div class="staff-kpi-value">{{if $kpi}}{{printf "%.1f" $kpi.AvgRating}}{{else}}0.0{{end}} ★</div>
 			<div class="staff-kpi-label">Rating Saya</div>
-			<div class="staff-kpi-sub">Dari {{$d.RatedCount}} penilaian</div>
+			<div class="staff-kpi-sub">Dari {{if $kpi}}{{$kpi.RatedCount}}{{else}}0{{end}} penilaian</div>
 		</div>
 	</div>
+
+	{{if $d}}
 
 	<!-- Charts Row -->
 	<div class="staff-chart-row staff-chart-row-3">

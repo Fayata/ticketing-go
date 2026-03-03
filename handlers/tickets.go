@@ -23,6 +23,7 @@ func NewTicketHandler(cfg *config.Config, emailService *utils.EmailService, tick
 	return &TicketHandler{cfg: cfg, emailService: emailService, ticketService: ticketService}
 }
 
+// HandleCreateTicket mengarahkan GET ke form buat tiket, POST ke proses simpan.
 func (h *TicketHandler) HandleCreateTicket(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		h.ShowCreateTicket(w, r)
@@ -35,7 +36,7 @@ func (h *TicketHandler) HandleCreateTicket(w http.ResponseWriter, r *http.Reques
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
-// ShowCreateTicket menampilkan form create ticket
+// ShowCreateTicket menampilkan form kirim tiket baru (user portal).
 func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	if h.ticketService.DepartmentCount() == 0 {
@@ -55,7 +56,7 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 	RenderTemplate(w, "tickets/create_ticket", data)
 }
 
-// CreateTicket proses pembuatan ticket baru
+// CreateTicket menyimpan tiket baru dan mengirim email konfirmasi ke user.
 func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	r.ParseForm()
@@ -95,7 +96,7 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/sukses/%d", ticket.ID)), http.StatusSeeOther)
 }
 
-// ShowTicketSuccess menampilkan halaman sukses
+// ShowTicketSuccess menampilkan halaman sukses setelah tiket berhasil dibuat.
 func (h *TicketHandler) ShowTicketSuccess(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -115,7 +116,7 @@ func (h *TicketHandler) ShowTicketSuccess(w http.ResponseWriter, r *http.Request
 	RenderTemplate(w, "ticket_success.html", map[string]interface{}{"title": "Tiket Berhasil Dibuat", "ticket": ticket})
 }
 
-// ShowMyTickets menampilkan daftar tiket user
+// ShowMyTickets menampilkan daftar tiket milik user yang login.
 func (h *TicketHandler) ShowMyTickets(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -146,6 +147,7 @@ func (h *TicketHandler) ShowMyTickets(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "tickets/my_tickets", data)
 }
 
+// HandleTicketDetail mengarahkan GET ke detail tiket, POST ke tambah balasan.
 func (h *TicketHandler) HandleTicketDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		h.ShowTicketDetail(w, r)
@@ -158,7 +160,7 @@ func (h *TicketHandler) HandleTicketDetail(w http.ResponseWriter, r *http.Reques
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
-// ShowTicketDetail menampilkan detail tiket
+// ShowTicketDetail menampilkan halaman detail tiket untuk user (lihat, balas).
 func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/")
@@ -189,7 +191,7 @@ func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request)
 	RenderTemplate(w, "tickets/ticket_detail", data)
 }
 
-// AddReply menambahkan reply ke tiket dan mengirim email
+// AddReply menyimpan balasan user ke tiket dan mengirim notif/email ke staff.
 func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 	path := strings.TrimPrefix(r.URL.Path, "/tiket/")
@@ -222,7 +224,7 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
 }
 
-// ShowRatingForm displays the rating form for a closed ticket
+// ShowRatingForm menampilkan form penilaian tiket (akses via token di URL).
 func (h *TicketHandler) ShowRatingForm(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -255,7 +257,7 @@ func (h *TicketHandler) ShowRatingForm(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, "tickets/rating", data)
 }
 
-// SubmitRating saves the user's rating for a closed ticket
+// SubmitRating menyimpan rating user untuk tiket yang sudah ditutup.
 func (h *TicketHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -290,7 +292,7 @@ func (h *TicketHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?success=Rating+berhasil+disimpan", http.StatusSeeOther)
 }
 
-// HandleRating routes rating requests (GET for form, POST for submission)
+// HandleRating mengarahkan GET ke form rating, POST ke simpan rating (pakai token di URL).
 func (h *TicketHandler) HandleRating(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		h.ShowRatingForm(w, r)

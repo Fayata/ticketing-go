@@ -16,9 +16,9 @@ import (
 
 var templates *template.Template
 
+// InitTemplates memuat semua template HTML dan mendaftarkan helper (date, eq, len, dll) untuk dipakai di template.
 func InitTemplates() {
 	funcMap := template.FuncMap{
-		// String helpers
 		"slice": func(s string, start, end int) string {
 			if start < 0 || end > len(s) || start > end {
 				return s
@@ -27,7 +27,6 @@ func InitTemplates() {
 		},
 		"upper": strings.ToUpper,
 
-		// Date helpers
 		"date": func(t interface{}) string {
 			if t == nil {
 				return ""
@@ -43,7 +42,7 @@ func InitTemplates() {
 			}
 			return ""
 		},
-		"dateShort": func(t interface{}) string {
+		"dateShort":func(t interface{}) string {
 			if t == nil {
 				return ""
 			}
@@ -76,7 +75,6 @@ func InitTemplates() {
 			return "Baru saja"
 		},
 
-		// Logic helpers
 		"add": func(a, b interface{}) int {
 			toInt := func(x interface{}) int {
 				switch v := x.(type) {
@@ -118,7 +116,6 @@ func InitTemplates() {
 			return 0
 		},
 
-		// Formatting helpers
 		"linebreaks": func(val interface{}) template.HTML {
 			if val == nil {
 				return ""
@@ -129,7 +126,6 @@ func InitTemplates() {
 			return template.HTML(s)
 		},
 
-		// App Specific helpers
 		"getStatusClass": func(status interface{}) string {
 			s := fmt.Sprintf("%v", status)
 			s = strings.ToUpper(s)
@@ -188,10 +184,7 @@ func InitTemplates() {
 		},
 	}
 
-	// Load templates
 	tmpl := template.New("").Funcs(funcMap)
-	// Parse glob pattern
-	// Pastikan folder templates ada di root project saat menjalankan main.go
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "*.html")))
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "tickets", "*.html")))
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "admin", "*.html")))
@@ -200,7 +193,7 @@ func InitTemplates() {
 	log.Println("Templates loaded successfully with helper functions")
 }
 
-// TruncateString truncates a string to max length
+// TruncateString memotong string sampai maxLen karakter; sisanya diganti "...".
 func TruncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
@@ -211,7 +204,7 @@ func TruncateString(s string, maxLen int) string {
 	return s[:maxLen-3] + "..."
 }
 
-// RenderTemplate: Fungsi utama untuk merender HTML
+// RenderTemplate merender template HTML dengan data ke response.
 func RenderTemplate(w http.ResponseWriter, tmplName string, data interface{}) {
 	if templates == nil {
 		http.Error(w, "Templates not initialized", http.StatusInternalServerError)
@@ -228,12 +221,12 @@ func RenderTemplate(w http.ResponseWriter, tmplName string, data interface{}) {
 
 }
 
-// Helper functions for context
+// GetUserFromContext mengembalikan user dari context (diisi middleware auth).
 func GetUserFromContext(r *http.Request) interface{} {
 	return r.Context().Value(middleware.UserKey)
 }
 
-// GetActiveTicketsCount returns active tickets count from request context (set by AuthRequired middleware).
+// GetActiveTicketsCount mengembalikan jumlah tiket aktif user dari context.
 func GetActiveTicketsCount(r *http.Request) interface{} {
 	count := r.Context().Value(middleware.ActiveTicketsCountKey)
 	if count == nil {
@@ -242,6 +235,7 @@ func GetActiveTicketsCount(r *http.Request) interface{} {
 	return count
 }
 
+// AddBaseData menggabungkan data dasar (user, title, unread_count, static_base) ke map data untuk template.
 func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interface{} {
 	if data == nil {
 		data = make(map[string]interface{})
@@ -261,7 +255,6 @@ func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interf
 		data["active_tickets_count"] = 0
 	}
 
-	// Get unread notification count if user exists
 	if user := GetUserFromContext(r); user != nil {
 		if u, ok := user.(*models.User); ok {
 			unreadCount, _ := models.GetUnreadCount(config.DB, u.ID)
@@ -276,7 +269,6 @@ func AddBaseData(r *http.Request, data map[string]interface{}) map[string]interf
 	if data["unread_replies_count"] == nil {
 		data["unread_replies_count"] = 0
 	}
-	// Base URL untuk asset static (gambar KB, dll) — pakai path absolut agar gambar selalu benar
 	if data["static_base"] == nil {
 		data["static_base"] = config.Path("/static")
 	}

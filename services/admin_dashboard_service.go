@@ -15,39 +15,29 @@ func NewAdminDashboardService() *AdminDashboardService {
 	return &AdminDashboardService{}
 }
 
-// AdminDashboardData holds all data for the admin dashboard page.
+// AdminDashboardData berisi semua data untuk halaman dashboard admin.
 type AdminDashboardData struct {
-	// KPI
-	WaitingCount      int
-	InProgressCount   int
-	ClosedTodayCount  int
-	AvgRating         float64
-	RatedCount        int
-	TotalTicketsMonth int
-	TotalUsersActive  int
-	StaffActiveCount  int
-	UnratedCount      int
-	// Trend (last N days): Tiket Baru & Selesai per hari
-	TrendData []AdminTrendPoint
-	// Status pie: Menunggu, In Progress, Closed
-	StatusData []AdminStatusPoint
-	// Tiket per departemen (horizontal bar)
-	DeptData []AdminDeptPoint
-	// Tiket per prioritas
-	PriorityData []AdminPriorityPoint
-	// Distribusi rating 1-5
-	RatingData []AdminRatingPoint
-	// Tiket terbaru (table)
-	RecentTickets []*models.Ticket
-	// Menunggu terlama (pool), dengan jumlah hari
-	WaitingLongest []AdminWaitingItem
-	// Staff per departemen + tiket aktif per dept
-	StaffData []AdminStaffDeptPoint
-	// Optional trend % for KPI cards (vs previous period)
-	TrendWaitingPct      int
-	TrendProgressPct     int
-	TrendClosedTodayPct  int
-	TrendAvgRatingPct    int
+	WaitingCount       int
+	InProgressCount    int
+	ClosedTodayCount   int
+	AvgRating          float64
+	RatedCount         int
+	TotalTicketsMonth  int
+	TotalUsersActive   int
+	StaffActiveCount   int
+	UnratedCount       int
+	TrendData          []AdminTrendPoint
+	StatusData         []AdminStatusPoint
+	DeptData           []AdminDeptPoint
+	PriorityData       []AdminPriorityPoint
+	RatingData         []AdminRatingPoint
+	RecentTickets      []*models.Ticket
+	WaitingLongest     []AdminWaitingItem
+	StaffData          []AdminStaffDeptPoint
+	TrendWaitingPct    int
+	TrendProgressPct   int
+	TrendClosedTodayPct int
+	TrendAvgRatingPct  int
 }
 
 type AdminTrendPoint struct {
@@ -85,7 +75,7 @@ type AdminStaffDeptPoint struct {
 	Aktif  int    `json:"aktif"`
 }
 
-// AdminWaitingItem dipakai untuk list "Menunggu Terlama" (tiket + hari menunggu).
+// AdminWaitingItem: satu tiket di pool + berapa hari menunggu (untuk list menunggu terlama).
 type AdminWaitingItem struct {
 	Ticket *models.Ticket
 	Days   int
@@ -103,11 +93,10 @@ const (
 	priorityGreen = "#10b981"
 )
 
-// GetAdminDashboardData returns full data for the admin dashboard.
+// GetAdminDashboardData mengumpulkan KPI, grafik, tiket terbaru, menunggu terlama, staff per dept untuk dashboard admin.
 func (s *AdminDashboardService) GetAdminDashboardData() (*AdminDashboardData, error) {
 	data := &AdminDashboardData{}
 
-	// ─── KPI: counts ───
 	now := time.Now()
 	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
@@ -132,7 +121,6 @@ func (s *AdminDashboardService) GetAdminDashboardData() (*AdminDashboardData, er
 	config.DB.Model(&models.TicketRating{}).Count(&n64)
 	data.RatedCount = int(n64)
 
-	// Closed tapi belum di-rate
 	config.DB.Raw(`
 		SELECT COUNT(*) FROM tickets t
 		WHERE t.status = ? AND t.deleted_at IS NULL
@@ -140,10 +128,8 @@ func (s *AdminDashboardService) GetAdminDashboardData() (*AdminDashboardData, er
 	`, models.StatusClosed).Scan(&n64)
 	data.UnratedCount = int(n64)
 
-	// ─── Trend: last N days ───
 	data.TrendData = s.getTrendData(trendDays)
 
-	// ─── Status pie ───
 	var w, p, c int64
 	config.DB.Model(&models.Ticket{}).Where("status = ?", models.StatusWaiting).Count(&w)
 	config.DB.Model(&models.Ticket{}).Where("status = ?", models.StatusInProgress).Count(&p)
@@ -154,7 +140,6 @@ func (s *AdminDashboardService) GetAdminDashboardData() (*AdminDashboardData, er
 		{Name: "Closed", Value: int(c), Color: statusGreen},
 	}
 
-	// ─── Per departemen ───
 	var depts []models.Department
 	config.DB.Order("name").Find(&depts)
 	data.DeptData = make([]AdminDeptPoint, 0, len(depts)+1)
@@ -169,7 +154,6 @@ func (s *AdminDashboardService) GetAdminDashboardData() (*AdminDashboardData, er
 		data.DeptData = append(data.DeptData, AdminDeptPoint{Dept: "Tanpa Dept", Tiket: int(noDept)})
 	}
 
-	// ─── Per prioritas ───
 	var high, med, low int64
 	config.DB.Model(&models.Ticket{}).Where("priority = ?", models.PriorityHigh).Count(&high)
 	config.DB.Model(&models.Ticket{}).Where("priority = ?", models.PriorityMedium).Count(&med)
@@ -180,14 +164,11 @@ func (s *AdminDashboardService) GetAdminDashboardData() (*AdminDashboardData, er
 		{Label: "Low", Count: int(low), Color: priorityGreen},
 	}
 
-	// ─── Distribusi rating 1-5 ───
 	data.RatingData = s.getRatingDistribution()
 
-	// ─── Tiket terbaru ───
 	config.DB.Preload("Department").Where("deleted_at IS NULL").
 		Order("created_at DESC").Limit(recentLimit).Find(&data.RecentTickets)
 
-	// ─── Menunggu terlama (pool, order by created_at asc) ───
 	var waitingTickets []*models.Ticket
 	config.DB.Preload("Department").Where("status = ? AND assigned_to_id IS NULL AND deleted_at IS NULL",
 		models.StatusWaiting).Order("created_at ASC").Limit(waitingLimit).Find(&waitingTickets)
@@ -200,15 +181,13 @@ func (s *AdminDashboardService) GetAdminDashboardData() (*AdminDashboardData, er
 		data.WaitingLongest = append(data.WaitingLongest, AdminWaitingItem{Ticket: t, Days: days})
 	}
 
-	// ─── Staff per departemen + tiket aktif per dept ───
 	data.StaffData = s.getStaffDeptData()
-
-	// Trend % (sederhana: bandingkan dengan periode sebelumnya)
 	s.fillTrendPct(data)
 
 	return data, nil
 }
 
+// getTrendData menghitung tiket baru dan selesai per hari (N hari terakhir) untuk grafik tren.
 func (s *AdminDashboardService) getTrendData(days int) []AdminTrendPoint {
 	now := time.Now()
 	out := make([]AdminTrendPoint, 0, days)
@@ -229,6 +208,7 @@ func (s *AdminDashboardService) getTrendData(days int) []AdminTrendPoint {
 	return out
 }
 
+// getRatingDistribution menghitung jumlah rating 1–5 bintang untuk grafik distribusi.
 func (s *AdminDashboardService) getRatingDistribution() []AdminRatingPoint {
 	out := make([]AdminRatingPoint, 5)
 	var total int64
@@ -249,6 +229,7 @@ func (s *AdminDashboardService) getRatingDistribution() []AdminRatingPoint {
 	return out
 }
 
+// getStaffDeptData menghitung jumlah staff dan tiket aktif per departemen.
 func (s *AdminDashboardService) getStaffDeptData() []AdminStaffDeptPoint {
 	var depts []models.Department
 	config.DB.Order("name").Find(&depts)
@@ -263,8 +244,8 @@ func (s *AdminDashboardService) getStaffDeptData() []AdminStaffDeptPoint {
 	return out
 }
 
+// fillTrendPct mengisi persen tren KPI (mis. Selesai Hari Ini vs kemarin).
 func (s *AdminDashboardService) fillTrendPct(data *AdminDashboardData) {
-	// Sederhana: bandingkan hari ini vs kemarin untuk closed today; waiting vs 7d ago, dll.
 	now := time.Now()
 	yesterdayStart := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
 	yesterdayEnd := yesterdayStart.Add(24 * time.Hour)
@@ -274,5 +255,4 @@ func (s *AdminDashboardService) fillTrendPct(data *AdminDashboardData) {
 	if closedYesterday > 0 {
 		data.TrendClosedTodayPct = int(float64(data.ClosedTodayCount-int(closedYesterday)) / float64(closedYesterday) * 100)
 	}
-	// Lainnya bisa diisi 0 atau hitung serupa
 }
