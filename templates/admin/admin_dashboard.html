@@ -254,22 +254,32 @@
 	var statusData = {{.status_data_json}};
 	var deptData = {{.dept_data_json}};
 	var priorityData = {{.priority_data_json}};
+	if (typeof trendData === 'undefined') trendData = [];
+	if (typeof statusData === 'undefined') statusData = [];
+	if (typeof deptData === 'undefined') deptData = [];
+	if (typeof priorityData === 'undefined') priorityData = [];
 
 	var T = {
 		blue: 'rgb(59, 130, 246)', green: 'rgb(16, 185, 129)', amber: 'rgb(245, 158, 11)',
 		red: 'rgb(239, 68, 68)', purple: 'rgb(139, 92, 246)', gray: 'rgb(243, 244, 246)'
 	};
 
-	if (trendData && trendData.length && window.Chart) {
-		var ctx = document.getElementById('adminChartTrend');
+	function initCharts() {
+		if (!window.Chart) return;
+		var ctx;
+		// Tren Tiket (Area/Line)
+		ctx = document.getElementById('adminChartTrend');
 		if (ctx) {
+			var labels = trendData.length ? trendData.map(function(d){ return d.d; }) : [];
+			var baru = trendData.length ? trendData.map(function(d){ return d.baru; }) : [];
+			var selesai = trendData.length ? trendData.map(function(d){ return d.selesai; }) : [];
 			new Chart(ctx, {
 				type: 'line',
 				data: {
-					labels: trendData.map(function(d){ return d.d; }),
+					labels: labels,
 					datasets: [
-						{ label: 'Tiket Baru', data: trendData.map(function(d){ return d.baru; }), borderColor: T.blue, backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3 },
-						{ label: 'Selesai', data: trendData.map(function(d){ return d.selesai; }), borderColor: T.green, backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3 }
+						{ label: 'Tiket Baru', data: baru, borderColor: T.blue, backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.3 },
+						{ label: 'Selesai', data: selesai, borderColor: T.green, backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.3 }
 					]
 				},
 				options: {
@@ -279,9 +289,8 @@
 				}
 			});
 		}
-	}
-	if (statusData && statusData.length && window.Chart) {
-		var ctx = document.getElementById('adminChartStatus');
+		// Status Tiket (Donut)
+		ctx = document.getElementById('adminChartStatus');
 		if (ctx) {
 			new Chart(ctx, {
 				type: 'doughnut',
@@ -292,9 +301,8 @@
 				options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
 			});
 		}
-	}
-	if (deptData && deptData.length && window.Chart) {
-		var ctx = document.getElementById('adminChartDept');
+		// Tiket per Departemen (Horizontal Bar)
+		ctx = document.getElementById('adminChartDept');
 		if (ctx) {
 			new Chart(ctx, {
 				type: 'bar',
@@ -310,9 +318,8 @@
 				}
 			});
 		}
-	}
-	if (priorityData && priorityData.length && window.Chart) {
-		var ctx = document.getElementById('adminChartPriority');
+		// Tiket per Prioritas (Bar)
+		ctx = document.getElementById('adminChartPriority');
 		if (ctx) {
 			new Chart(ctx, {
 				type: 'bar',
@@ -327,6 +334,11 @@
 				}
 			});
 		}
+	}
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', initCharts);
+	} else {
+		initCharts();
 	}
 })();
 </script>

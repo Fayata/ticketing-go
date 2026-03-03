@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"html/template"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -56,19 +57,20 @@ func (h *AdminHandler) ShowAdminDashboard(w http.ResponseWriter, r *http.Request
 	priorityJSON, _ := json.Marshal(dash.PriorityData)
 	ratingJSON, _ := json.Marshal(dash.RatingData)
 	staffJSON, _ := json.Marshal(dash.StaffData)
+	// Pakai template.JS agar JSON tidak di-escape HTML sehingga chart bisa di-render di script
 	data := AddBaseData(r, map[string]interface{}{
-		"title":           "Dashboard Admin — Ticketing",
-		"page_title":      "Dashboard",
-		"page_subtitle":   "Sistem Ticketing Admin",
-		"nav_active":      "admin_dashboard",
-		"template_name":   "admin/admin_dashboard",
-		"dashboard":       dash,
-		"trend_data_json": string(trendJSON),
-		"status_data_json": string(statusJSON),
-		"dept_data_json":  string(deptJSON),
-		"priority_data_json": string(priorityJSON),
-		"rating_data_json": string(ratingJSON),
-		"staff_data_json": string(staffJSON),
+		"title":             "Dashboard Admin — Ticketing",
+		"page_title":        "Dashboard",
+		"page_subtitle":     "Sistem Ticketing Admin",
+		"nav_active":        "admin_dashboard",
+		"template_name":     "admin/admin_dashboard",
+		"dashboard":         dash,
+		"trend_data_json":   template.JS(trendJSON),
+		"status_data_json":  template.JS(statusJSON),
+		"dept_data_json":    template.JS(deptJSON),
+		"priority_data_json": template.JS(priorityJSON),
+		"rating_data_json":  template.JS(ratingJSON),
+		"staff_data_json":   template.JS(staffJSON),
 	})
 	RenderTemplate(w, "admin/admin_dashboard", data)
 }
