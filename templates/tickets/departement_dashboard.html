@@ -237,65 +237,7 @@
 <script type="application/json" id="staffTrendData">{{.trend_data_json}}</script>
 <script type="application/json" id="staffMonthlyData">{{.monthly_data_json}}</script>
 <script type="application/json" id="staffDonutData">{{.donut_data_json}}</script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script>
-(function(){
-	function parseJson(id, fallback) {
-		var el = document.getElementById(id);
-		if (!el || !el.textContent) return fallback || [];
-		try { return JSON.parse(el.textContent); } catch (e) { return fallback || []; }
-	}
-	var trendData = parseJson('staffTrendData', []);
-	var monthlyData = parseJson('staffMonthlyData', []);
-	var donutData = parseJson('staffDonutData', []);
-
-	var T = { blue: 'rgb(59, 130, 246)', green: 'rgb(16, 185, 129)', amber: 'rgb(245, 158, 11)', gray: 'rgb(243, 244, 246)' };
-
-	function initCharts() {
-		if (!window.Chart) return;
-		var ctx = document.getElementById('staffChartTrend');
-		if (ctx) {
-			var labels = trendData.length ? trendData.map(function(d){ return d.d; }) : [];
-			var ambil = trendData.length ? trendData.map(function(d){ return d.ambil; }) : [];
-			var selesai = trendData.length ? trendData.map(function(d){ return d.selesai; }) : [];
-			new Chart(ctx, {
-				type: 'line',
-				data: {
-					labels: labels,
-					datasets: [
-						{ label: 'Tiket Diambil', data: ambil, borderColor: T.blue, backgroundColor: 'rgba(59,130,246,0.15)', fill: true, tension: 0.3 },
-						{ label: 'Tiket Diselesaikan', data: selesai, borderColor: T.green, backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.3 }
-					]
-				},
-				options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: T.gray } } }
-			});
-		}
-		ctx = document.getElementById('staffChartMonthly');
-		if (ctx) {
-			new Chart(ctx, {
-				type: 'bar',
-				data: {
-					labels: monthlyData.length ? monthlyData.map(function(d){ return d.b; }) : ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'],
-					datasets: [{ label: 'Tiket Selesai', data: monthlyData.length ? monthlyData.map(function(d){ return d.v; }) : [], backgroundColor: monthlyData.length ? monthlyData.map(function(d){ return d.v > 0 ? 'rgb(16, 185, 129)' : 'rgb(243, 244, 246)'; }) : [] }]
-				},
-				options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
-			});
-		}
-		ctx = document.getElementById('staffChartDonut');
-		if (ctx) {
-			new Chart(ctx, {
-				type: 'doughnut',
-				data: {
-					labels: donutData.length ? donutData.map(function(d){ return d.name; }) : [],
-					datasets: [{ data: donutData.length ? donutData.map(function(d){ return d.value; }) : [], backgroundColor: donutData.length ? donutData.map(function(d){ return d.color; }) : [] }]
-				},
-				options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
-			});
-		}
-	}
-	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initCharts);
-	else initCharts();
-})();
-</script>
+<script src="static/js/chart.umd.min.js"></script>
+<script src="static/js/staff-dashboard-charts.js"></script>
 {{end}}
 {{end}}

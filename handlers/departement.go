@@ -71,6 +71,9 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	trendJSON, _ := json.Marshal(dash.TrendData)
 	monthlyJSON, _ := json.Marshal(dash.MonthlyData)
 	donutJSON, _ := json.Marshal(dash.DonutData)
+	trendSafe := template.JS(escapeJSONForScript(trendJSON))
+	monthlySafe := template.JS(escapeJSONForScript(monthlyJSON))
+	donutSafe := template.JS(escapeJSONForScript(donutJSON))
 
 	successMsg := r.URL.Query().Get("success")
 
@@ -95,9 +98,9 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 		"dashboard":          dash,
 		"kpi":                kpi,
 		"success":            successMsg,
-		"trend_data_json":    template.JS(trendJSON),
-		"monthly_data_json":  template.JS(monthlyJSON),
-		"donut_data_json":    template.JS(donutJSON),
+		"trend_data_json":    trendSafe,
+		"monthly_data_json":  monthlySafe,
+		"donut_data_json":    donutSafe,
 	})
 
 	RenderTemplate(w, "tickets/department_dashboard", data)
@@ -294,6 +297,11 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	}()
 
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/department/tiket/%d", ticketID)), http.StatusSeeOther)
+}
+
+// escapeJSONForScript mencegah </script> di dalam JSON memutus tag script di HTML.
+func escapeJSONForScript(b []byte) []byte {
+	return []byte(strings.ReplaceAll(string(b), "</script>", "<\\/script>"))
 }
 
 // parseTicketIDFromPath mengurai ID tiket dari URL (contoh: /department/tiket/release/123 → 123).
