@@ -65,7 +65,7 @@ func PortalUserRequired(next http.HandlerFunc) http.HandlerFunc {
 		}
 		// staff/admin -> redirect ke area mereka
 		if user.IsSuperAdmin {
-			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/admin/dashboard"), http.StatusSeeOther)
 			return
 		}
 		if user.IsStaff {
@@ -87,7 +87,7 @@ func GuestOnly(next http.HandlerFunc) http.HandlerFunc {
 				var user models.User
 				if err := config.DB.Select("is_staff", "is_super_admin").First(&user, userID).Error; err == nil {
 					if user.IsSuperAdmin {
-						http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
+						http.Redirect(w, r, config.Path("/admin/dashboard"), http.StatusSeeOther)
 						return
 					}
 					if user.IsStaff {

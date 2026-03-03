@@ -26,7 +26,8 @@ func main() {
 	emailService := utils.NewEmailService(cfg)
 	authService := services.NewAuthService(cfg, emailService, jwtService)
 	authController := controllers.NewAuthController(authService)
-	adminHandler := handlers.NewAdminHandler(cfg)
+	adminDashboardService := services.NewAdminDashboardService()
+	adminHandler := handlers.NewAdminHandler(cfg, adminDashboardService)
 
 	dashboardService := services.NewDashboardService()
 	kbService := services.NewKBService()
@@ -80,6 +81,7 @@ func main() {
 
 	// admin & staff
 	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard)))
+	mux.HandleFunc("/admin/dashboard", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ShowAdminDashboard)))
 	mux.HandleFunc("/admin/users", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListUsers)))
 	mux.HandleFunc("/admin/users/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateUserForm)))
 	mux.HandleFunc("/admin/users/toggle/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleUserStatus)))

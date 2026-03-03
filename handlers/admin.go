@@ -14,6 +14,7 @@ import (
 
 	"ticketing/config"
 	"ticketing/models"
+	"ticketing/services"
 	"ticketing/utils"
 )
 
@@ -26,11 +27,50 @@ const (
 )
 
 type AdminHandler struct {
-	cfg *config.Config
+	cfg              *config.Config
+	adminDashService *services.AdminDashboardService
 }
 
-func NewAdminHandler(cfg *config.Config) *AdminHandler {
-	return &AdminHandler{cfg: cfg}
+func NewAdminHandler(cfg *config.Config, adminDashService *services.AdminDashboardService) *AdminHandler {
+	return &AdminHandler{cfg: cfg, adminDashService: adminDashService}
+}
+
+// ShowAdminDashboard menampilkan dashboard admin (KPI, grafik, tiket terbaru, dll).
+func (h *AdminHandler) ShowAdminDashboard(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if h.adminDashService == nil {
+		http.Error(w, "Dashboard service not configured", http.StatusInternalServerError)
+		return
+	}
+	dash, err := h.adminDashService.GetAdminDashboardData()
+	if err != nil {
+		http.Error(w, "Failed to load dashboard", http.StatusInternalServerError)
+		return
+	}
+	trendJSON, _ := json.Marshal(dash.TrendData)
+	statusJSON, _ := json.Marshal(dash.StatusData)
+	deptJSON, _ := json.Marshal(dash.DeptData)
+	priorityJSON, _ := json.Marshal(dash.PriorityData)
+	ratingJSON, _ := json.Marshal(dash.RatingData)
+	staffJSON, _ := json.Marshal(dash.StaffData)
+	data := AddBaseData(r, map[string]interface{}{
+		"title":           "Dashboard Admin — Ticketing",
+		"page_title":      "Dashboard",
+		"page_subtitle":   "Sistem Ticketing Admin",
+		"nav_active":      "admin_dashboard",
+		"template_name":   "admin/admin_dashboard",
+		"dashboard":       dash,
+		"trend_data_json": string(trendJSON),
+		"status_data_json": string(statusJSON),
+		"dept_data_json":  string(deptJSON),
+		"priority_data_json": string(priorityJSON),
+		"rating_data_json": string(ratingJSON),
+		"staff_data_json": string(staffJSON),
+	})
+	RenderTemplate(w, "admin/admin_dashboard", data)
 }
 
 // ListUsers: Menampilkan daftar semua user

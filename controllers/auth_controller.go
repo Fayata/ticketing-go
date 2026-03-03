@@ -65,9 +65,9 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, config.Path(nextParam), http.StatusSeeOther)
 			return
 		}
-		// setelah login: admin -> admin, staff -> departemen, user -> dashboard
+		// setelah login: admin -> dashboard admin, staff -> departemen, user -> dashboard
 		if user.IsSuperAdmin {
-			http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/admin/dashboard"), http.StatusSeeOther)
 		} else if user.IsStaff {
 			http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
 		} else {

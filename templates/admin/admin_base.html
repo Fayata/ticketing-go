@@ -21,6 +21,10 @@
             </div>
 
             <nav class="dept-nav">
+                <a href="admin/dashboard" class="dept-nav-item {{if eq .nav_active "admin_dashboard"}}active{{end}}">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span class="dept-nav-label">Dashboard</span>
+                </a>
                 <a href="admin/users" class="dept-nav-item {{if eq .nav_active "admin_users"}}active{{end}}">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     <span class="dept-nav-label">Manajemen User</span>
@@ -74,7 +78,9 @@
                     {{end}}
                 </div>
                 {{end}}
-                {{if eq .template_name "admin/users_list"}}
+                {{if eq .template_name "admin/admin_dashboard"}}
+                    {{template "admin/admin_dashboard_content" .}}
+                {{else if eq .template_name "admin/users_list"}}
                     {{template "admin/users_list_content" .}}
                 {{else if eq .template_name "admin/user_form"}}
                     {{template "admin/user_form_content" .}}

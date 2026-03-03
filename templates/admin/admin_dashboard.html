@@ -1,0 +1,333 @@
+{{define "admin/admin_dashboard"}}
+{{template "admin_base" .}}
+{{end}}
+
+{{define "admin/admin_dashboard_content"}}
+<link rel="stylesheet" href="static/css/admin_dashboard.css">
+<div class="admin-dash">
+	<div class="admin-dash-header">
+		<div>
+			<h1 class="admin-dash-title">Dashboard</h1>
+			<p class="admin-dash-subtitle">{{.page_subtitle}}</p>
+		</div>
+		<div class="admin-dash-header-actions">
+			<button type="button" class="admin-dash-btn admin-dash-btn-outline" id="adminDashFilterBtn" aria-label="Filter">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+				Filter
+			</button>
+		</div>
+	</div>
+
+	{{$d := .dashboard}}
+	{{if not $d}}{{$d = nil}}{{end}}
+
+	{{if $d}}
+	<!-- KPI row 1 -->
+	<div class="admin-kpi-grid">
+		<div class="admin-kpi-card admin-kpi-amber">
+			<div class="admin-kpi-head">
+				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+				{{if $d.TrendWaitingPct}}<span class="admin-kpi-trend {{if ge $d.TrendWaitingPct 0}}up{{else}}down{{end}}">{{if ge $d.TrendWaitingPct 0}}↑{{else}}↓{{end}} {{$d.TrendWaitingPct}}%</span>{{end}}
+			</div>
+			<div class="admin-kpi-value">{{$d.WaitingCount}}</div>
+			<div class="admin-kpi-label">Tiket Menunggu</div>
+			<div class="admin-kpi-sub">Belum di-assign</div>
+		</div>
+		<div class="admin-kpi-card admin-kpi-blue">
+			<div class="admin-kpi-head">
+				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+				{{if $d.TrendProgressPct}}<span class="admin-kpi-trend {{if ge $d.TrendProgressPct 0}}up{{else}}down{{end}}">{{if ge $d.TrendProgressPct 0}}↑{{else}}↓{{end}} {{$d.TrendProgressPct}}%</span>{{end}}
+			</div>
+			<div class="admin-kpi-value">{{$d.InProgressCount}}</div>
+			<div class="admin-kpi-label">Sedang Dikerjakan</div>
+			<div class="admin-kpi-sub">Tiket In Progress</div>
+		</div>
+		<div class="admin-kpi-card admin-kpi-green">
+			<div class="admin-kpi-head">
+				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+				{{if $d.TrendClosedTodayPct}}<span class="admin-kpi-trend up">↑ {{$d.TrendClosedTodayPct}}%</span>{{end}}
+			</div>
+			<div class="admin-kpi-value">{{$d.ClosedTodayCount}}</div>
+			<div class="admin-kpi-label">Selesai Hari Ini</div>
+			<div class="admin-kpi-sub">Closed hari ini</div>
+		</div>
+		<div class="admin-kpi-card admin-kpi-purple">
+			<div class="admin-kpi-head">
+				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+				{{if $d.TrendAvgRatingPct}}<span class="admin-kpi-trend up">↑ {{$d.TrendAvgRatingPct}}%</span>{{end}}
+			</div>
+			<div class="admin-kpi-value">{{printf "%.1f" $d.AvgRating}} ★</div>
+			<div class="admin-kpi-label">Rata-rata Rating</div>
+			<div class="admin-kpi-sub">{{$d.RatedCount}} tiket dinilai</div>
+		</div>
+	</div>
+
+	<!-- KPI row 2 -->
+	<div class="admin-kpi-grid">
+		<div class="admin-kpi-card admin-kpi-sky">
+			<div class="admin-kpi-value">{{$d.TotalTicketsMonth}}</div>
+			<div class="admin-kpi-label">Total Tiket Bulan Ini</div>
+			<div class="admin-kpi-sub">Bulan berjalan</div>
+		</div>
+		<div class="admin-kpi-card admin-kpi-green">
+			<div class="admin-kpi-value">{{$d.TotalUsersActive}}</div>
+			<div class="admin-kpi-label">Total User Aktif</div>
+			<div class="admin-kpi-sub">Terdaftar & aktif</div>
+		</div>
+		<div class="admin-kpi-card admin-kpi-rose">
+			<div class="admin-kpi-value">{{$d.StaffActiveCount}}</div>
+			<div class="admin-kpi-label">Staff Aktif</div>
+			<div class="admin-kpi-sub">Tersebar per departemen</div>
+		</div>
+		<div class="admin-kpi-card admin-kpi-slate">
+			<div class="admin-kpi-value">{{$d.UnratedCount}}</div>
+			<div class="admin-kpi-label">Belum Di-rate</div>
+			<div class="admin-kpi-sub">Closed tanpa rating</div>
+		</div>
+	</div>
+
+	<!-- Chart row 1: Trend + Status -->
+	<div class="admin-chart-row admin-chart-row-2">
+		<div class="admin-card admin-card-wide">
+			<div class="admin-card-head">
+				<div class="admin-card-title-wrap">
+					<span class="admin-card-icon admin-card-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg></span>
+					<span class="admin-card-title">Tren Tiket — {{len $d.TrendData}} Hari Terakhir</span>
+				</div>
+			</div>
+			<div class="admin-card-body">
+				<div class="admin-chart-wrap admin-chart-trend">
+					<canvas id="adminChartTrend" height="200"></canvas>
+				</div>
+			</div>
+		</div>
+		<div class="admin-card">
+			<div class="admin-card-head">
+				<span class="admin-card-icon admin-card-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5v2 M15 11v2 M15 17v2 M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7a2 2 0 0 1 2-2z"/></svg></span>
+				<span class="admin-card-title">Status Tiket</span>
+			</div>
+			<div class="admin-card-body">
+				<div class="admin-chart-wrap admin-chart-pie">
+					<canvas id="adminChartStatus" height="140"></canvas>
+				</div>
+				<div class="admin-legend-list">
+					{{range $d.StatusData}}
+					<div class="admin-legend-item">
+						<span class="admin-legend-dot" style="background:{{.Color}}"></span>
+						<span class="admin-legend-label">{{.Name}}</span>
+						<span class="admin-legend-value">{{.Value}}</span>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Chart row 2: Dept + Priority -->
+	<div class="admin-chart-row">
+		<div class="admin-card">
+			<div class="admin-card-head">
+				<span class="admin-card-icon admin-card-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
+				<span class="admin-card-title">Tiket per Departemen</span>
+			</div>
+			<div class="admin-card-body">
+				<div class="admin-chart-wrap admin-chart-bar-h">
+					<canvas id="adminChartDept" height="180"></canvas>
+				</div>
+			</div>
+		</div>
+		<div class="admin-card">
+			<div class="admin-card-head">
+				<span class="admin-card-icon admin-card-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span>
+				<span class="admin-card-title">Tiket per Prioritas</span>
+			</div>
+			<div class="admin-card-body">
+				<div class="admin-chart-wrap admin-chart-bar">
+					<canvas id="adminChartPriority" height="180"></canvas>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Bottom: Recent tickets + Waiting longest + Rating & Staff -->
+	<div class="admin-chart-row admin-chart-row-2">
+		<div class="admin-card admin-card-wide">
+			<div class="admin-card-head admin-card-head-action">
+				<span class="admin-card-title-wrap">
+					<span class="admin-card-icon admin-card-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+					<span class="admin-card-title">Tiket Terbaru</span>
+				</span>
+				<a href="#" class="admin-card-link">Lihat Semua <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
+			</div>
+			<div class="admin-card-body admin-card-table-wrap">
+				<table class="admin-dash-table">
+					<thead>
+						<tr>
+							<th>ID</th><th>Judul</th><th>Prioritas</th><th>Status</th><th>Departemen</th><th>Tanggal</th>
+						</tr>
+					</thead>
+					<tbody>
+						{{range $d.RecentTickets}}
+						<tr>
+							<td class="admin-td-id">{{.GetTicketNumber}}</td>
+							<td class="admin-td-title">{{.Title}}</td>
+							<td><span class="admin-priority admin-priority-{{.Priority}}">{{.GetPriorityDisplay}}</span></td>
+							<td><span class="admin-badge admin-badge-{{.Status}}">{{.GetStatusDisplay}}</span></td>
+							<td>{{if .Department}}{{.Department.Name}}{{else}}—{{end}}</td>
+							<td class="admin-td-date">{{dateShort .CreatedAt}}</td>
+						</tr>
+						{{end}}
+						{{if not $d.RecentTickets}}
+						<tr><td colspan="6" class="admin-td-empty">Belum ada tiket.</td></tr>
+						{{end}}
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="admin-dash-right-col">
+			<div class="admin-card">
+				<div class="admin-card-head">
+					<span class="admin-card-icon admin-card-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span>
+					<span class="admin-card-title">Menunggu Terlama</span>
+				</div>
+				<div class="admin-card-body">
+					<div class="admin-waiting-list">
+						{{range $d.WaitingLongest}}
+						<div class="admin-waiting-item">
+							<div class="admin-waiting-bar" style="--accent: #ef4444;"></div>
+							<div class="admin-waiting-content">
+								<div class="admin-waiting-meta">
+									<span class="admin-waiting-id">{{.Ticket.GetTicketNumber}}</span>
+									<span class="admin-waiting-days">{{.Days}} hari</span>
+								</div>
+								<div class="admin-waiting-title">{{.Ticket.Title}}</div>
+								<div class="admin-waiting-dept">{{if .Ticket.Department}}{{.Ticket.Department.Name}}{{else}}—{{end}}</div>
+							</div>
+						</div>
+						{{end}}
+						{{if not $d.WaitingLongest}}
+						<p class="admin-empty-msg">Tidak ada tiket menunggu.</p>
+						{{end}}
+					</div>
+				</div>
+			</div>
+			<div class="admin-card">
+				<div class="admin-card-head">
+					<span class="admin-card-icon admin-card-icon-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+					<span class="admin-card-title">Distribusi Rating</span>
+				</div>
+				<div class="admin-card-body">
+					<div class="admin-rating-bars">
+						{{range $d.RatingData}}
+						<div class="admin-rating-row">
+							<span class="admin-rating-star">{{.Star}}</span>
+							<div class="admin-rating-track"><div class="admin-rating-fill" style="width: {{.Pct}}%;"></div></div>
+							<span class="admin-rating-count">{{.Count}}</span>
+						</div>
+						{{end}}
+					</div>
+					<div class="admin-staff-dept">
+						<div class="admin-staff-dept-title">Staff per Departemen</div>
+						{{range $d.StaffData}}
+						<div class="admin-staff-dept-row">
+							<span>{{.Dept}}</span>
+							<div class="admin-staff-chips">
+								<span class="admin-chip admin-chip-green">{{.Staff}} staff</span>
+								<span class="admin-chip admin-chip-gray">{{.Aktif}} aktif</span>
+							</div>
+						</div>
+						{{end}}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	{{else}}
+	<div class="admin-dash-empty">Data dashboard tidak tersedia.</div>
+	{{end}}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+	var trendData = {{.trend_data_json}};
+	var statusData = {{.status_data_json}};
+	var deptData = {{.dept_data_json}};
+	var priorityData = {{.priority_data_json}};
+
+	var T = {
+		blue: 'rgb(59, 130, 246)', green: 'rgb(16, 185, 129)', amber: 'rgb(245, 158, 11)',
+		red: 'rgb(239, 68, 68)', purple: 'rgb(139, 92, 246)', gray: 'rgb(243, 244, 246)'
+	};
+
+	if (trendData && trendData.length && window.Chart) {
+		var ctx = document.getElementById('adminChartTrend');
+		if (ctx) {
+			new Chart(ctx, {
+				type: 'line',
+				data: {
+					labels: trendData.map(function(d){ return d.d; }),
+					datasets: [
+						{ label: 'Tiket Baru', data: trendData.map(function(d){ return d.baru; }), borderColor: T.blue, backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3 },
+						{ label: 'Selesai', data: trendData.map(function(d){ return d.selesai; }), borderColor: T.green, backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3 }
+					]
+				},
+				options: {
+					responsive: true, maintainAspectRatio: false,
+					plugins: { legend: { position: 'top' } },
+					scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: T.gray } } }
+				}
+			});
+		}
+	}
+	if (statusData && statusData.length && window.Chart) {
+		var ctx = document.getElementById('adminChartStatus');
+		if (ctx) {
+			new Chart(ctx, {
+				type: 'doughnut',
+				data: {
+					labels: statusData.map(function(d){ return d.name; }),
+					datasets: [{ data: statusData.map(function(d){ return d.value; }), backgroundColor: statusData.map(function(d){ return d.color; }) }]
+				},
+				options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
+			});
+		}
+	}
+	if (deptData && deptData.length && window.Chart) {
+		var ctx = document.getElementById('adminChartDept');
+		if (ctx) {
+			new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: deptData.map(function(d){ return d.dept; }),
+					datasets: [{ label: 'Tiket', data: deptData.map(function(d){ return d.tiket; }), backgroundColor: T.green }]
+				},
+				options: {
+					indexAxis: 'y',
+					responsive: true, maintainAspectRatio: false,
+					plugins: { legend: { display: false } },
+					scales: { x: { beginAtZero: true }, y: { grid: { display: false } } }
+				}
+			});
+		}
+	}
+	if (priorityData && priorityData.length && window.Chart) {
+		var ctx = document.getElementById('adminChartPriority');
+		if (ctx) {
+			new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: priorityData.map(function(d){ return d.label; }),
+					datasets: [{ label: 'Jumlah', data: priorityData.map(function(d){ return d.count; }), backgroundColor: priorityData.map(function(d){ return d.color; }) }]
+				},
+				options: {
+					responsive: true, maintainAspectRatio: false,
+					plugins: { legend: { display: false } },
+					scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
+				}
+			});
+		}
+	}
+})();
+</script>
+{{end}}
