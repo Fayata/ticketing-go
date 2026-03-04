@@ -9,14 +9,11 @@
         <p style="color:#6b7280; font-size:0.875rem;">Pantau seluruh tiket dari berbagai departemen.</p>
     </div>
 
-    <form method="GET" action="department/all-tickets"
-        style="background:#f9fafb; padding:1.25rem; border-radius:8px; margin-bottom:1.5rem; display:flex; gap:1rem; align-items:end; flex-wrap:wrap; border:1px solid #e5e7eb;">
+    <form method="GET" action="department/all-tickets" class="dept-all-filters">
 
-        <div style="flex:1; min-width:200px;">
-            <label
-                style="font-size:0.875rem; font-weight:600; color:#374151; display:block; margin-bottom:0.5rem;">Departemen</label>
-            <select name="department" class="form-input"
-                style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px;">
+        <div class="dept-all-field">
+            <label>Departemen</label>
+            <select name="department" class="dept-all-select">
                 <option value="ALL">Semua Departemen</option>
                 {{range .departments}}
                 <option value="{{.ID}}" {{if eq $.filter_dept (printf "%d" .ID)}}selected{{end}}>{{.Name}}</option>
@@ -24,11 +21,9 @@
             </select>
         </div>
 
-        <div style="flex:1; min-width:150px;">
-            <label
-                style="font-size:0.875rem; font-weight:600; color:#374151; display:block; margin-bottom:0.5rem;">Status</label>
-            <select name="status" class="form-input"
-                style="width:100%; padding:0.5rem; border:1px solid #d1d5db; border-radius:6px;">
+        <div class="dept-all-field">
+            <label>Status</label>
+            <select name="status" class="dept-all-select">
                 <option value="ALL">Semua Status</option>
                 <option value="WAITING" {{if eq .filter_status "WAITING" }}selected{{end}}>Waiting</option>
                 <option value="IN_PROGRESS" {{if eq .filter_status "IN_PROGRESS" }}selected{{end}}>In Progress</option>
@@ -36,66 +31,58 @@
             </select>
         </div>
 
-        <div style="display:flex; gap:0.5rem;">
-            <button type="submit"
-                style="background:#2563eb; color:white; border:none; padding:0.6rem 1.2rem; border-radius:6px; font-weight:600; cursor:pointer;">
-                Filter
-            </button>
-            <a href="department/all-tickets"
-                style="background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; padding:0.6rem 1rem; border-radius:6px; font-weight:600; text-decoration:none;">
-                Reset
-            </a>
+        <div class="dept-all-actions">
+            <button type="submit" class="dept-all-btn-primary">Filter</button>
+            <a href="department/all-tickets" class="dept-all-btn-reset">Reset</a>
         </div>
     </form>
 
     <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse; text-align:left;">
+        <table class="dept-all-table">
             <thead>
-                <tr
-                    style="border-bottom:2px solid #e5e7eb; background:#f9fafb; color:#4b5563; font-size:0.875rem; text-transform:uppercase;">
-                    <th style="padding:1rem 0.75rem;">ID</th>
-                    <th style="padding:1rem 0.75rem;">Departemen</th>
-                    <th style="padding:1rem 0.75rem;">Judul Tiket</th>
-                    <th style="padding:1rem 0.75rem;">Pengirim</th>
-                    <th style="padding:1rem 0.75rem;">Status</th>
-                    <th style="padding:1rem 0.75rem;">Staff</th>
-                    <th style="padding:1rem 0.75rem;">Tanggal</th>
-                    <th style="padding:1rem 0.75rem;">Rating</th>
-                    <th style="padding:1rem 0.75rem;">Aksi</th>
+                <tr>
+                    <th>ID</th>
+                    <th>Departemen</th>
+                    <th>Judul Tiket</th>
+                    <th>Pengirim</th>
+                    <th>Status</th>
+                    <th>Staff</th>
+                    <th>Tanggal</th>
+                    <th>Rating</th>
+                    <th>Aksi</th>
                 </tr>
             </thead>
-            <tbody style="font-size:0.9rem;">
+            <tbody>
                 {{range .tickets}}
-                <tr style="border-bottom:1px solid #f3f4f6;">
-                    <td style="padding:0.75rem; font-weight:700; color:#1f2937;">{{.GetTicketNumber}}</td>
-                    <td style="padding:0.75rem;">
-                        <span
-                            style="background:#eff6ff; color:#1e40af; padding:2px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; border:1px solid #dbeafe;">
+                <tr>
+                    <td class="dept-all-cell-id">{{.GetTicketNumber}}</td>
+                    <td>
+                        <span class="dept-all-dept-badge">
                             {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
                         </span>
                     </td>
-                    <td style="padding:0.75rem; color:#111827; font-weight:500;">
+                    <td class="dept-all-cell-title">
                         {{.Title}}
                     </td>
-                    <td style="padding:0.75rem; color:#4b5563;">{{.CreatedBy.Username}}</td>
-                    <td style="padding:0.75rem;">
+                    <td class="dept-all-cell-text">{{.CreatedBy.Username}}</td>
+                    <td>
                         <span class="badge status-{{.Status}}">{{.GetStatusDisplay}}</span>
                     </td>
-                    <td style="padding:0.75rem; color:#4b5563;">
+                    <td class="dept-all-cell-text">
                         {{if .AssignedTo}}
                         <span style="color:#059669; font-weight:600;">{{.AssignedTo.Username}}</span>
                         {{else}}
                         <span style="color:#9ca3af; font-style:italic;">-</span>
                         {{end}}
                     </td>
-                    <td style="padding:0.75rem; color:#6b7280;">
+                    <td class="dept-all-cell-meta">
                         {{.CreatedAt.Format "02 Jan 15:04"}}
                     </td>
-                    <td style="padding:0.75rem;">
+                    <td class="dept-all-cell-rating">
                         {{if eq .Status "CLOSED"}}
                         {{$rating := index $.ratings_map .ID}}
                         {{if $rating}}
-                        <div style="display:flex; align-items:center; gap:0.25rem;">
+                        <div class="dept-all-rating-stars">
                             {{range $i := seq 1 5}}
                             {{if le $i $rating.Rating}}
                             <span style="color:#f59e0b; font-size:0.9rem;">★</span>
@@ -103,24 +90,22 @@
                             <span style="color:#d1d5db; font-size:0.9rem;">☆</span>
                             {{end}}
                             {{end}}
-                            <span style="font-size:0.75rem; color:#92400e; font-weight:600;">{{$rating.Rating}}/5</span>
+                            <span class="dept-all-rating-text">{{$rating.Rating}}/5</span>
                         </div>
                         {{else}}
-                        <span style="font-size:0.75rem; color:#9ca3af; font-style:italic;">Belum ada rating</span>
+                        <span class="dept-all-rating-empty">Belum ada rating</span>
                         {{end}}
                         {{else}}
-                        <span style="font-size:0.75rem; color:#9ca3af; font-style:italic;">-</span>
+                        <span class="dept-all-rating-empty">-</span>
                         {{end}}
                     </td>
-                    <td style="padding:0.75rem;">
-                        <a href="department/tiket/{{.ID}}"
-                            style="color:#2563eb; text-decoration:none; font-weight:600; font-size:0.85rem;">Detail
-                            &rarr;</a>
+                    <td class="dept-all-cell-action">
+                        <a href="department/tiket/{{.ID}}" class="dept-all-link">Detail &rarr;</a>
                     </td>
                 </tr>
                 {{else}}
                 <tr>
-                    <td colspan="9" style="text-align:center; padding:3rem; color:#9ca3af;">
+                    <td colspan="9" class="dept-all-empty">
                         Tidak ada tiket yang ditemukan dengan filter ini.
                     </td>
                 </tr>

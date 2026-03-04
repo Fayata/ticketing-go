@@ -1,6 +1,6 @@
 /* Filter bar halaman Tiket Saya (user portal) */
 .filters-bar {
-    background: white;
+    background: var(--bg-primary);
     padding: 1.5rem;
     border-radius: var(--radius-lg);
     margin-bottom: 1.5rem;
@@ -44,7 +44,7 @@
 
 .filter-btn {
     padding: 0.625rem 1.5rem;
-    background: var(--primary-red);
+    background: var(--primary-blue);
     color: white;
     border: none;
     border-radius: var(--radius-sm);
@@ -54,7 +54,7 @@
 }
 
 .filter-btn:hover {
-    background: var(--primary-red-hover);
+    background: var(--primary-blue-hover);
     box-shadow: var(--shadow-lg);
     transform: translateY(-1px);
 }

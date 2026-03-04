@@ -1104,3 +1104,58 @@
 :root[data-theme="dark"] .kb-admin .kb-admin-empty {
     color: #9ca3af;
 }
+
+/* Dark mode untuk Department All Tickets */
+:root[data-theme="dark"] .dept-all-filters {
+    background: #0f172a;
+    border-color: #1f2937;
+}
+:root[data-theme="dark"] .dept-all-field label {
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-all-select {
+    background: #020617;
+    border-color: #1f2937;
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-all-btn-primary {
+    background: #2563eb;
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-all-btn-reset {
+    background: #020617;
+    color: #e5e7eb;
+    border-color: #1f2937;
+}
+:root[data-theme="dark"] .dept-all-table thead {
+    background: #020617;
+    color: #9ca3af;
+}
+:root[data-theme="dark"] .dept-all-table thead th {
+    border-bottom-color: #1f2937;
+}
+:root[data-theme="dark"] .dept-all-table tbody tr {
+    border-bottom-color: #1f2937;
+}
+:root[data-theme="dark"] .dept-all-cell-id,
+:root[data-theme="dark"] .dept-all-cell-title {
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-all-cell-text,
+:root[data-theme="dark"] .dept-all-cell-meta {
+    color: #9ca3af;
+}
+:root[data-theme="dark"] .dept-all-dept-badge {
+    background: #0b1220;
+    color: #bfdbfe;
+    border-color: #1d4ed8;
+}
+:root[data-theme="dark"] .dept-all-rating-empty {
+    color: #6b7280;
+}
+:root[data-theme="dark"] .dept-all-cell-action .dept-all-link {
+    color: #60a5fa;
+}
+:root[data-theme="dark"] .dept-all-empty {
+    color: #6b7280;
+}
