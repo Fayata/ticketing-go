@@ -201,6 +201,32 @@ body {
     font-weight: 600;
 }
 
+/* Dark mode: selaraskan dengan tema admin/staff (navy + teal) */
+:root[data-theme="dark"] .sidebar {
+    background: linear-gradient(180deg, #0b1b1a 0%, #071a23 50%, #0b1220 100%);
+    border-right-color: rgba(148, 163, 184, 0.15);
+}
+:root[data-theme="dark"] .sidebar-header {
+    border-bottom-color: rgba(148, 163, 184, 0.15);
+}
+:root[data-theme="dark"] .logo {
+    background: linear-gradient(135deg, #34d399 0%, #22d3ee 60%, #6366f1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+:root[data-theme="dark"] .nav-item {
+    color: rgba(226, 232, 240, 0.8);
+}
+:root[data-theme="dark"] .nav-item:hover {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+}
+:root[data-theme="dark"] .nav-item.active {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+}
+
 .nav-item svg {
     width: 1.25rem;
     height: 1.25rem;

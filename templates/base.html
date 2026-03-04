@@ -153,7 +153,6 @@
                     <p>{{if .page_subtitle}}{{.page_subtitle}}{{else}}Selamat datang kembali!{{end}}</p>
                 </div>
                 <div class="header-actions">
-                    <button type="button" class="dept-theme-toggle" id="themeToggle" data-theme-toggle aria-label="Toggle theme">🌙</button>
                     <div class="notif-wrap">
                         <button class="notif-btn {{if gt .unread_count 0}}active{{end}}" id="notificationBtn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -272,7 +271,6 @@
         </main>
     </div>
 
-    <script src="static/js/theme.js"></script>
     <script src="static/js/common.js"></script>
     <script src="static/js/dashboard.js"></script>
     <script src="static/js/alerts.js"></script>

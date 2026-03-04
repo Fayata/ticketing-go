@@ -1035,3 +1035,72 @@
 :root[data-theme="dark"] .staff-ticket-item { background: #0b1220; }
 :root[data-theme="dark"] .staff-mini-item:hover,
 :root[data-theme="dark"] .staff-unrated-item:hover { background: rgba(148, 163, 184, 0.08); }
+
+/* Dark mode untuk kartu umum & KB admin (admin + staff) */
+:root[data-theme="dark"] .dept-card {
+    background-color: #0f172a;
+    border-color: #1f2937;
+    box-shadow: 0 0 0 1px rgba(15,23,42,0.7);
+}
+:root[data-theme="dark"] .dept-card-header h2,
+:root[data-theme="dark"] .dept-card-header p {
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-pool-card {
+    background-color: #0f172a;
+    border-color: #1f2937;
+}
+:root[data-theme="dark"] .dept-pool-header {
+    background: rgba(15,23,42,0.95);
+}
+
+:root[data-theme="dark"] .kb-admin .card {
+    background: #020617;
+    border-color: #1f2937;
+    box-shadow: 0 0 0 1px rgba(15,23,42,0.8);
+}
+:root[data-theme="dark"] .kb-admin .card-header {
+    border-bottom-color: #1f2937;
+}
+:root[data-theme="dark"] .kb-admin .card-header h2 {
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .kb-admin .card-body {
+    background: transparent;
+}
+:root[data-theme="dark"] .kb-admin .form-label,
+:root[data-theme="dark"] .kb-admin .text-muted {
+    color: #9ca3af;
+}
+:root[data-theme="dark"] .kb-admin .form-input {
+    background: #020617;
+    border-color: #1f2937;
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .kb-admin .form-input::placeholder {
+    color: #6b7280;
+}
+:root[data-theme="dark"] .kb-admin .kb-emoji-dropdown,
+:root[data-theme="dark"] .kb-admin .kb-color-dropdown {
+    background: #020617;
+    border-color: #1f2937;
+}
+:root[data-theme="dark"] .kb-admin .kb-emoji-cell:hover {
+    background: #0b1220;
+}
+:root[data-theme="dark"] .kb-admin .kb-color-sample-wrap {
+    border-top-color: #1f2937;
+}
+:root[data-theme="dark"] .kb-admin .kb-admin-table thead {
+    background: #020617;
+}
+:root[data-theme="dark"] .kb-admin .kb-admin-table th,
+:root[data-theme="dark"] .kb-admin .kb-admin-table td {
+    border-bottom-color: #1f2937;
+}
+:root[data-theme="dark"] .kb-admin .kb-admin-table th {
+    color: #9ca3af;
+}
+:root[data-theme="dark"] .kb-admin .kb-admin-empty {
+    color: #9ca3af;
+}
