@@ -33,7 +33,10 @@
     border-radius: var(--radius-sm);
     font-size: 0.875rem;
     transition: var(--transition);
+    background: var(--bg-primary);
+    color: var(--text-primary);
 }
+.filter-input::placeholder { color: var(--text-light); }
 
 .filter-input:focus,
 .filter-select:focus {

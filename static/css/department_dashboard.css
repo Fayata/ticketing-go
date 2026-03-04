@@ -211,6 +211,133 @@
     margin-bottom: 1rem;
 }
 
+/* Tombol utama (dipakai di admin: Tambah User/Departemen) */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    background: linear-gradient(135deg, #059669, #0d9488);
+    color: #ffffff;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    text-decoration: none;
+    box-sizing: border-box;
+}
+.btn-primary:hover {
+    background: linear-gradient(135deg, #047857, #0f766e);
+    transform: translateY(-1px);
+}
+
+/* Kartu generik (dipakai di admin: users_list, departments_list, dll) */
+.card {
+    background: #ffffff;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+.card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.card-header h2 { margin: 0; font-size: 1.125rem; color: #0f172a; }
+.card-body { padding: 1.5rem; }
+
+/* Staff - All Tickets (Semua Tiket) */
+.dept-all-title { font-size: 1.25rem; font-weight: 700; color: #1f2937; margin: 0; }
+.dept-all-subtitle { color: #6b7280; font-size: 0.875rem; margin: 0.25rem 0 0 0; }
+.dept-all-filters {
+    background: #f9fafb;
+    padding: 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    border: 1px solid #e5e7eb;
+}
+.dept-all-field { flex: 1; min-width: 200px; }
+.dept-all-field label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+.dept-all-select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: #ffffff;
+    color: #111827;
+}
+.dept-all-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.dept-all-btn-primary {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.dept-all-btn-reset {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+.dept-all-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9rem;
+}
+.dept-all-table thead {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+}
+.dept-all-table thead th {
+    padding: 1rem 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+.dept-all-table tbody tr { border-bottom: 1px solid #f3f4f6; }
+.dept-all-table tbody td { padding: 0.75rem; }
+.dept-all-cell-id { font-weight: 700; color: #1f2937; }
+.dept-all-dept-badge {
+    background: #eff6ff;
+    color: #1e40af;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid #dbeafe;
+}
+.dept-all-cell-title { color: #111827; font-weight: 500; }
+.dept-all-cell-text { color: #4b5563; }
+.dept-all-cell-meta { color: #6b7280; }
+.dept-all-rating-stars { display: flex; align-items: center; gap: 0.25rem; }
+.dept-all-rating-text { font-size: 0.75rem; color: #92400e; font-weight: 600; }
+.dept-all-rating-empty { font-size: 0.75rem; color: #9ca3af; font-style: italic; }
+.dept-all-cell-action .dept-all-link { color: #2563eb; text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+.dept-all-empty { text-align: center; padding: 3rem; color: #9ca3af; }
+
 .dept-icon-wrapper {
     padding: 0.5rem;
     border-radius: 0.5rem;
@@ -1159,3 +1286,13 @@
 :root[data-theme="dark"] .dept-all-empty {
     color: #6b7280;
 }
+
+/* Dark mode: paksa table admin yang masih inline-style agar tidak putih */
+:root[data-theme="dark"] .card-header p { color: #9ca3af !important; }
+:root[data-theme="dark"] .card table thead { background-color: #020617 !important; }
+:root[data-theme="dark"] .card table thead th { border-bottom-color: #1f2937 !important; color: #9ca3af !important; }
+:root[data-theme="dark"] .card table tbody tr { border-bottom-color: #1f2937 !important; }
+:root[data-theme="dark"] .card table td { color: #e5e7eb !important; }
+:root[data-theme="dark"] .card table td span[style*=\"background:#eff6ff\"] { background: #0b1220 !important; color: #bfdbfe !important; border-color: #1d4ed8 !important; }
+:root[data-theme="dark"] .card table td span[style*=\"color:#6b7280\"] { color: #9ca3af !important; }
+:root[data-theme="dark"] .card table td span[style*=\"color:#111827\"] { color: #e5e7eb !important; }
