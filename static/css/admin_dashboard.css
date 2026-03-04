@@ -24,6 +24,26 @@
 	--ad-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
 }
 
+/* Dark mode: cukup override variable agar seluruh komponen ikut berubah */
+:root[data-theme="dark"] .admin-dash {
+	--ad-gray-50: #0b1220;
+	--ad-gray-100: #0f172a;
+	--ad-gray-200: #1f2937;
+	--ad-gray-400: #94a3b8;
+	--ad-gray-500: #9ca3af;
+	--ad-gray-700: #e5e7eb;
+	--ad-gray-900: #f8fafc;
+	--ad-white: #0f172a;
+	--ad-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+
+:root[data-theme="dark"] .admin-dash-btn {
+	background: var(--ad-white);
+	border-color: rgba(148, 163, 184, 0.2);
+	color: var(--ad-gray-700);
+}
+:root[data-theme="dark"] .admin-dash-btn-outline:hover { background: rgba(148, 163, 184, 0.08); }
+
 .admin-dash-header {
 	display: flex;
 	justify-content: space-between;

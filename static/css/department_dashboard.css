@@ -950,3 +950,88 @@
     .staff-card-head,
     .staff-card-body { padding-left: 14px; padding-right: 14px; }
 }
+
+/* Theme toggle (dipakai di staff & admin layout) */
+.dept-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.dept-theme-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    color: #0f172a;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.dept-theme-toggle:hover { background: #f3f4f6; }
+
+/* ========== Dark mode (staff/admin) ========== */
+:root[data-theme="dark"] .department-layout {
+    background-color: #0b1220;
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-sidebar {
+    background: linear-gradient(180deg, #0b1b1a 0%, #071a23 50%, #0b1220 100%);
+    border-right-color: rgba(148, 163, 184, 0.15);
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-sidebar-header {
+    border-bottom-color: rgba(148, 163, 184, 0.15);
+}
+:root[data-theme="dark"] .dept-logo {
+    background: linear-gradient(135deg, #34d399, #22d3ee);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+:root[data-theme="dark"] .dept-nav-item { color: rgba(226, 232, 240, 0.75); }
+:root[data-theme="dark"] .dept-nav-item:hover { background-color: rgba(16, 185, 129, 0.12); color: #34d399; }
+:root[data-theme="dark"] .dept-nav-item.active { background-color: rgba(16, 185, 129, 0.14); color: #34d399; }
+:root[data-theme="dark"] .dept-profile-section { border-top-color: rgba(148, 163, 184, 0.15); }
+:root[data-theme="dark"] .dept-avatar-circle { box-shadow: 0 0 0 2px rgba(16,185,129,0.25); }
+:root[data-theme="dark"] .dept-profile-badge { color: #34d399; }
+
+:root[data-theme="dark"] .dept-header {
+    background-color: #0f172a;
+    border-bottom-color: rgba(148, 163, 184, 0.15);
+}
+:root[data-theme="dark"] .dept-header h2 { color: #f8fafc; }
+:root[data-theme="dark"] .dept-header p { color: rgba(148, 163, 184, 0.9) !important; }
+:root[data-theme="dark"] .dept-header-mobile-menu {
+    background: #0b1220;
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #e5e7eb;
+}
+:root[data-theme="dark"] .dept-header-mobile-menu:hover { background: rgba(16,185,129,0.12); color: #34d399; }
+
+:root[data-theme="dark"] .dept-theme-toggle {
+    background: #0b1220;
+    border-color: rgba(148, 163, 184, 0.2);
+    color: #e5e7eb;
+    box-shadow: none;
+}
+:root[data-theme="dark"] .dept-theme-toggle:hover { background: rgba(148, 163, 184, 0.12); }
+
+/* Staff dashboard variables override */
+:root[data-theme="dark"] .staff-dash {
+    --sd-white: #0f172a;
+    --sd-gray-50: #0b1220;
+    --sd-gray-100: #0f172a;
+    --sd-gray-200: #1f2937;
+    --sd-gray-400: #94a3b8;
+    --sd-gray-500: #9ca3af;
+    --sd-gray-700: #e5e7eb;
+    --sd-gray-900: #f8fafc;
+    --sd-shadow: 0 0 0 1px rgba(148, 163, 184, 0.12);
+}
+:root[data-theme="dark"] .staff-ticket-item { background: #0b1220; }
+:root[data-theme="dark"] .staff-mini-item:hover,
+:root[data-theme="dark"] .staff-unrated-item:hover { background: rgba(148, 163, 184, 0.08); }
