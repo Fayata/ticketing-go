@@ -203,7 +203,7 @@
 }
 
 .btn-submit:hover {
-    background: var(--primary-blue-hover);
+    background: var(--primary-red-hover);
     box-shadow: var(--shadow-lg);
     transform: translateY(-1px);
 }
