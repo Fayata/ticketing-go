@@ -375,7 +375,7 @@ func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request
 	systemReply := models.TicketReply{
 		TicketID: ticket.ID,
 		UserID:   user.ID,
-		Message:  "⚠️ Tiket dikembalikan ke pool (Released).",
+		Message:  "Tiket dikembalikan ke pool (Released).",
 	}
 	config.DB.Create(&systemReply)
 
@@ -410,7 +410,7 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 		systemReply := models.TicketReply{
 			TicketID: ticket.ID,
 			UserID:   user.ID,
-			Message:  "✅ Tiket ditandai selesai (Closed).",
+			Message:  "Tiket ditandai selesai (Closed).",
 		}
 		config.DB.Create(&systemReply)
 
