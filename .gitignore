@@ -5,3 +5,7 @@ ticketing.exe
 docs/PERFORMA_PRODUCTION.md
 app.log
 static/uploads/
+# Graphify
+graphify-out/
+.agents/rules/graphify.md
+.agents/workflows/graphify.md

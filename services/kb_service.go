@@ -1,6 +1,8 @@
 package services
 
 import (
+	"log"
+
 	"ticketing/config"
 	"ticketing/models"
 
@@ -12,6 +14,8 @@ type KBService struct{}
 func NewKBService() *KBService {
 	return &KBService{}
 }
+
+
 
 // CatWithCount for KB list page.
 type CatWithCount struct {
@@ -111,7 +115,8 @@ func (s *KBService) SearchKBArticles(query string, categoryID *uint, limit int) 
 	}
 	q := config.DB.Preload("Category").Where("published = ? AND deleted_at IS NULL", true)
 	if query != "" {
-		like := "%" + query + "%"
+		like := "%" + escapeLike(query) + "%"
+		log.Printf("[Security][SQLi] KB search sanitized: original=%q escaped=%q", query, escapeLike(query))
 		q = q.Where("title ILIKE ? OR content ILIKE ? OR slug ILIKE ?", like, like, like)
 	}
 	if categoryID != nil && *categoryID != 0 {

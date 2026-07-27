@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"ticketing/config"
 	"ticketing/controllers"
@@ -21,6 +22,10 @@ func main() {
 	}
 	config.InitSession(cfg.SessionSecret, cfg.SessionSecure)
 	utils.InitTemplates()
+
+	// [Security] Initialize rate limiter untuk login (5 requests per 1 menit per IP)
+	loginLimiter := middleware.NewRateLimiter(5, 1*time.Minute)
+	log.Println("[Security] Rate limiter initialized: 5 req/min for login")
 
 	jwtService := utils.NewJWTService(cfg)
 	emailService := utils.NewEmailService(cfg)
@@ -70,7 +75,7 @@ func main() {
 		http.Redirect(w, r, config.Path("/login"), http.StatusSeeOther)
 	})
 
-	mux.HandleFunc("/login", middleware.GuestOnly(authController.Login))
+	mux.HandleFunc("/login", loginLimiter.Limit(middleware.GuestOnly(authController.Login)))
 	mux.HandleFunc("/register", middleware.GuestOnly(authController.Register))
 	mux.HandleFunc("/verify-email", authController.VerifyEmail)
 	mux.HandleFunc("/logout", authController.Logout)
@@ -119,10 +124,16 @@ func main() {
 
 	seedDefaultData()
 
+	log.Println("[Security] OWASP mitigations active: SecurityHeaders, RateLimiter, CSRF-ready")
+	log.Printf("[Security] Debug mode: %v | Session secure: %v", cfg.Debug, cfg.SessionSecure)
+
 	log.Printf("Server starting on port %s", cfg.Port)
 	log.Printf("Visit: http://localhost:%s", cfg.Port)
 
-	loggedMux := middleware.LoggingMiddleware(mux)
+	// [Security] Apply security middleware stack
+	securedMux := middleware.SecurityHeaders(mux, cfg.Debug)
+	loggedMux := middleware.LoggingMiddleware(securedMux)
+	log.Println("[Security] Security headers middleware applied")
 	var handler http.Handler = loggedMux
 	if config.AppBasePath != "" && config.AppBasePath != "/" {
 		prefix := strings.TrimRight(config.AppBasePath, "/")

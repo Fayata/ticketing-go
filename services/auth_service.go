@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"ticketing/config"
@@ -24,8 +25,46 @@ func NewAuthService(cfg *config.Config, emailService *utils.EmailService, jwtSer
 	}
 }
 
+// validatePassword memvalidasi kekuatan password.
+func validatePassword(password string) error {
+	if len(password) < 8 {
+		return errors.New("password minimal 8 karakter")
+	}
+	hasLetter := false
+	hasDigit := false
+	for _, c := range password {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') {
+			hasLetter = true
+		}
+		if c >= '0' && c <= '9' {
+			hasDigit = true
+		}
+	}
+	if !hasLetter || !hasDigit {
+		return errors.New("password harus mengandung huruf dan angka")
+	}
+	return nil
+}
+
+// validateUsername memvalidasi format dan panjang username.
+func validateUsername(username string) error {
+	if len(username) < 3 || len(username) > 50 {
+		return errors.New("username harus 3-50 karakter")
+	}
+	return nil
+}
+
 // RegisterUser: Buat user, assign group, generate token, kirim email
 func (s *AuthService) RegisterUser(username, email, password string) error {
+	// [Security] Validasi input
+	if err := validateUsername(username); err != nil {
+		return err
+	}
+	if err := validatePassword(password); err != nil {
+		return err
+	}
+	log.Printf("[Security][Auth] Registration attempt for username=%q email=%q", username, email)
+
 	// 1. Cek duplikasi
 	var existingUser models.User
 	if err := config.DB.Where("username = ? OR email = ?", username, email).First(&existingUser).Error; err == nil {
@@ -93,10 +132,12 @@ func (s *AuthService) Authenticate(username, password string) (*models.User, err
 	var user models.User
 	// Preload Groups agar bisa dicek hak aksesnya di middleware
 	if err := config.DB.Preload("Groups").Where("username = ? OR email = ?", username, username).First(&user).Error; err != nil {
+		log.Printf("[Security][Auth] Failed login attempt: user=%q not found", username)
 		return nil, errors.New("username atau password salah")
 	}
 
 	if !utils.CheckPasswordHash(password, user.Password) {
+		log.Printf("[Security][Auth] Failed login attempt for user=%q from password mismatch", username)
 		return nil, errors.New("username atau password salah")
 	}
 
@@ -149,6 +190,11 @@ func (s *AuthService) ResetPassword(token, newPassword string) error {
 	if err := config.DB.First(&user, claims.UserID).Error; err != nil {
 		return errors.New("user tidak ditemukan")
 	}
+
+	if err := validatePassword(newPassword); err != nil {
+		return err
+	}
+	log.Printf("[Security][Auth] Password reset for user ID=%d", claims.UserID)
 
 	hashedPassword, _ := utils.HashPassword(newPassword)
 	user.Password = hashedPassword

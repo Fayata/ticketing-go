@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -159,7 +161,8 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := config.DB.Create(&newUser).Error; err != nil {
-			http.Error(w, "Gagal membuat user: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("[Security][Admin] Failed to create user: %v", err)
+			http.Error(w, "Gagal membuat user. Silakan coba lagi.", http.StatusInternalServerError)
 			return
 		}
 
@@ -173,6 +176,11 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 
 // ToggleUserStatus mengaktifkan/nonaktifkan user (untuk admin).
 func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	path := strings.TrimPrefix(r.URL.Path, "/admin/users/toggle/")
 	userID, _ := strconv.Atoi(path)
 
@@ -180,6 +188,7 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 	if err := config.DB.First(&targetUser, userID).Error; err == nil {
 		currentUser := GetUserFromContext(r).(*models.User)
 		if currentUser.ID != targetUser.ID {
+			log.Printf("[Security][Admin] User %d toggling status of user %d", currentUser.ID, targetUser.ID)
 			targetUser.IsActive = !targetUser.IsActive
 			config.DB.Save(&targetUser)
 		}
@@ -203,7 +212,9 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method == http.MethodGet && targetUser.IsStaff {
+	if r.Method == http.MethodPost && targetUser.IsStaff {
+		currentUser := GetUserFromContext(r).(*models.User)
+		log.Printf("[Security][Admin] User %d changing staff role of user %d", currentUser.ID, targetUser.ID)
 		targetUser.IsStaff = false
 		targetUser.DepartmentID = nil
 		config.DB.Save(&targetUser)
@@ -239,10 +250,13 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 		deptID, _ := strconv.Atoi(deptIDStr)
 		deptUID := uint(deptID)
 
+		currentUser := GetUserFromContext(r).(*models.User)
+		log.Printf("[Security][Admin] User %d changing staff role of user %d", currentUser.ID, targetUser.ID)
 		targetUser.IsStaff = true
 		targetUser.DepartmentID = &deptUID
 		if err := config.DB.Save(&targetUser).Error; err != nil {
-			http.Error(w, "Gagal mengubah user menjadi staff: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("[Security][Admin] Failed to change user to staff: %v", err)
+			http.Error(w, "Gagal mengubah user menjadi staff. Silakan coba lagi.", http.StatusInternalServerError)
 			return
 		}
 
@@ -362,7 +376,8 @@ func (h *AdminHandler) CreateDepartmentForm(w http.ResponseWriter, r *http.Reque
 		}
 
 		if err := config.DB.Create(&newDept).Error; err != nil {
-			http.Error(w, "Gagal membuat departemen: "+err.Error(), http.StatusInternalServerError)
+			log.Printf("[Security][Admin] Failed to create department: %v", err)
+			http.Error(w, "Gagal membuat departemen. Silakan coba lagi.", http.StatusInternalServerError)
 			return
 		}
 
@@ -622,13 +637,50 @@ func firstFormValue(v map[string][]string, key string) string {
 	return vals[0]
 }
 
+// saveUploadedFile menyimpan file upload dan memvalidasi magic bytes untuk keamanan.
 func saveUploadedFile(fh *multipart.FileHeader, dstPath string) error {
 	src, err := fh.Open()
 	if err != nil {
 		return err
 	}
 	defer src.Close()
-	dst, err := os.Create(dstPath)
+
+	// [Security] Validasi magic bytes — pastikan file benar-benar gambar
+	header := make([]byte, 512)
+	n, err := src.Read(header)
+	if err != nil {
+		return fmt.Errorf("[Security][Upload] Failed to read file header: %w", err)
+	}
+	header = header[:n]
+
+	contentType := http.DetectContentType(header)
+	allowedTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/gif":  true,
+		"image/webp": true,
+	}
+	if !allowedTypes[contentType] {
+		log.Printf("[Security][Upload] BLOCKED: file %q has content-type %q, not an allowed image", fh.Filename, contentType)
+		return fmt.Errorf("file type not allowed: %s", contentType)
+	}
+
+	// Reset reader to beginning
+	if seeker, ok := src.(io.ReadSeeker); ok {
+		seeker.Seek(0, io.SeekStart)
+	} else {
+		src.Close()
+		src, _ = fh.Open()
+	}
+
+	// [Security] Sanitize filename — hapus path traversal
+	cleanName := filepath.Base(dstPath)
+	cleanDir := filepath.Dir(dstPath)
+	safePath := filepath.Join(cleanDir, cleanName)
+
+	log.Printf("[Security][Upload] Saving validated file: %s (type: %s, size: %d)", safePath, contentType, fh.Size)
+
+	dst, err := os.Create(safePath)
 	if err != nil {
 		return err
 	}

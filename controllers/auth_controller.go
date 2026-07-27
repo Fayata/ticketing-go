@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"ticketing/config"
@@ -62,8 +64,13 @@ func (c *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		sess.Save(r, w)
 
 		if nextParam != "" {
-			http.Redirect(w, r, config.Path(nextParam), http.StatusSeeOther)
-			return
+			// [Security] Validasi open redirect — hanya izinkan relative path internal
+			if strings.HasPrefix(nextParam, "/") && !strings.HasPrefix(nextParam, "//") && !strings.Contains(nextParam, ":") {
+				log.Printf("[Security][Redirect] Valid next redirect: %s for user %s", nextParam, user.Username)
+				http.Redirect(w, r, config.Path(nextParam), http.StatusSeeOther)
+				return
+			}
+			log.Printf("[Security][Redirect] BLOCKED open redirect attempt: %q by user %s", nextParam, user.Username)
 		}
 		// setelah login: admin -> dashboard admin, staff -> departemen, user -> dashboard
 		if user.IsSuperAdmin {
@@ -131,7 +138,6 @@ func (c *AuthController) ForgotPassword(w http.ResponseWriter, r *http.Request) 
 
 		err := c.authService.RequestPasswordReset(email)
 		if err != nil {
-			// Opsional: Handle error jika email tidak ditemukan (security best practice biasanya tidak memberitahu)
 		}
 
 		utils.RenderTemplate(w, "forgot_password.html", map[string]interface{}{

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,14 @@ type TicketService struct {
 
 func NewTicketService(jwtService *utils.JWTService) *TicketService {
 	return &TicketService{jwtService: jwtService}
+}
+
+// escapeLike escapes SQL LIKE wildcard characters to prevent wildcard injection.
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "%", "\\%")
+	s = strings.ReplaceAll(s, "_", "\\_")
+	return s
 }
 
 // DepartmentCount returns number of departments.
@@ -80,19 +89,20 @@ func (s *TicketService) GetMyTickets(userID uint, searchQuery, statusFilter, pri
 	query := config.DB.Preload("Department").Preload("Replies").Where("created_by_id = ?", userID)
 
 	if searchQuery != "" {
+		log.Printf("[Security][SQLi] Search query sanitized: original=%q escaped=%q", searchQuery, escapeLike(searchQuery))
 		cleanSearch := strings.TrimPrefix(strings.ToUpper(searchQuery), "T")
 		if ticketID, err := strconv.Atoi(cleanSearch); err == nil {
-			query = query.Where("id = ? OR title LIKE ? OR description LIKE ?", ticketID, "%"+searchQuery+"%", "%"+searchQuery+"%")
+			query = query.Where("id = ? OR title LIKE ? OR description LIKE ?", ticketID, "%"+escapeLike(searchQuery)+"%", "%"+escapeLike(searchQuery)+"%")
 		} else {
 			if len(cleanSearch) > 2 {
 				potentialIDStr := cleanSearch[2:]
 				if potentialID, err := strconv.Atoi(potentialIDStr); err == nil {
-					query = query.Where("id = ? OR title LIKE ? OR description LIKE ?", potentialID, "%"+searchQuery+"%", "%"+searchQuery+"%")
+					query = query.Where("id = ? OR title LIKE ? OR description LIKE ?", potentialID, "%"+escapeLike(searchQuery)+"%", "%"+escapeLike(searchQuery)+"%")
 				} else {
-					query = query.Where("title LIKE ? OR description LIKE ?", "%"+searchQuery+"%", "%"+searchQuery+"%")
+					query = query.Where("title LIKE ? OR description LIKE ?", "%"+escapeLike(searchQuery)+"%", "%"+escapeLike(searchQuery)+"%")
 				}
 			} else {
-				query = query.Where("title LIKE ? OR description LIKE ?", "%"+searchQuery+"%", "%"+searchQuery+"%")
+				query = query.Where("title LIKE ? OR description LIKE ?", "%"+escapeLike(searchQuery)+"%", "%"+escapeLike(searchQuery)+"%")
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -182,6 +183,17 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 		http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
 		return
 	}
+
+	// [Security] Validasi department — staff hanya bisa akses tiket departemennya
+	var staffUser models.User
+	config.DB.Select("department_id").First(&staffUser, user.ID)
+	if staffUser.DepartmentID != nil && ticket.DepartmentID != nil && !user.IsSuperAdmin {
+		if *staffUser.DepartmentID != *ticket.DepartmentID {
+			log.Printf("[Security][AccessControl] BLOCKED: Staff %d (dept %d) tried to access ticket %d (dept %d)", user.ID, *staffUser.DepartmentID, ticket.ID, *ticket.DepartmentID)
+			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Anda+tidak+memiliki+akses+ke+tiket+departemen+lain", http.StatusSeeOther)
+			return
+		}
+	}
 	isOwner := false
 	if ticket.AssignedToID != nil && *ticket.AssignedToID == user.ID {
 		isOwner = true
@@ -327,6 +339,17 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 
 	var ticket models.Ticket
 	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err == nil {
+		// [Security] Validasi department — staff hanya bisa claim tiket departemennya
+		var claimStaff models.User
+		config.DB.Select("department_id").First(&claimStaff, user.ID)
+		if claimStaff.DepartmentID != nil && ticket.DepartmentID != nil {
+			if *claimStaff.DepartmentID != *ticket.DepartmentID {
+				log.Printf("[Security][AccessControl] BLOCKED: Staff %d tried to claim ticket %d from different department", user.ID, ticket.ID)
+				http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tidak+bisa+mengambil+tiket+departemen+lain", http.StatusSeeOther)
+				return
+			}
+		}
+
 		wasUnassigned := ticket.AssignedToID == nil
 		ticket.AssignedToID = &user.ID
 		ticket.Status = models.StatusInProgress
