@@ -18,7 +18,7 @@
 /* Sidebar hijau-teal (sama tema user) */
 .dept-sidebar {
     width: 260px;
-    background: linear-gradient(180deg, #d1fae5 0%, #cffafe 50%, #e0f2fe 100%);
+    background: #4DFFEA;
     color: #0f172a;
     display: flex;
     flex-direction: column;
@@ -73,7 +73,7 @@
 .dept-logo {
     font-size: 1.5rem;
     font-weight: 700;
-    background: linear-gradient(135deg, #059669, #0d9488);
+    background: #4DFFEA;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -137,7 +137,7 @@
 .dept-avatar-circle {
     width: 3rem;
     height: 3rem;
-    background: linear-gradient(135deg, #059669, #0d9488);
+    background: #4DFFEA;
     color: white;
     border-radius: 50%;
     display: flex;
@@ -217,7 +217,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1.25rem;
-    background: linear-gradient(135deg, #059669, #0d9488);
+    background: #4DFFEA;
     color: #ffffff;
     border: none;
     border-radius: 0.5rem;
@@ -229,7 +229,7 @@
     box-sizing: border-box;
 }
 .btn-primary:hover {
-    background: linear-gradient(135deg, #047857, #0f766e);
+    background: #4DFFEA;
     transform: translateY(-1px);
 }
 
@@ -404,7 +404,7 @@
     position: absolute;
     bottom: 0;
     width: 100%;
-    background: linear-gradient(to top, #34d399, #059669);
+    background: #4DFFEA;
     border-radius: 0.5rem 0.5rem 0 0;
     transition: height 0.5s ease;
     display: flex;
@@ -413,7 +413,7 @@
 }
 
 .chart-fill:hover {
-    background: linear-gradient(to top, #10b981, #0d9488);
+    background: #4DFFEA;
 }
 
 .chart-value-label {
@@ -538,7 +538,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 1.25rem;
-    background: linear-gradient(135deg, #059669, #0d9488);
+    background: #4DFFEA;
     color: white;
     border: none;
     border-radius: 0.5rem;
@@ -549,7 +549,7 @@
     text-decoration: none;
 }
 .kb-admin .btn-primary:hover {
-    background: linear-gradient(135deg, #047857, #0f766e);
+    background: #4DFFEA;
     transform: translateY(-1px);
 }
 .kb-admin .btn-outline-teal {
@@ -871,7 +871,7 @@
 .staff-kpi-purple { border-top-color: var(--sd-purple-500); }
 .staff-kpi-purple::after { background: var(--sd-purple-500); }
 .staff-kpi-highlight {
-    background: linear-gradient(135deg, var(--sd-green-500), rgba(16, 185, 129, 0.85));
+    background: #4DFFEA;
     border-top: none;
 }
 .staff-kpi-highlight::after { background: rgba(255,255,255,.12); }
@@ -1106,7 +1106,7 @@
     color: #e5e7eb;
 }
 :root[data-theme="dark"] .dept-sidebar {
-    background: linear-gradient(180deg, #0b1b1a 0%, #071a23 50%, #0b1220 100%);
+    background: #4DFFEA;
     border-right-color: rgba(148, 163, 184, 0.15);
     color: #e5e7eb;
 }
@@ -1114,7 +1114,7 @@
     border-bottom-color: rgba(148, 163, 184, 0.15);
 }
 :root[data-theme="dark"] .dept-logo {
-    background: linear-gradient(135deg, #34d399, #22d3ee);
+    background: #4DFFEA;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

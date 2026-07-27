@@ -104,7 +104,7 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 9999px;
-    background: linear-gradient(135deg, var(--primary-red), var(--secondary-red));
+    background: #4DFFEA;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -115,7 +115,7 @@
 }
 
 .author-avatar.staff {
-    background: linear-gradient(135deg, var(--success-color), #059669);
+    background: #4DFFEA;
 }
 
 .author-name {

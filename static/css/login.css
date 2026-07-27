@@ -40,7 +40,7 @@
     --shadow-xl: 0 50px 120px rgba(0, 0, 0, 0.9);
     
     /* Transition */
-    --login-card-bg: linear-gradient(160deg, #0d2137 0%, #0f2d2a 55%, #0d1f2d 100%);
+    --login-card-bg: #4DFFEA;
     --login-title-color: #f0fdf9;
     --login-subtitle-color: rgba(167, 220, 201, 0.65);
     --login-input-bg: rgba(15, 23, 42, 0.85);
@@ -62,7 +62,7 @@
     --text-light: #94a3b8;
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
-    --bg-gradient: linear-gradient(135deg, #d1fae5 0%, #cffafe 50%, #e0f2fe 100%);
+    --bg-gradient: #4DFFEA;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -122,7 +122,7 @@ body {
     top: 0;
     bottom: 0;
     width: 4px;
-    background: linear-gradient(180deg, var(--primary-red), var(--secondary-red));
+    background: #4DFFEA;
     border-radius: 4px 0 0 4px;
 }
 
@@ -226,7 +226,7 @@ body {
     justify-content: center;
     width: 4rem;
     height: 4rem;
-    background: linear-gradient(135deg, #10b981, #0891b2);
+    background: #4DFFEA;
     border-radius: 50%;
     margin-bottom: 1rem;
     box-shadow: var(--shadow-lg);
