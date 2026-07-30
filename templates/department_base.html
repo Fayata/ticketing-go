@@ -8,7 +8,7 @@
     <title>{{.title}}</title>
     <script>
       (function(){
-        var t = localStorage.getItem('theme') || 'dark';
+        var d = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; var t = localStorage.getItem('theme') || d;
         document.documentElement.setAttribute('data-theme', t);
       })();
     </script>

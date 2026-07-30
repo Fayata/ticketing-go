@@ -104,7 +104,7 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 9999px;
-    background: #4DFFEA;
+    background: var(--brand-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -115,7 +115,7 @@
 }
 
 .author-avatar.staff {
-    background: #4DFFEA;
+    background: var(--brand-color);
 }
 
 .author-name {

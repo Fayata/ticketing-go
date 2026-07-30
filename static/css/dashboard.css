@@ -112,7 +112,7 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 260px;
-    background: #4DFFEA;
+    background: var(--brand-color);
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -139,7 +139,7 @@ body {
 .logo {
     font-size: 1.25rem;
     font-weight: 700;
-    background: #4DFFEA;
+    background: var(--brand-color);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -203,14 +203,14 @@ body {
 
 /* Dark mode: selaraskan dengan tema admin/staff (navy + teal) */
 :root[data-theme="dark"] .sidebar {
-    background: #4DFFEA;
+    background: var(--brand-color);
     border-right-color: rgba(148, 163, 184, 0.15);
 }
 :root[data-theme="dark"] .sidebar-header {
     border-bottom-color: rgba(148, 163, 184, 0.15);
 }
 :root[data-theme="dark"] .logo {
-    background: #4DFFEA;
+    background: var(--brand-color);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -283,7 +283,7 @@ body {
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 9999px;
-    background: #4DFFEA;
+    background: var(--brand-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -494,7 +494,7 @@ body {
 
 /* Welcome Banner */
 .welcome-banner {
-    background: #4DFFEA;
+    background: var(--brand-color);
     border-radius: var(--radius-lg);
     padding: 2rem;
     color: white;
@@ -994,7 +994,7 @@ body {
 
 /* CTA Card */
 .cta-card {
-    background: #4DFFEA;
+    background: var(--brand-color);
     border-radius: var(--radius-lg);
     padding: 1.5rem;
     border: 1px solid #e9d5ff;
@@ -1187,7 +1187,7 @@ body {
 }
 
 .welcome-banner.department-banner {
-    background: #4DFFEA;
+    background: var(--brand-color);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1252,7 +1252,7 @@ body {
 .kb-hero {
     border-radius: 18px;
     padding: 2.8rem 2.5rem;
-    background: #4DFFEA;
+    background: var(--brand-color);
     position: relative;
     overflow: hidden;
     text-align: center;
@@ -1263,7 +1263,7 @@ body {
     position: absolute;
     top: -100px; right: -100px;
     width: 360px; height: 360px;
-    background: #4DFFEA;
+    background: var(--brand-color);
     pointer-events: none;
 }
 .kb-hero::after {
@@ -1271,7 +1271,7 @@ body {
     position: absolute;
     bottom: -80px; left: 30%;
     width: 280px; height: 280px;
-    background: #4DFFEA;
+    background: var(--brand-color);
     pointer-events: none;
 }
 .kb-hero-icon { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; position: relative; z-index: 1; }
@@ -1346,7 +1346,7 @@ body {
     right: 6px; top: 50%;
     transform: translateY(-50%);
     padding: 0.5rem 1rem;
-    background: #4DFFEA;
+    background: var(--brand-color);
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -1432,7 +1432,7 @@ body {
 .article-num {
     width: 28px; height: 28px;
     border-radius: 8px;
-    background: #4DFFEA;
+    background: var(--brand-color);
     display: flex; align-items: center; justify-content: center;
     font-size: 0.72rem; font-weight: 700;
     color: #059669;
@@ -1524,7 +1524,7 @@ body {
 .feedback-banner {
     border-radius: 14px;
     padding: 1.5rem 2rem;
-    background: #4DFFEA;
+    background: var(--brand-color);
     border: 1px solid rgba(16,185,129,0.2);
     display: flex;
     align-items: center;
@@ -1554,7 +1554,7 @@ body {
     padding: 0.55rem 1.2rem;
     border-radius: 9px;
     border: none;
-    background: #4DFFEA;
+    background: var(--brand-color);
     color: #fff;
     font-size: 0.82rem; font-weight: 600;
     cursor: pointer;

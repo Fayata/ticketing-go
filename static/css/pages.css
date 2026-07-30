@@ -1,3 +1,11 @@
+:root,
+:root[data-theme="light"] {
+    --brand-color: #059669; /* Darker green for light theme */
+}
+:root[data-theme="dark"] {
+    --brand-color: #4DFFEA; /* Brighter neon green for dark theme */
+}
+
 /* Common Page Styles (success, error pages) */
 
 /* Alert styles */
