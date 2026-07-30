@@ -32,10 +32,12 @@ const (
 type AdminHandler struct {
 	cfg              *config.Config
 	adminDashService *services.AdminDashboardService
+	aiService        *services.AIService
+	adminSearch      *services.AdminSearchService
 }
 
-func NewAdminHandler(cfg *config.Config, adminDashService *services.AdminDashboardService) *AdminHandler {
-	return &AdminHandler{cfg: cfg, adminDashService: adminDashService}
+func NewAdminHandler(cfg *config.Config, adminDashService *services.AdminDashboardService, aiService *services.AIService, adminSearch *services.AdminSearchService) *AdminHandler {
+	return &AdminHandler{cfg: cfg, adminDashService: adminDashService, aiService: aiService, adminSearch: adminSearch}
 }
 
 // ShowAdminDashboard menampilkan halaman dashboard admin: KPI, grafik, tiket terbaru, menunggu terlama.
@@ -930,4 +932,32 @@ func (h *AdminHandler) DeleteKBArticle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, config.Path("/admin/knowledge-base")+"?success=Artikel+berhasil+dihapus", http.StatusSeeOther)
+}
+
+// SearchAdmin handles the natural language search via Google AI
+func (h *AdminHandler) SearchAdmin(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Redirect(w, r, config.Path("admin/dashboard"), http.StatusSeeOther)
+		return
+	}
+
+	filters, err := h.aiService.TranslateQueryToFilters(r.Context(), query)
+	if err != nil {
+		log.Printf("Error translating query via AI: %v", err)
+		// Fallback to basic keyword search if AI fails
+		filters = services.AIFilters{Keyword: query}
+	}
+
+	tickets, err := h.adminSearch.SearchTickets(filters)
+	if err != nil {
+		log.Printf("Error searching tickets: %v", err)
+	}
+
+	utils.RenderTemplate(w, "admin_search_results", map[string]interface{}{
+		"title":   "Hasil Pencarian: " + query,
+		"query":   query,
+		"filters": filters,
+		"tickets": tickets,
+	})
 }

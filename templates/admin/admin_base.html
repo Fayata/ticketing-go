@@ -77,7 +77,11 @@
                     <h2 style="font-size:1.5rem; font-weight:700; margin:0;">{{if .page_title}}{{.page_title}}{{else}}Admin{{end}}</h2>
                     <p style="color:#6b7280; margin:0.25rem 0 0 0;">{{if .page_subtitle}}{{.page_subtitle}}{{else}}Kelola sistem ticketing{{end}}</p>
                 </div>
-                <div class="dept-header-actions">
+                <div class="dept-header-actions" style="display: flex; gap: 1rem; align-items: center;">
+                    <form action="admin/search" method="GET" class="search-form" style="display: flex; align-items: center; background: rgba(0,0,0,0.05); border-radius: 8px; padding: 0.25rem 0.75rem;">
+                        <span style="font-size: 1.1rem; margin-right: 0.5rem; color: #64748b;">🔍</span>
+                        <input type="text" name="q" placeholder="Smart Search (e.g., tiket rusak bulan lalu)" style="border: none; background: transparent; outline: none; padding: 0.5rem; width: 300px; color: inherit;">
+                    </form>
                     <button type="button" class="dept-theme-toggle" id="themeToggle" data-theme-toggle aria-label="Toggle theme">🌙</button>
                 </div>
             </header>

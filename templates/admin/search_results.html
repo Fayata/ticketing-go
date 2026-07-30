@@ -1,0 +1,95 @@
+{{define "admin_search_results"}}
+{{template "admin_base" .}}
+{{end}}
+
+{{define "admin/search_results_content"}}
+<link rel="stylesheet" href="static/css/admin_dashboard.css">
+<div class="admin-dash">
+	<div class="admin-dash-header">
+		<div>
+			<h1 class="admin-dash-title">Smart Search Results</h1>
+			<p class="admin-dash-subtitle">
+                Pencarian untuk: <strong>"{{.query}}"</strong>
+            </p>
+		</div>
+	</div>
+
+    <!-- Tampilkan Interpretasi AI -->
+    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <h3 style="margin-top:0; font-size: 1rem; color: #059669; display: flex; align-items: center; gap: 0.5rem;">
+            🔍 AI Filter Interpretation
+        </h3>
+        <p style="margin: 0; font-size: 0.9rem; color: inherit;">
+            Berdasarkan pencarian Anda, AI menyaring data dengan parameter: 
+            {{if .filters.Department}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Dept: <b>{{.filters.Department}}</b></span>{{end}}
+            {{if .filters.Status}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Status: <b>{{.filters.Status}}</b></span>{{end}}
+            {{if .filters.Priority}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Priority: <b>{{.filters.Priority}}</b></span>{{end}}
+            {{if .filters.Keyword}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Keyword: <b>"{{.filters.Keyword}}"</b></span>{{end}}
+            {{if and (not .filters.Department) (not .filters.Status) (not .filters.Priority) (not .filters.Keyword)}}
+                <em>Semua tiket</em>
+            {{end}}
+        </p>
+    </div>
+
+	<!-- Results Table -->
+	<div class="admin-card">
+		<div class="admin-card-header">
+			<h2 class="admin-card-title">Ditemukan {{len .tickets}} tiket</h2>
+		</div>
+		<div class="admin-table-container">
+			<table class="admin-table">
+				<thead>
+					<tr>
+						<th>ID Tiket</th>
+						<th>Judul</th>
+						<th>Departemen</th>
+						<th>Status</th>
+						<th>Prioritas</th>
+						<th>Pemohon</th>
+						<th>Tanggal</th>
+					</tr>
+				</thead>
+				<tbody>
+					{{if .tickets}}
+						{{range .tickets}}
+						<tr>
+							<td style="font-weight: 500;">
+                                <a href="department/tickets/{{.ID}}" style="color: inherit; text-decoration: none;">#{{.ID}}</a>
+                            </td>
+							<td>{{.Title}}</td>
+							<td>
+								{{if .Department}}
+								<span class="admin-badge admin-badge-info">{{.Department.Name}}</span>
+								{{else}}
+								<span style="color:#94a3b8">-</span>
+								{{end}}
+							</td>
+							<td>
+								{{if eq .Status "OPEN"}}<span class="admin-badge admin-badge-info">Open</span>{{end}}
+								{{if eq .Status "IN_PROGRESS"}}<span class="admin-badge admin-badge-warning">In Progress</span>{{end}}
+								{{if eq .Status "RESOLVED"}}<span class="admin-badge admin-badge-success">Resolved</span>{{end}}
+								{{if eq .Status "CLOSED"}}<span class="admin-badge" style="background:#e2e8f0;color:#475569;">Closed</span>{{end}}
+							</td>
+							<td>
+								{{if eq .Priority "LOW"}}<span class="admin-badge admin-badge-success">Low</span>{{end}}
+								{{if eq .Priority "MEDIUM"}}<span class="admin-badge admin-badge-info">Medium</span>{{end}}
+								{{if eq .Priority "HIGH"}}<span class="admin-badge admin-badge-warning">High</span>{{end}}
+								{{if eq .Priority "URGENT"}}<span class="admin-badge admin-badge-danger">Urgent</span>{{end}}
+							</td>
+							<td>{{if .User}}{{.User.Name}}{{else}}-{{end}}</td>
+							<td style="color:#64748b; font-size:0.875rem;">{{.CreatedAt.Format "02 Jan 06 15:04"}}</td>
+						</tr>
+						{{end}}
+					{{else}}
+						<tr>
+							<td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">
+								Tidak ada tiket yang cocok dengan pencarian Anda.
+							</td>
+						</tr>
+					{{end}}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+{{end}}

@@ -9,3 +9,4 @@ static/uploads/
 graphify-out/
 .agents/rules/graphify.md
 .agents/workflows/graphify.md
+.env

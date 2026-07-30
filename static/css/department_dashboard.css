@@ -74,9 +74,9 @@
     font-size: 1.5rem;
     font-weight: 700;
     background: var(--brand-color);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    
+    
+    
 }
 
 .dept-nav {
@@ -1115,9 +1115,9 @@
 }
 :root[data-theme="dark"] .dept-logo {
     background: var(--brand-color);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    
+    
+    
 }
 :root[data-theme="dark"] .dept-nav-item { color: rgba(226, 232, 240, 0.75); }
 :root[data-theme="dark"] .dept-nav-item:hover { background-color: rgba(16, 185, 129, 0.12); color: #34d399; }
@@ -1296,3 +1296,4 @@
 :root[data-theme="dark"] .card table td span[style*=\"background:#eff6ff\"] { background: #0b1220 !important; color: #bfdbfe !important; border-color: #1d4ed8 !important; }
 :root[data-theme="dark"] .card table td span[style*=\"color:#6b7280\"] { color: #9ca3af !important; }
 :root[data-theme="dark"] .card table td span[style*=\"color:#111827\"] { color: #e5e7eb !important; }
+.dept-sidebar, .dept-sidebar a, .dept-sidebar span, .dept-sidebar h1, .dept-sidebar svg, .dept-nav-item, :root[data-theme='dark'] .dept-nav-item { color: var(--sidebar-text-color) !important; }
