@@ -48,7 +48,7 @@ func (s *AIService) TranslateQueryToFilters(ctx context.Context, naturalQuery st
 		return AIFilters{Keyword: naturalQuery}, nil
 	}
 
-	model := s.client.GenerativeModel("gemini-1.5-flash")
+	model := s.client.GenerativeModel("gemini-3.5-flash")
 	model.ResponseMIMEType = "application/json"
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{

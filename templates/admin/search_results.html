@@ -76,7 +76,7 @@
 								{{if eq .Priority "HIGH"}}<span class="admin-badge admin-badge-warning">High</span>{{end}}
 								{{if eq .Priority "URGENT"}}<span class="admin-badge admin-badge-danger">Urgent</span>{{end}}
 							</td>
-							<td>{{if .User}}{{.User.Name}}{{else}}-{{end}}</td>
+							<td>{{if .CreatedBy}}{{.CreatedBy.Name}}{{else}}-{{end}}</td>
 							<td style="color:#64748b; font-size:0.875rem;">{{.CreatedAt.Format "02 Jan 06 15:04"}}</td>
 						</tr>
 						{{end}}

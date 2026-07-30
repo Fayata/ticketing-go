@@ -16,7 +16,7 @@ func NewAdminSearchService() *AdminSearchService {
 // SearchTickets queries the database based on AI generated filters.
 func (s *AdminSearchService) SearchTickets(filters AIFilters) ([]models.Ticket, error) {
 	var tickets []models.Ticket
-	query := config.DB.Preload("Department").Preload("User")
+	query := config.DB.Preload("Department").Preload("CreatedBy")
 
 	// Apply Department filter
 	if filters.Department != "" {
