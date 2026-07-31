@@ -3,56 +3,234 @@
 {{end}}
 
 {{define "admin/user_form_content"}}
-<div class="form-container">
-    <div class="form-header">
-        <h2>Buat Akun Baru</h2>
-        <p>Set akun sebagai <strong>User</strong>, <strong>Staff</strong>, atau <strong>Admin</strong> sesuai kebutuhan.</p>
-    </div>
-    
-    <form method="POST" action="admin/users/create">
-        <div class="form-group full-width">
-            <label>Username</label>
-            <input type="text" name="username" class="form-input" required>
-        </div>
-        
-        <div class="form-group full-width">
-            <label>Email</label>
-            <input type="email" name="email" class="form-input" required>
-        </div>
+<style>
+/* Breadcrumb */
+.uf-breadcrumb { font-size: 0.875rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+.uf-breadcrumb a { color: #059669; text-decoration: none; font-weight: 500; }
+.uf-breadcrumb a:hover { text-decoration: underline; }
+.uf-breadcrumb span { color: #94a3b8; }
+.uf-breadcrumb .uf-bc-current { color: var(--text-primary, #1e293b); font-weight: 600; }
 
-        <div class="form-group full-width">
-            <label>Password</label>
-            <input type="password" name="password" class="form-input" required>
-        </div>
+/* Two-column layout */
+.uf-layout { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1.5rem; align-items: start; }
+@media (max-width: 900px) { .uf-layout { grid-template-columns: 1fr; } }
 
-        <div class="form-group full-width">
-            <label>Role</label>
-            <select name="role" id="roleSelect" class="form-input" onchange="toggleDepartment()">
-                <option value="user">User</option>
-                <option value="staff">Staff</option>
-                <option value="admin">Admin</option>
-            </select>
-            <small style="color:#6b7280; font-size:0.85rem; margin-top:0.25rem; display:block;">
-                User: hanya buat & lihat tiket sendiri. Staff: menjawab tiket per departemen. Admin: kelola user & departemen.
-            </small>
-        </div>
+/* Card */
+.uf-card { background: var(--bg-primary, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; padding: 1.75rem; }
+.uf-card-title { font-size: 1.1rem; font-weight: 700; margin: 0 0 0.25rem 0; color: var(--text-primary, #1e293b); }
+.uf-card-desc { font-size: 0.875rem; color: #64748b; margin: 0 0 1.5rem 0; }
 
-        <div class="form-group full-width" id="deptContainer" style="display:none;">
-            <label>Pilih Departemen (Wajib untuk Staff)</label>
-            <select name="department_id" class="form-input">
-                <option value="">-- Pilih Departemen --</option>
-                {{range .departments}}
-                <option value="{{.ID}}">{{.Name}}</option>
-                {{end}}
-            </select>
-        </div>
+/* Form fields */
+.uf-field { margin-bottom: 1.25rem; }
+.uf-field label { display: block; font-size: 0.875rem; font-weight: 600; color: var(--text-primary, #374151); margin-bottom: 0.35rem; }
+.uf-field label .uf-hint { font-weight: 400; color: #94a3b8; font-size: 0.8rem; margin-left: 0.25rem; }
+.uf-field input, .uf-field select {
+    width: 100%; padding: 0.65rem 0.85rem; box-sizing: border-box;
+    border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; font-size: 0.95rem;
+    background: var(--bg-primary, #fff); color: var(--text-primary, #1e293b);
+    transition: border-color 0.2s, box-shadow 0.2s; font-family: inherit;
+}
+.uf-field input:focus, .uf-field select:focus {
+    outline: none; border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
+}
+.uf-field input::placeholder { color: #94a3b8; }
 
-        <div class="form-actions">
-            <a href="admin/users" class="btn-cancel">Batal</a>
-            <button type="submit" class="btn-submit">Simpan User</button>
-        </div>
-    </form>
+/* Password wrapper */
+.uf-pw-wrap { position: relative; }
+.uf-pw-wrap input { padding-right: 2.75rem; }
+.uf-pw-toggle { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 1.1rem; padding: 0.25rem; }
+.uf-pw-toggle:hover { color: #64748b; }
+
+/* Role radios */
+.uf-role-group { display: flex; flex-direction: column; gap: 0; }
+.uf-role-option { display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.85rem; border: 1px solid var(--border-color, #e2e8f0); cursor: pointer; transition: background 0.15s; font-size: 0.95rem; color: var(--text-primary, #1e293b); }
+.uf-role-option:first-child { border-radius: 8px 8px 0 0; }
+.uf-role-option:last-child { border-radius: 0 0 8px 8px; }
+.uf-role-option:not(:last-child) { border-bottom: none; }
+.uf-role-option:hover { background: rgba(5,150,105,0.04); }
+.uf-role-option.active { background: rgba(5,150,105,0.06); border-color: #059669; }
+.uf-role-option input[type="radio"] { accent-color: #059669; width: 1rem; height: 1rem; margin: 0; }
+.uf-role-option .uf-role-name { font-weight: 600; }
+.uf-role-option .uf-role-desc { color: #64748b; font-size: 0.875rem; }
+
+/* Dept select (conditional) */
+.uf-dept-container { margin-top: 1rem; display: none; }
+.uf-dept-container.visible { display: block; }
+
+/* Actions */
+.uf-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color, #e2e8f0); }
+.uf-btn-cancel { padding: 0.6rem 1.25rem; border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; background: var(--bg-primary, #fff); color: var(--text-primary, #374151); font-size: 0.9rem; font-weight: 500; cursor: pointer; text-decoration: none; transition: background 0.15s; }
+.uf-btn-cancel:hover { background: rgba(0,0,0,0.03); }
+.uf-btn-submit { padding: 0.6rem 1.5rem; border: none; border-radius: 8px; background: #059669; color: #fff; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.15s; display: flex; align-items: center; gap: 0.4rem; }
+.uf-btn-submit:hover { background: #047857; }
+
+/* Preview Card */
+.uf-preview-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; margin-bottom: 1rem; }
+.uf-avatar { width: 48px; height: 48px; border-radius: 10px; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; }
+.uf-preview-name { font-size: 1.1rem; font-weight: 700; color: var(--text-primary, #1e293b); margin: 0; }
+.uf-preview-email { font-size: 0.85rem; color: #94a3b8; margin: 0.15rem 0 1rem 0; }
+.uf-preview-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-top: 1px solid var(--border-color, #f1f5f9); font-size: 0.9rem; }
+.uf-preview-row .uf-pr-label { color: #64748b; }
+.uf-preview-row .uf-pr-value { font-weight: 500; color: var(--text-primary, #1e293b); }
+.uf-preview-row .uf-pr-badge { background: #059669; color: #fff; padding: 2px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+
+/* Notes */
+.uf-notes-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #64748b; margin: 1.5rem 0 0.75rem 0; }
+.uf-notes ul { margin: 0; padding-left: 1.25rem; }
+.uf-notes li { font-size: 0.875rem; color: #64748b; line-height: 1.7; }
+.uf-notes li strong { color: var(--text-primary, #1e293b); }
+</style>
+
+<!-- Breadcrumb -->
+<div class="uf-breadcrumb">
+    <a href="admin/users">Manajemen User</a>
+    <span>/</span>
+    <span class="uf-bc-current">Tambah User</span>
 </div>
 
-<script src="static/js/user-form.js"></script>
+<div class="uf-layout">
+    <!-- LEFT: Form Card -->
+    <div class="uf-card">
+        <h2 class="uf-card-title">Buat Akun Baru</h2>
+        <p class="uf-card-desc">Set akun sebagai User, Staff, atau Admin sesuai kebutuhan.</p>
+
+        <form method="POST" action="admin/users/create" id="userForm">
+            <div class="uf-field">
+                <label>Username</label>
+                <input type="text" name="username" id="ufUsername" placeholder="username" required autocomplete="off">
+            </div>
+
+            <div class="uf-field">
+                <label>Email</label>
+                <input type="email" name="email" id="ufEmail" placeholder="nama@mnk.co.id" required autocomplete="off">
+            </div>
+
+            <div class="uf-field">
+                <label>Password <span class="uf-hint">min. 8 karakter</span></label>
+                <div class="uf-pw-wrap">
+                    <input type="password" name="password" id="ufPassword" placeholder="••••••••••" required minlength="8">
+                    <button type="button" class="uf-pw-toggle" onclick="togglePw()" aria-label="Tampilkan password">👁</button>
+                </div>
+            </div>
+
+            <div class="uf-field">
+                <label>Role</label>
+                <div class="uf-role-group" id="ufRoleGroup">
+                    <label class="uf-role-option active">
+                        <input type="radio" name="role" value="user" checked>
+                        <span><span class="uf-role-name">User</span> <span class="uf-role-desc">Hanya buat & lihat tiket sendiri.</span></span>
+                    </label>
+                    <label class="uf-role-option">
+                        <input type="radio" name="role" value="staff">
+                        <span><span class="uf-role-name">Staff</span> <span class="uf-role-desc">Menjawab tiket per departemen.</span></span>
+                    </label>
+                    <label class="uf-role-option">
+                        <input type="radio" name="role" value="admin">
+                        <span><span class="uf-role-name">Admin</span> <span class="uf-role-desc">Kelola user & departemen.</span></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="uf-dept-container" id="ufDeptContainer">
+                <div class="uf-field">
+                    <label>Pilih Departemen <span class="uf-hint">(Wajib untuk Staff)</span></label>
+                    <select name="department_id" id="ufDept">
+                        <option value="">-- Pilih Departemen --</option>
+                        {{range .departments}}
+                        <option value="{{.ID}}">{{.Name}}</option>
+                        {{end}}
+                    </select>
+                </div>
+            </div>
+
+            <div class="uf-actions">
+                <a href="admin/users" class="uf-btn-cancel">Batal</a>
+                <button type="submit" class="uf-btn-submit">✓ Simpan User</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- RIGHT: Preview + Notes -->
+    <div>
+        <div class="uf-card">
+            <div class="uf-preview-label">Preview Akun</div>
+            <div class="uf-avatar" id="pvAvatar">A</div>
+            <p class="uf-preview-name" id="pvName">username</p>
+            <p class="uf-preview-email" id="pvEmail">belum diisi</p>
+            <div class="uf-preview-row">
+                <span class="uf-pr-label">Role</span>
+                <span class="uf-pr-badge" id="pvRole">User</span>
+            </div>
+            <div class="uf-preview-row">
+                <span class="uf-pr-label">Akses tiket</span>
+                <span class="uf-pr-value" id="pvAccess">Miliknya sendiri</span>
+            </div>
+            <div class="uf-preview-row">
+                <span class="uf-pr-label">Status</span>
+                <span class="uf-pr-value">Aktif</span>
+            </div>
+        </div>
+
+        <div class="uf-card" style="margin-top: 1rem;">
+            <div class="uf-preview-label">Catatan</div>
+            <div class="uf-notes">
+                <ul>
+                    <li><strong>User</strong> cocok untuk pelapor/karyawan biasa.</li>
+                    <li><strong>Staff</strong> perlu di-assign ke departemen setelah dibuat.</li>
+                    <li><strong>Admin</strong> punya akses penuh — batasi jumlahnya.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+    var usernameEl = document.getElementById('ufUsername');
+    var emailEl = document.getElementById('ufEmail');
+    var roleRadios = document.querySelectorAll('input[name="role"]');
+    var roleOptions = document.querySelectorAll('.uf-role-option');
+    var deptContainer = document.getElementById('ufDeptContainer');
+    var pvAvatar = document.getElementById('pvAvatar');
+    var pvName = document.getElementById('pvName');
+    var pvEmail = document.getElementById('pvEmail');
+    var pvRole = document.getElementById('pvRole');
+    var pvAccess = document.getElementById('pvAccess');
+
+    var roleMap = { user: 'User', staff: 'Staff', admin: 'Admin' };
+    var accessMap = { user: 'Miliknya sendiri', staff: 'Tiket departemen', admin: 'Semua tiket' };
+
+    function updatePreview() {
+        var u = usernameEl.value.trim() || 'username';
+        var e = emailEl.value.trim() || 'belum diisi';
+        var role = 'user';
+        roleRadios.forEach(function(r){ if(r.checked) role = r.value; });
+
+        pvAvatar.textContent = u.charAt(0).toUpperCase();
+        pvName.textContent = u;
+        pvEmail.textContent = e;
+        pvRole.textContent = roleMap[role] || 'User';
+        pvAccess.textContent = accessMap[role] || 'Miliknya sendiri';
+
+        deptContainer.classList.toggle('visible', role === 'staff');
+
+        roleOptions.forEach(function(opt){
+            var radio = opt.querySelector('input[type="radio"]');
+            opt.classList.toggle('active', radio.checked);
+        });
+    }
+
+    usernameEl.addEventListener('input', updatePreview);
+    emailEl.addEventListener('input', updatePreview);
+    roleRadios.forEach(function(r){ r.addEventListener('change', updatePreview); });
+    updatePreview();
+})();
+
+function togglePw(){
+    var pw = document.getElementById('ufPassword');
+    var btn = pw.nextElementSibling;
+    if(pw.type === 'password'){ pw.type = 'text'; btn.textContent = '🙈'; }
+    else { pw.type = 'password'; btn.textContent = '👁'; }
+}
+</script>
 {{end}}

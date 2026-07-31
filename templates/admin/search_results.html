@@ -3,89 +3,136 @@
 {{end}}
 
 {{define "admin/search_results_content"}}
-<link rel="stylesheet" href="static/css/admin_dashboard.css">
-<div class="admin-dash">
+<style>
+/* AI Answer */
+.sr-ai-box { background: rgba(5,150,105,0.04); border: 1px solid rgba(5,150,105,0.15); border-left: 4px solid #059669; border-radius: 8px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+.sr-ai-title { font-size: 0.95rem; font-weight: 600; color: #059669; margin: 0 0 0.6rem 0; display: flex; align-items: center; gap: 0.4rem; }
+.sr-ai-body { font-size: 0.9rem; line-height: 1.75; color: var(--text-primary, #334155); white-space: pre-wrap; }
 
-    <!-- AI Answer Box -->
-    {{if .ai_answer}}
-    <div style="background: linear-gradient(135deg, rgba(5,150,105,0.08), rgba(5,150,105,0.03)); border: 1px solid rgba(5,150,105,0.25); padding: 1.25rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
-        <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem; color: #059669; display: flex; align-items: center; gap: 0.5rem;">
-            🔍 Jawaban AI
-        </h3>
-        <div style="font-size: 0.95rem; line-height: 1.7; color: inherit; white-space: pre-wrap;">{{.ai_answer}}</div>
-    </div>
+/* Filter bar */
+.sr-filter-bar { background: var(--bg-primary, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.sr-filter-label { color: #94a3b8; }
+.sr-filter-tag { background: var(--bg-secondary, #f1f5f9); padding: 2px 10px; border-radius: 6px; font-size: 0.825rem; color: var(--text-primary, #475569); }
+
+/* Results card */
+.sr-card { background: var(--bg-primary, #fff); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; overflow: hidden; }
+.sr-card-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; }
+.sr-card-title { font-size: 1rem; font-weight: 700; color: var(--text-primary, #1e293b); margin: 0; }
+.sr-card-count { font-size: 0.875rem; color: #059669; font-weight: 500; }
+
+/* Table */
+.sr-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.sr-table thead th { text-align: left; padding: 0.6rem 1.5rem; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; border-top: 1px solid var(--border-color, #e2e8f0); border-bottom: 1px solid var(--border-color, #e2e8f0); background: var(--bg-secondary, #f8fafc); }
+.sr-table tbody td { padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border-color, #f1f5f9); color: var(--text-primary, #334155); vertical-align: middle; }
+.sr-table tbody tr:last-child td { border-bottom: none; }
+.sr-table tbody tr:hover { background: rgba(0,0,0,0.015); }
+
+/* ID link */
+.sr-tid { font-weight: 600; color: var(--text-primary, #1e293b); }
+
+/* Department badge */
+.sr-dept { display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+.sr-dept-tech { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.sr-dept-cs { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.sr-dept-hr { background: rgba(168,85,247,0.1); color: #a855f7; }
+.sr-dept-fin { background: rgba(34,197,94,0.1); color: #22c55e; }
+.sr-dept-default { background: rgba(100,116,139,0.1); color: #64748b; }
+
+/* Status dot */
+.sr-status { display: flex; align-items: center; gap: 0.4rem; font-size: 0.875rem; }
+.sr-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sr-dot-open { background: #22c55e; }
+.sr-dot-progress { background: #3b82f6; }
+.sr-dot-closed { background: #94a3b8; }
+.sr-dot-waiting { background: #f59e0b; }
+
+/* Priority */
+.sr-prio-na { color: #cbd5e1; }
+
+/* Empty */
+.sr-empty { text-align: center; padding: 3rem 1rem; color: #94a3b8; }
+</style>
+
+<!-- AI Answer -->
+{{if .ai_answer}}
+<div class="sr-ai-box">
+    <div class="sr-ai-title">🔍 Jawaban AI</div>
+    <div class="sr-ai-body">{{.ai_answer}}</div>
+</div>
+{{end}}
+
+<!-- Filter bar -->
+<div class="sr-filter-bar">
+    <span class="sr-filter-label">Filter yang diterapkan:</span>
+    {{if .filters.Department}}<span class="sr-filter-tag">Dept: {{.filters.Department}}</span>{{end}}
+    {{if .filters.Status}}<span class="sr-filter-tag">Status: {{.filters.Status}}</span>{{end}}
+    {{if .filters.Priority}}<span class="sr-filter-tag">Priority: {{.filters.Priority}}</span>{{end}}
+    {{if .filters.Keyword}}<span class="sr-filter-tag">Keyword: "{{.filters.Keyword}}"</span>{{end}}
+    {{if and (not .filters.Department) (not .filters.Status) (not .filters.Priority) (not .filters.Keyword)}}
+        <span class="sr-filter-tag">Semua tiket</span>
     {{end}}
+</div>
 
-    <!-- AI Filter Interpretation -->
-    <div style="background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem;">
-        <span style="color: #64748b;">Filter yang diterapkan: </span>
-        {{if .filters.Department}}<span style="background: rgba(5,150,105,0.1); color: #059669; padding: 2px 8px; border-radius: 4px; margin-right: 4px; font-weight: 500;">Dept: {{.filters.Department}}</span>{{end}}
-        {{if .filters.Status}}<span style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 2px 8px; border-radius: 4px; margin-right: 4px; font-weight: 500;">Status: {{.filters.Status}}</span>{{end}}
-        {{if .filters.Priority}}<span style="background: rgba(245,158,11,0.1); color: #f59e0b; padding: 2px 8px; border-radius: 4px; margin-right: 4px; font-weight: 500;">Priority: {{.filters.Priority}}</span>{{end}}
-        {{if .filters.Keyword}}<span style="background: rgba(0,0,0,0.06); padding: 2px 8px; border-radius: 4px; margin-right: 4px;">Keyword: "{{.filters.Keyword}}"</span>{{end}}
-        {{if and (not .filters.Department) (not .filters.Status) (not .filters.Priority) (not .filters.Keyword)}}
-            <span style="color: #94a3b8;">Semua tiket</span>
-        {{end}}
+<!-- Results Table Card -->
+<div class="sr-card">
+    <div class="sr-card-header">
+        <h2 class="sr-card-title">Hasil Pencarian</h2>
+        <span class="sr-card-count">Ditemukan {{len .tickets}} tiket</span>
     </div>
-
-	<!-- Results Table -->
-	<div class="admin-card">
-		<div class="admin-card-header">
-			<h2 class="admin-card-title">Ditemukan {{len .tickets}} tiket</h2>
-		</div>
-		<div class="admin-table-container">
-			<table class="admin-table">
-				<thead>
-					<tr>
-						<th>ID Tiket</th>
-						<th>Judul</th>
-						<th>Departemen</th>
-						<th>Status</th>
-						<th>Prioritas</th>
-						<th>Pemohon</th>
-						<th>Tanggal</th>
-					</tr>
-				</thead>
-				<tbody>
-					{{if .tickets}}
-						{{range .tickets}}
-						<tr>
-							<td style="font-weight: 500;">
-                                <a href="department/tickets/{{.ID}}" style="color: #059669; text-decoration: none;">#{{.ID}}</a>
-                            </td>
-							<td>{{.Title}}</td>
-							<td>
-								{{if .Department}}
-								<span class="admin-badge admin-badge-info">{{.Department.Name}}</span>
-								{{else}}
-								<span style="color:#94a3b8">-</span>
-								{{end}}
-							</td>
-							<td>
-								{{if eq .Status "WAITING"}}<span class="admin-badge admin-badge-warning">Waiting</span>{{end}}
-								{{if eq .Status "IN_PROGRESS"}}<span class="admin-badge admin-badge-info">In Progress</span>{{end}}
-								{{if eq .Status "CLOSED"}}<span class="admin-badge" style="background:#e2e8f0;color:#475569;">Closed</span>{{end}}
-							</td>
-							<td>
-								{{if eq .Priority "LOW"}}<span class="admin-badge admin-badge-success">Low</span>{{end}}
-								{{if eq .Priority "MEDIUM"}}<span class="admin-badge admin-badge-info">Medium</span>{{end}}
-								{{if eq .Priority "HIGH"}}<span class="admin-badge admin-badge-warning">High</span>{{end}}
-								{{if eq .Priority "URGENT"}}<span class="admin-badge admin-badge-danger">Urgent</span>{{end}}
-							</td>
-							<td>{{if .CreatedBy}}{{getFullName .CreatedBy}}{{else}}-{{end}}</td>
-							<td style="color:#64748b; font-size:0.875rem;">{{.CreatedAt.Format "02 Jan 06 15:04"}}</td>
-						</tr>
-						{{end}}
-					{{else}}
-						<tr>
-							<td colspan="7" style="text-align: center; padding: 2rem; color: #64748b;">
-								Tidak ada tiket yang cocok dengan pencarian Anda.
-							</td>
-						</tr>
-					{{end}}
-				</tbody>
-			</table>
-		</div>
-	</div>
+    <table class="sr-table">
+        <thead>
+            <tr>
+                <th>ID Tiket</th>
+                <th>Judul</th>
+                <th>Departemen</th>
+                <th>Status</th>
+                <th>Prioritas</th>
+                <th>Pemohon</th>
+                <th>Tanggal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{if .tickets}}
+                {{range .tickets}}
+                <tr>
+                    <td class="sr-tid">#{{.ID}}</td>
+                    <td>{{.Title}}</td>
+                    <td>
+                        {{if .Department}}
+                            <span class="sr-dept sr-dept-default">{{.Department.Name}}</span>
+                        {{else}}
+                            <span style="color:#cbd5e1">—</span>
+                        {{end}}
+                    </td>
+                    <td>
+                        <div class="sr-status">
+                            {{if eq .Status "WAITING"}}
+                                <span class="sr-dot sr-dot-open"></span> Open
+                            {{else if eq .Status "IN_PROGRESS"}}
+                                <span class="sr-dot sr-dot-progress"></span> In Progress
+                            {{else if eq .Status "CLOSED"}}
+                                <span class="sr-dot sr-dot-closed"></span> Closed
+                            {{else}}
+                                <span class="sr-dot sr-dot-closed"></span> {{.Status}}
+                            {{end}}
+                        </div>
+                    </td>
+                    <td>
+                        {{if eq .Priority "LOW"}}Low
+                        {{else if eq .Priority "MEDIUM"}}Medium
+                        {{else if eq .Priority "HIGH"}}<span style="color:#f59e0b; font-weight:500;">High</span>
+                        {{else if eq .Priority "URGENT"}}<span style="color:#ef4444; font-weight:500;">Urgent</span>
+                        {{else}}<span class="sr-prio-na">—</span>
+                        {{end}}
+                    </td>
+                    <td>{{if .CreatedBy}}{{getFullName .CreatedBy}}{{else}}—{{end}}</td>
+                    <td style="color:#64748b; white-space:nowrap;">{{.CreatedAt.Format "02 Jan 06, 15:04"}}</td>
+                </tr>
+                {{end}}
+            {{else}}
+                <tr><td colspan="7" class="sr-empty">Tidak ada tiket yang cocok dengan pencarian Anda.</td></tr>
+            {{end}}
+        </tbody>
+    </table>
 </div>
 {{end}}
