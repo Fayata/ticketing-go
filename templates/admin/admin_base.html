@@ -116,6 +116,8 @@
                     {{template "admin/kb_category_edit_content" .}}
                 {{else if eq .template_name "admin/kb_article_edit"}}
                     {{template "admin/kb_article_edit_content" .}}
+                {{else if eq .template_name "admin/search_results"}}
+                    {{template "admin/search_results_content" .}}
                 {{else}}
                     {{template "admin/users_list_content" .}}
                 {{end}}

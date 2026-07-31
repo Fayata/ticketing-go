@@ -53,7 +53,7 @@ func (s *AIService) TranslateQueryToFilters(ctx context.Context, naturalQuery st
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{
 			genai.Text(`You are an AI Query Translator for a ticketing system database.
-Extract filter parameters from the user's natural language query.
+Extract filter parameters from the user's natural language query..
 Return ONLY a valid JSON object matching this schema:
 {
   "department": "string (extract department name if mentioned, e.g., 'IT', 'HR', 'Finance', else empty string)",

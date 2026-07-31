@@ -954,10 +954,15 @@ func (h *AdminHandler) SearchAdmin(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error searching tickets: %v", err)
 	}
 
-	utils.RenderTemplate(w, "admin_search_results", map[string]interface{}{
-		"title":   "Hasil Pencarian: " + query,
-		"query":   query,
-		"filters": filters,
-		"tickets": tickets,
+	data := utils.AddBaseData(r, map[string]interface{}{
+		"title":         "Hasil Pencarian: " + query,
+		"page_title":    "Smart Search Results",
+		"page_subtitle":  "Hasil pencarian AI untuk: \"" + query + "\"",
+		"template_name": "admin/search_results",
+		"nav_active":    "admin_search",
+		"query":         query,
+		"filters":       filters,
+		"tickets":       tickets,
 	})
+	utils.RenderTemplate(w, "admin_search_results", data)
 }
