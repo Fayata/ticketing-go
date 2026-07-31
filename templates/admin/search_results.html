@@ -5,30 +5,27 @@
 {{define "admin/search_results_content"}}
 <link rel="stylesheet" href="static/css/admin_dashboard.css">
 <div class="admin-dash">
-	<div class="admin-dash-header">
-		<div>
-			<h1 class="admin-dash-title">Smart Search Results</h1>
-			<p class="admin-dash-subtitle">
-                Pencarian untuk: <strong>"{{.query}}"</strong>
-            </p>
-		</div>
-	</div>
 
-    <!-- Tampilkan Interpretasi AI -->
-    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
-        <h3 style="margin-top:0; font-size: 1rem; color: #059669; display: flex; align-items: center; gap: 0.5rem;">
-            🔍 AI Filter Interpretation
+    <!-- AI Answer Box -->
+    {{if .ai_answer}}
+    <div style="background: linear-gradient(135deg, rgba(5,150,105,0.08), rgba(5,150,105,0.03)); border: 1px solid rgba(5,150,105,0.25); padding: 1.25rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+        <h3 style="margin: 0 0 0.75rem 0; font-size: 1rem; color: #059669; display: flex; align-items: center; gap: 0.5rem;">
+            🔍 Jawaban AI
         </h3>
-        <p style="margin: 0; font-size: 0.9rem; color: inherit;">
-            Berdasarkan pencarian Anda, AI menyaring data dengan parameter: 
-            {{if .filters.Department}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Dept: <b>{{.filters.Department}}</b></span>{{end}}
-            {{if .filters.Status}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Status: <b>{{.filters.Status}}</b></span>{{end}}
-            {{if .filters.Priority}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Priority: <b>{{.filters.Priority}}</b></span>{{end}}
-            {{if .filters.Keyword}}<span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 4px;">Keyword: <b>"{{.filters.Keyword}}"</b></span>{{end}}
-            {{if and (not .filters.Department) (not .filters.Status) (not .filters.Priority) (not .filters.Keyword)}}
-                <em>Semua tiket</em>
-            {{end}}
-        </p>
+        <div style="font-size: 0.95rem; line-height: 1.7; color: inherit; white-space: pre-wrap;">{{.ai_answer}}</div>
+    </div>
+    {{end}}
+
+    <!-- AI Filter Interpretation -->
+    <div style="background: rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.08); padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.85rem;">
+        <span style="color: #64748b;">Filter yang diterapkan: </span>
+        {{if .filters.Department}}<span style="background: rgba(5,150,105,0.1); color: #059669; padding: 2px 8px; border-radius: 4px; margin-right: 4px; font-weight: 500;">Dept: {{.filters.Department}}</span>{{end}}
+        {{if .filters.Status}}<span style="background: rgba(59,130,246,0.1); color: #3b82f6; padding: 2px 8px; border-radius: 4px; margin-right: 4px; font-weight: 500;">Status: {{.filters.Status}}</span>{{end}}
+        {{if .filters.Priority}}<span style="background: rgba(245,158,11,0.1); color: #f59e0b; padding: 2px 8px; border-radius: 4px; margin-right: 4px; font-weight: 500;">Priority: {{.filters.Priority}}</span>{{end}}
+        {{if .filters.Keyword}}<span style="background: rgba(0,0,0,0.06); padding: 2px 8px; border-radius: 4px; margin-right: 4px;">Keyword: "{{.filters.Keyword}}"</span>{{end}}
+        {{if and (not .filters.Department) (not .filters.Status) (not .filters.Priority) (not .filters.Keyword)}}
+            <span style="color: #94a3b8;">Semua tiket</span>
+        {{end}}
     </div>
 
 	<!-- Results Table -->
@@ -54,7 +51,7 @@
 						{{range .tickets}}
 						<tr>
 							<td style="font-weight: 500;">
-                                <a href="department/tickets/{{.ID}}" style="color: inherit; text-decoration: none;">#{{.ID}}</a>
+                                <a href="department/tickets/{{.ID}}" style="color: #059669; text-decoration: none;">#{{.ID}}</a>
                             </td>
 							<td>{{.Title}}</td>
 							<td>
@@ -65,9 +62,8 @@
 								{{end}}
 							</td>
 							<td>
-								{{if eq .Status "OPEN"}}<span class="admin-badge admin-badge-info">Open</span>{{end}}
-								{{if eq .Status "IN_PROGRESS"}}<span class="admin-badge admin-badge-warning">In Progress</span>{{end}}
-								{{if eq .Status "RESOLVED"}}<span class="admin-badge admin-badge-success">Resolved</span>{{end}}
+								{{if eq .Status "WAITING"}}<span class="admin-badge admin-badge-warning">Waiting</span>{{end}}
+								{{if eq .Status "IN_PROGRESS"}}<span class="admin-badge admin-badge-info">In Progress</span>{{end}}
 								{{if eq .Status "CLOSED"}}<span class="admin-badge" style="background:#e2e8f0;color:#475569;">Closed</span>{{end}}
 							</td>
 							<td>

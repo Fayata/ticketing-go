@@ -10,6 +10,7 @@ import (
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
 	"ticketing/config"
+	"ticketing/models"
 )
 
 type AIService struct {
@@ -44,7 +45,6 @@ func NewAIService(cfg *config.Config) *AIService {
 // TranslateQueryToFilters converts natural language into JSON filters using Gemini.
 func (s *AIService) TranslateQueryToFilters(ctx context.Context, naturalQuery string) (AIFilters, error) {
 	if s.client == nil {
-		// Fallback if no API key: just use the query as keyword
 		return AIFilters{Keyword: naturalQuery}, nil
 	}
 
@@ -53,16 +53,16 @@ func (s *AIService) TranslateQueryToFilters(ctx context.Context, naturalQuery st
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{
 			genai.Text(`You are an AI Query Translator for a ticketing system database.
-Extract filter parameters from the user's natural language query..
+Extract filter parameters from the user's natural language query.
 Return ONLY a valid JSON object matching this schema:
 {
   "department": "string (extract department name if mentioned, e.g., 'IT', 'HR', 'Finance', else empty string)",
-  "status": "string (map to one of: 'OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', else empty string)",
+  "status": "string (map to one of: 'WAITING', 'IN_PROGRESS', 'CLOSED', else empty string)",
   "priority": "string (map to one of: 'LOW', 'MEDIUM', 'HIGH', 'URGENT', else empty string)",
   "keyword": "string (any remaining important keywords or error messages, else empty string)"
 }
 Example: "tampilkan tiket yang statusnya open di departemen IT yang error"
-JSON: {"department": "IT", "status": "OPEN", "priority": "", "keyword": "error"}`),
+JSON: {"department": "IT", "status": "WAITING", "priority": "", "keyword": "error"}`),
 		},
 	}
 
@@ -97,4 +97,62 @@ JSON: {"department": "IT", "status": "OPEN", "priority": "", "keyword": "error"}
 	}
 
 	return filters, nil
+}
+
+// AnalyzeTickets sends ticket data + user question to Gemini and returns an AI summary/answer.
+func (s *AIService) AnalyzeTickets(ctx context.Context, question string, tickets []models.Ticket) (string, error) {
+	if s.client == nil {
+		return "", fmt.Errorf("AI client not available")
+	}
+
+	// Build a concise summary of ticket data for AI context
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Total tiket ditemukan: %d\n\n", len(tickets)))
+	for i, t := range tickets {
+		dept := "-"
+		if t.Department != nil {
+			dept = t.Department.Name
+		}
+		creator := "-"
+		if t.CreatedBy.Username != "" {
+			name := strings.TrimSpace(t.CreatedBy.FirstName + " " + t.CreatedBy.LastName)
+			if name == "" {
+				name = t.CreatedBy.Username
+			}
+			creator = name
+		}
+		sb.WriteString(fmt.Sprintf("%d. #%d | %s | Dept: %s | Status: %s | Priority: %s | Pemohon: %s | Tanggal: %s\n",
+			i+1, t.ID, t.Title, dept, t.Status, t.Priority, creator, t.CreatedAt.Format("02 Jan 2006")))
+	}
+
+	model := s.client.GenerativeModel("gemini-3.5-flash")
+	model.SystemInstruction = &genai.Content{
+		Parts: []genai.Part{
+			genai.Text(`Kamu adalah asisten analitik untuk sistem ticketing. Jawab pertanyaan admin berdasarkan data tiket yang diberikan.
+Berikan jawaban yang ringkas, akurat, dan langsung menjawab pertanyaan.
+Gunakan bahasa Indonesia. Jika pertanyaan berupa hitungan, berikan angkanya.
+Jika pertanyaan berupa analisis, berikan insight yang berguna.
+Format jawaban dengan rapi menggunakan bullet point atau angka jika diperlukan.
+Jangan menambahkan informasi yang tidak ada di data.`),
+		},
+	}
+
+	prompt := genai.Text(fmt.Sprintf("Pertanyaan admin: %s\n\nData tiket:\n%s", question, sb.String()))
+	resp, err := model.GenerateContent(ctx, prompt)
+	if err != nil {
+		log.Printf("Gemini analyze error: %v", err)
+		return "", err
+	}
+
+	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("empty response from Gemini")
+	}
+
+	part := resp.Candidates[0].Content.Parts[0]
+	textResponse, ok := part.(genai.Text)
+	if !ok {
+		return "", fmt.Errorf("unexpected response type")
+	}
+
+	return strings.TrimSpace(string(textResponse)), nil
 }

@@ -945,7 +945,6 @@ func (h *AdminHandler) SearchAdmin(w http.ResponseWriter, r *http.Request) {
 	filters, err := h.aiService.TranslateQueryToFilters(r.Context(), query)
 	if err != nil {
 		log.Printf("Error translating query via AI: %v", err)
-		// Fallback to basic keyword search if AI fails
 		filters = services.AIFilters{Keyword: query}
 	}
 
@@ -954,15 +953,27 @@ func (h *AdminHandler) SearchAdmin(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error searching tickets: %v", err)
 	}
 
+	// Step 2: Ask AI to analyze the results and answer the question
+	aiAnswer := ""
+	if len(tickets) > 0 {
+		answer, err := h.aiService.AnalyzeTickets(r.Context(), query, tickets)
+		if err != nil {
+			log.Printf("Error analyzing tickets via AI: %v", err)
+		} else {
+			aiAnswer = answer
+		}
+	}
+
 	data := utils.AddBaseData(r, map[string]interface{}{
 		"title":         "Hasil Pencarian: " + query,
 		"page_title":    "Smart Search Results",
-		"page_subtitle":  "Hasil pencarian AI untuk: \"" + query + "\"",
+		"page_subtitle": "Hasil pencarian AI untuk: \"" + query + "\"",
 		"template_name": "admin/search_results",
 		"nav_active":    "admin_search",
 		"query":         query,
 		"filters":       filters,
 		"tickets":       tickets,
+		"ai_answer":     aiAnswer,
 	})
 	utils.RenderTemplate(w, "admin_search_results", data)
 }
