@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log"
 	"strings"
 
 	"ticketing/config"
@@ -20,7 +21,6 @@ func (s *AdminSearchService) SearchTickets(filters AIFilters) ([]models.Ticket, 
 
 	// Apply Department filter
 	if filters.Department != "" {
-		// Try exact match first, or LIKE
 		query = query.Joins("JOIN departments ON departments.id = tickets.department_id").
 			Where("departments.name ILIKE ?", "%"+filters.Department+"%")
 	}
@@ -37,12 +37,23 @@ func (s *AdminSearchService) SearchTickets(filters AIFilters) ([]models.Ticket, 
 
 	// Apply Keyword filter
 	if filters.Keyword != "" {
-		// Basic SQLi prevention - though GORM parameterization handles it
 		kw := "%" + filters.Keyword + "%"
 		query = query.Where("tickets.title ILIKE ? OR tickets.description ILIKE ?", kw, kw)
 	}
 
 	// Fetch results
 	err := query.Order("tickets.created_at DESC").Limit(50).Find(&tickets).Error
+	if err != nil {
+		return tickets, err
+	}
+
+	// Fallback: if keyword produced 0 results but other filters are empty,
+	// retry without keyword to show all tickets instead of empty page
+	if len(tickets) == 0 && filters.Keyword != "" && filters.Department == "" && filters.Status == "" && filters.Priority == "" {
+		log.Printf("[Search] Keyword '%s' returned 0 results, retrying without keyword filter", filters.Keyword)
+		err = config.DB.Preload("Department").Preload("CreatedBy").
+			Order("tickets.created_at DESC").Limit(50).Find(&tickets).Error
+	}
+
 	return tickets, err
 }

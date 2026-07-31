@@ -52,17 +52,31 @@ func (s *AIService) TranslateQueryToFilters(ctx context.Context, naturalQuery st
 	model.ResponseMIMEType = "application/json"
 	model.SystemInstruction = &genai.Content{
 		Parts: []genai.Part{
-			genai.Text(`You are an AI Query Translator for a ticketing system database.
-Extract filter parameters from the user's natural language query.
-Return ONLY a valid JSON object matching this schema:
+			genai.Text(`Kamu adalah AI Query Translator untuk sistem ticketing helpdesk.
+Tugas: Ubah pertanyaan bahasa Indonesia dari admin menjadi parameter filter JSON.
+
+ATURAN PENTING:
+- Jika user hanya minta "tampilkan/tampilin/lihat semua tiket/user/departemen" TANPA filter spesifik, kembalikan SEMUA field kosong (artinya tampilkan semua data).
+- Kata "user", "tiket", "departemen", "tampilkan", "tampilin", "lihat", "cari" adalah KATA PERINTAH, BUKAN keyword pencarian. Jangan masukkan kata-kata ini ke field keyword.
+- Field "keyword" HANYA untuk istilah teknis spesifik yang dicari di judul/deskripsi tiket (misal: "error 500", "printer rusak", "login gagal").
+- Jika tidak ada keyword teknis spesifik, kosongkan field keyword.
+
+Schema JSON:
 {
-  "department": "string (extract department name if mentioned, e.g., 'IT', 'HR', 'Finance', else empty string)",
-  "status": "string (map to one of: 'WAITING', 'IN_PROGRESS', 'CLOSED', else empty string)",
-  "priority": "string (map to one of: 'LOW', 'MEDIUM', 'HIGH', 'URGENT', else empty string)",
-  "keyword": "string (any remaining important keywords or error messages, else empty string)"
+  "department": "nama departemen jika disebut (IT, HR, Finance, Technical Support, Customer Service), kosong jika tidak",
+  "status": "WAITING atau IN_PROGRESS atau CLOSED, kosong jika tidak disebut",
+  "priority": "LOW atau MEDIUM atau HIGH atau URGENT, kosong jika tidak disebut",
+  "keyword": "istilah teknis spesifik saja, kosong jika tidak ada"
 }
-Example: "tampilkan tiket yang statusnya open di departemen IT yang error"
-JSON: {"department": "IT", "status": "WAITING", "priority": "", "keyword": "error"}`),
+
+Contoh:
+- "tampilin semua tiket" → {"department":"","status":"","priority":"","keyword":""}
+- "tampilin user" → {"department":"","status":"","priority":"","keyword":""}
+- "tampilin departemen" → {"department":"","status":"","priority":"","keyword":""}
+- "tiket di departemen IT yang masih open" → {"department":"IT","status":"WAITING","priority":"","keyword":""}
+- "cari tiket tentang printer rusak" → {"department":"","status":"","priority":"","keyword":"printer rusak"}
+- "tiket urgent yang belum selesai" → {"department":"","status":"WAITING","priority":"URGENT","keyword":""}
+- "berapa tiket yang dikirim user" → {"department":"","status":"","priority":"","keyword":""}`),
 		},
 	}
 
