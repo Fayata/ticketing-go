@@ -32,10 +32,18 @@ func main() {
 	// Initialize handlers
 	notificationHandler := handlers.NewNotificationHandler(cfg, notificationService)
 
-	// Auto-migrate model
-	err := config.DB.AutoMigrate(&models.Notification{})
+	// Auto-migrate notification models with retry
+	var err error
+	for i := 0; i < 5; i++ {
+		err = config.DB.AutoMigrate(&models.Notification{})
+		if err == nil {
+			break
+		}
+		log.Printf("Migration failed (attempt %d/5): %v. Retrying in 2 seconds...", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
 	if err != nil {
-		log.Fatalf("AutoMigrate failed: %v", err)
+		log.Fatalf("AutoMigrate failed after 5 attempts: %v", err)
 	}
 
 	mux := http.NewServeMux()

@@ -35,9 +35,18 @@ func main() {
 	config.InitSession(cfg.SessionSecret, cfg.SessionSecure)
 	utils.InitTemplates()
 
-	// Auto-migrate auth-related models
-	if err := config.AutoMigrate(&models.User{}, &models.Group{}); err != nil {
-		log.Fatalf("Migration failed: %v", err)
+	// Auto-migrate auth-related models with retry
+	var err error
+	for i := 0; i < 5; i++ {
+		err = config.AutoMigrate(&models.User{}, &models.Group{})
+		if err == nil {
+			break
+		}
+		log.Printf("Migration failed (attempt %d/5): %v. Retrying in 2 seconds...", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
+	if err != nil {
+		log.Fatalf("Migration failed after 5 attempts: %v", err)
 	}
 
 	// Seed default admin data

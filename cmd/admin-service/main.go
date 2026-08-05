@@ -32,18 +32,26 @@ func main() {
 	config.InitDatabase(cfg)
 	db := config.DB
 
-	// Auto-migrate ALL models
+	// Auto-migrate ALL models with retry (to handle concurrent migration collisions)
 	log.Println("Migrating database models...")
-	err := db.AutoMigrate(
-		&models.User{},
-		&models.Department{},
-		&models.Group{},
-		&models.Ticket{},
-		&models.KBCategory{},
-		&models.KBArticle{},
-	)
+	var err error
+	for i := 0; i < 5; i++ {
+		err = db.AutoMigrate(
+			&models.User{},
+			&models.Department{},
+			&models.Group{},
+			&models.Ticket{},
+			&models.KBCategory{},
+			&models.KBArticle{},
+		)
+		if err == nil {
+			break
+		}
+		log.Printf("Migration failed (attempt %d/5): %v. Retrying in 2 seconds...", i+1, err)
+		time.Sleep(2 * time.Second)
+	}
 	if err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+		log.Fatalf("Failed to migrate database after 5 attempts: %v", err)
 	}
 
 	// Seed default data

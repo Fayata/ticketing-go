@@ -56,10 +56,10 @@ run-monolith:
 
 # Docker Targets
 docker-up:
-	docker-compose up --build -d
+	docker compose up --build -d
 
 docker-down:
-	docker-compose down
+	docker compose down
 
 # Dev Tools
 test:
