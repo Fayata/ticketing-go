@@ -23,6 +23,9 @@ RUN go build -o /bin/gateway ./cmd/gateway && \
 # Stage 2: Runtime
 FROM alpine:3.20
 
+# Install tzdata for timezone support
+RUN apk add --no-cache tzdata
+
 # Set working directory
 WORKDIR /app
 
