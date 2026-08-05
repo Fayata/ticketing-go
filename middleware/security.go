@@ -3,7 +3,9 @@ package middleware
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -24,10 +26,20 @@ func SecurityHeaders(next http.Handler, debug bool) http.Handler {
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self'")
 
+		// [Security] CSP: tighter in production (no unsafe-eval)
 		if debug {
-			log.Printf("[Security] Headers applied to %s", r.URL.Path)
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self'")
+		} else {
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self'")
+			// [Security] HSTS: enforce HTTPS for 1 year in production
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+
+		// [Security] Prevent caching of sensitive pages
+		if strings.HasPrefix(r.URL.Path, "/admin") || strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private")
+			w.Header().Set("Pragma", "no-cache")
 		}
 
 		next.ServeHTTP(w, r)
@@ -83,7 +95,7 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 				requestToken = r.FormValue("csrf_token")
 			}
 
-			if requestToken != token {
+			if subtle.ConstantTimeCompare([]byte(requestToken), []byte(token)) != 1 {
 				log.Printf("[Security][CSRF] Token mismatch for %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
 				http.Error(w, "403 Forbidden - CSRF token invalid", http.StatusForbidden)
 				return
@@ -110,19 +122,60 @@ type RateLimiter struct {
 }
 
 func NewRateLimiter(maxRequests int, windowDuration time.Duration) *RateLimiter {
-	return &RateLimiter{
+	rl := &RateLimiter{
 		maxRequests:    maxRequests,
 		windowDuration: windowDuration,
 		visitors:       make(map[string][]time.Time),
 	}
+	// [Security] Auto-cleanup expired entries every 5 minutes to prevent memory leak
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			rl.mu.Lock()
+			now := time.Now()
+			for ip, times := range rl.visitors {
+				var valid []time.Time
+				for _, t := range times {
+					if now.Sub(t) <= rl.windowDuration {
+						valid = append(valid, t)
+					}
+				}
+				if len(valid) == 0 {
+					delete(rl.visitors, ip)
+				} else {
+					rl.visitors[ip] = valid
+				}
+			}
+			rl.mu.Unlock()
+		}
+	}()
+	return rl
+}
+
+// getClientIP extracts the real client IP, supporting reverse proxies.
+func getClientIP(r *http.Request) string {
+	// Check X-Real-IP first
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	// Check X-Forwarded-For
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		if len(parts) > 0 {
+			return strings.TrimSpace(parts[0])
+		}
+	}
+	// Fallback to RemoteAddr
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
 }
 
 func (rl *RateLimiter) Limit(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			ip = r.RemoteAddr
-		}
+		ip := getClientIP(r)
 
 		rl.mu.Lock()
 		now := time.Now()
@@ -140,6 +193,8 @@ func (rl *RateLimiter) Limit(next http.HandlerFunc) http.HandlerFunc {
 			rl.visitors[ip] = validTimes
 			rl.mu.Unlock()
 
+			retryAfter := rl.windowDuration.Seconds()
+			w.Header().Set("Retry-After", fmt.Sprintf("%.0f", retryAfter))
 			log.Printf("[Security][RateLimit] IP %s exceeded %d requests in %v on %s", ip, rl.maxRequests, rl.windowDuration, r.URL.Path)
 			http.Error(w, "429 Too Many Requests", http.StatusTooManyRequests)
 			return
@@ -151,4 +206,40 @@ func (rl *RateLimiter) Limit(next http.HandlerFunc) http.HandlerFunc {
 
 		next.ServeHTTP(w, r)
 	}
+}
+
+// LimitHandler wraps http.Handler (for use in middleware chains).
+func (rl *RateLimiter) LimitHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := getClientIP(r)
+
+		rl.mu.Lock()
+		now := time.Now()
+
+		var validTimes []time.Time
+		if times, exists := rl.visitors[ip]; exists {
+			for _, t := range times {
+				if now.Sub(t) <= rl.windowDuration {
+					validTimes = append(validTimes, t)
+				}
+			}
+		}
+
+		if len(validTimes) >= rl.maxRequests {
+			rl.visitors[ip] = validTimes
+			rl.mu.Unlock()
+
+			retryAfter := rl.windowDuration.Seconds()
+			w.Header().Set("Retry-After", fmt.Sprintf("%.0f", retryAfter))
+			log.Printf("[Security][RateLimit] IP %s exceeded %d requests in %v on %s", ip, rl.maxRequests, rl.windowDuration, r.URL.Path)
+			http.Error(w, "429 Too Many Requests", http.StatusTooManyRequests)
+			return
+		}
+
+		validTimes = append(validTimes, now)
+		rl.visitors[ip] = validTimes
+		rl.mu.Unlock()
+
+		next.ServeHTTP(w, r)
+	})
 }

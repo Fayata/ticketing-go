@@ -39,10 +39,12 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 	var client *smtp.Client
 	var err error
 
-	// KONFIGURASI TLS: InsecureSkipVerify true agar tidak rewel sertifikat
+	// [Security] TLS config — proper certificate verification
+	// InsecureSkipVerify is only acceptable for development/testing
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: false, // [Security] Verify TLS certificates
 		ServerName:         host,
+		MinVersion:         tls.VersionTLS12, // [Security] Enforce minimum TLS 1.2
 	}
 
 	// LOGIKA UTAMA: Pilih metode koneksi berdasarkan Port

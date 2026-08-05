@@ -79,7 +79,7 @@ func (s *AuthService) RegisterUser(username, email, password string) error {
 		Email:      email,
 		Password:   hashedPassword,
 		IsActive:   true,
-		IsVerified: true, 
+		IsVerified: false, // [Security] User must verify email before login
 	}
 
 	if err := config.DB.Create(&user).Error; err != nil {

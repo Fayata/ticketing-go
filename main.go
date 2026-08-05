@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strings"
@@ -23,9 +25,12 @@ func main() {
 	config.InitSession(cfg.SessionSecret, cfg.SessionSecure)
 	utils.InitTemplates()
 
-	// [Security] Initialize rate limiter untuk login (5 requests per 1 menit per IP)
+	// [Security] Initialize rate limiters per endpoint
 	loginLimiter := middleware.NewRateLimiter(5, 1*time.Minute)
-	log.Println("[Security] Rate limiter initialized: 5 req/min for login")
+	registerLimiter := middleware.NewRateLimiter(3, 1*time.Minute)
+	forgotPwLimiter := middleware.NewRateLimiter(3, 1*time.Minute)
+	globalLimiter := middleware.NewRateLimiter(60, 1*time.Minute)
+	log.Println("[Security] Rate limiters initialized: login=5/min, register=3/min, forgot=3/min, global=60/min")
 
 	jwtService := utils.NewJWTService(cfg)
 	emailService := utils.NewEmailService(cfg)
@@ -78,10 +83,10 @@ func main() {
 	})
 
 	mux.HandleFunc("/login", loginLimiter.Limit(middleware.GuestOnly(authController.Login)))
-	mux.HandleFunc("/register", middleware.GuestOnly(authController.Register))
+	mux.HandleFunc("/register", registerLimiter.Limit(middleware.GuestOnly(authController.Register)))
 	mux.HandleFunc("/verify-email", authController.VerifyEmail)
 	mux.HandleFunc("/logout", authController.Logout)
-	mux.HandleFunc("/forgot-password", middleware.GuestOnly(authController.ForgotPassword))
+	mux.HandleFunc("/forgot-password", forgotPwLimiter.Limit(middleware.GuestOnly(authController.ForgotPassword)))
 	mux.HandleFunc("/reset-password", middleware.GuestOnly(authController.ResetPassword))
 
 	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard)))
@@ -114,7 +119,7 @@ func main() {
 	mux.HandleFunc("/tiket/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleTicketDetail)))
 	mux.HandleFunc("/kirim-tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.HandleCreateTicket)))
 	mux.HandleFunc("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowTicketSuccess)))
-		mux.HandleFunc("/rating/", ticketHandler.HandleRating)
+		mux.HandleFunc("/rating/", middleware.AuthRequired(ticketHandler.HandleRating))
 	mux.HandleFunc("/settings", middleware.AuthRequired(middleware.PortalUserRequired(settingsHandler.HandleSettings)))
 	mux.HandleFunc("/knowledge-base", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKnowledgeBase)))
 	mux.HandleFunc("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowKBArticle)))
@@ -127,16 +132,18 @@ func main() {
 
 	seedDefaultData()
 
-	log.Println("[Security] OWASP mitigations active: SecurityHeaders, RateLimiter, CSRF-ready")
+	log.Println("[Security] OWASP mitigations active: SecurityHeaders, RateLimiter, CSRF, InputValidation")
 	log.Printf("[Security] Debug mode: %v | Session secure: %v", cfg.Debug, cfg.SessionSecure)
 
 	log.Printf("Server starting on port %s", cfg.Port)
 	log.Printf("Visit: http://localhost:%s", cfg.Port)
 
-	// [Security] Apply security middleware stack
-	securedMux := middleware.SecurityHeaders(mux, cfg.Debug)
-	loggedMux := middleware.LoggingMiddleware(securedMux)
-	log.Println("[Security] Security headers middleware applied")
+	// [Security] Apply security middleware stack (order matters: outermost runs first)
+	csrfProtected := middleware.CSRFMiddleware(mux)
+	securedMux := middleware.SecurityHeaders(csrfProtected, cfg.Debug)
+	rateLimited := globalLimiter.LimitHandler(securedMux)
+	loggedMux := middleware.LoggingMiddleware(rateLimited)
+	log.Println("[Security] Full middleware stack applied: Logging → RateLimit → SecurityHeaders → CSRF")
 	var handler http.Handler = loggedMux
 	if config.AppBasePath != "" && config.AppBasePath != "/" {
 		prefix := strings.TrimRight(config.AppBasePath, "/")
@@ -154,6 +161,9 @@ func main() {
 			}
 		})
 	}
+
+	// [Security] Request body size limiter (10MB)
+	handler = http.MaxBytesHandler(handler, 10<<20)
 	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
 		log.Fatal(err)
 	}
@@ -171,7 +181,8 @@ func seedDefaultData() {
 
 	const defaultAdminUsername = "admin"
 	const defaultAdminEmail = "admin@local.test"
-	const defaultAdminPassword = "admin12345"
+	// [Security] Generate random admin password instead of hardcoded
+	defaultAdminPassword := generateRandomPassword(16)
 
 	var existing models.User
 	err := config.DB.Where("email = ?", defaultAdminEmail).First(&existing).Error
@@ -208,4 +219,14 @@ func seedDefaultData() {
 		log.Printf("failed to create default admin: %v", cerr)
 		return
 	}
+	log.Printf("[Security] Default admin created: username=%s email=%s password=%s — CHANGE THIS IMMEDIATELY!", defaultAdminUsername, defaultAdminEmail, defaultAdminPassword)
+}
+
+// generateRandomPassword creates a cryptographically random password of the specified length.
+func generateRandomPassword(length int) string {
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "ChangeMe!2024SecureP@ss" // fallback — still better than hardcoded simple password
+	}
+	return hex.EncodeToString(bytes)[:length]
 }

@@ -187,9 +187,16 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 	// [Security] Validasi department — staff hanya bisa akses tiket departemennya
 	var staffUser models.User
 	config.DB.Select("department_id").First(&staffUser, user.ID)
-	if staffUser.DepartmentID != nil && ticket.DepartmentID != nil && !user.IsSuperAdmin {
-		if *staffUser.DepartmentID != *ticket.DepartmentID {
-			log.Printf("[Security][AccessControl] BLOCKED: Staff %d (dept %d) tried to access ticket %d (dept %d)", user.ID, *staffUser.DepartmentID, ticket.ID, *ticket.DepartmentID)
+	if !user.IsSuperAdmin {
+		// Staff without department cannot access any ticket
+		if staffUser.DepartmentID == nil {
+			log.Printf("[Security][AccessControl] BLOCKED: Staff %d has no department, cannot access ticket %d", user.ID, ticket.ID)
+			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Anda+belum+memiliki+departemen", http.StatusSeeOther)
+			return
+		}
+		// Staff can only access tickets in their department
+		if ticket.DepartmentID == nil || *staffUser.DepartmentID != *ticket.DepartmentID {
+			log.Printf("[Security][AccessControl] BLOCKED: Staff %d (dept %v) tried to access ticket %d (dept %v)", user.ID, staffUser.DepartmentID, ticket.ID, ticket.DepartmentID)
 			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Anda+tidak+memiliki+akses+ke+tiket+departemen+lain", http.StatusSeeOther)
 			return
 		}

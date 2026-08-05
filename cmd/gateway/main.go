@@ -1,0 +1,178 @@
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"log"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+)
+
+func main() {
+	port := os.Getenv("GATEWAY_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	authURL := os.Getenv("AUTH_SERVICE_URL")
+	if authURL == "" {
+		authURL = "http://localhost:8081"
+	}
+
+	ticketURL := os.Getenv("TICKET_SERVICE_URL")
+	if ticketURL == "" {
+		ticketURL = "http://localhost:8082"
+	}
+
+	notificationURL := os.Getenv("NOTIFICATION_SERVICE_URL")
+	if notificationURL == "" {
+		notificationURL = "http://localhost:8083"
+	}
+
+	adminURL := os.Getenv("ADMIN_SERVICE_URL")
+	if adminURL == "" {
+		adminURL = "http://localhost:8084"
+	}
+
+	mux := http.NewServeMux()
+
+	// Proxies
+	authProxy := newProxy(authURL)
+	ticketProxy := newProxy(ticketURL)
+	notificationProxy := newProxy(notificationURL)
+	adminProxy := newProxy(adminURL)
+
+	// Auth routes
+	mux.Handle("/login", authProxy)
+	mux.Handle("/register", authProxy)
+	mux.Handle("/logout", authProxy)
+	mux.Handle("/verify-email", authProxy)
+	mux.Handle("/forgot-password", authProxy)
+	mux.Handle("/reset-password", authProxy)
+
+	// Ticket routes
+	mux.Handle("/tiket/", ticketProxy)
+	mux.Handle("/tiket", ticketProxy)
+	mux.Handle("/kirim-tiket", ticketProxy)
+	mux.Handle("/rating/", ticketProxy)
+	mux.Handle("/dashboard", ticketProxy)
+	mux.Handle("/settings", ticketProxy)
+	mux.Handle("/knowledge-base/", ticketProxy)
+	mux.Handle("/knowledge-base", ticketProxy)
+
+	// Notification routes
+	mux.Handle("/api/notifications/", notificationProxy)
+	mux.Handle("/api/notifications", notificationProxy)
+
+	// Admin routes
+	mux.Handle("/admin/", adminProxy)
+	mux.Handle("/departement/", adminProxy)
+	mux.Handle("/department/", adminProxy)
+
+	// Static files
+	fs := http.FileServer(http.Dir("./static"))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	// Health check
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "ok",
+			"services": []string{
+				"auth", "ticket", "notification", "admin",
+			},
+		})
+	})
+
+	// Global Middleware
+	handler := applyGlobalMiddleware(mux)
+
+	server := &http.Server{
+		Addr:    ":" + port,
+		Handler: handler,
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		log.Printf("Gateway starting on port %s", port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Gateway listen error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Shutting down Gateway...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Gateway shutdown error: %v", err)
+	}
+	log.Println("Gateway gracefully stopped")
+}
+
+func newProxy(target string) http.Handler {
+	targetURL, err := url.Parse(target)
+	if err != nil {
+		log.Fatalf("Invalid target URL %s: %v", target, err)
+	}
+	return httputil.NewSingleHostReverseProxy(targetURL)
+}
+
+func applyGlobalMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Correlation ID
+		reqID := r.Header.Get("X-Correlation-ID")
+		if reqID == "" {
+			reqID = generateCorrelationID() // Fallback random ID
+			r.Header.Set("X-Correlation-ID", reqID)
+		}
+		w.Header().Set("X-Correlation-ID", reqID)
+
+		// Limit Body Size (10MB)
+		r.Body = http.MaxBytesReader(w, r.Body, 10*1024*1024)
+
+		// Security Headers
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
+		// Logging
+		start := time.Now()
+		
+		// Wrap ResponseWriter to capture status code
+		ww := &responseWriterWrapper{ResponseWriter: w, status: http.StatusOK}
+
+		next.ServeHTTP(ww, r)
+
+		log.Printf("%s %s %d %s", r.Method, r.RequestURI, ww.status, time.Since(start))
+	})
+}
+
+type responseWriterWrapper struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriterWrapper) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func generateCorrelationID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}

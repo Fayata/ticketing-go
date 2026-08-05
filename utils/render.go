@@ -121,6 +121,10 @@ func InitTemplates() {
 				return ""
 			}
 			s := fmt.Sprint(val)
+			// [Security] Escape HTML entities FIRST to prevent XSS, then add <br>
+			s = template.HTMLEscapeString(s)
+			s = strings.ReplaceAll(s, "&#13;&#10;", "<br>")
+			s = strings.ReplaceAll(s, "&#10;", "<br>")
 			s = strings.ReplaceAll(s, "\r\n", "<br>")
 			s = strings.ReplaceAll(s, "\n", "<br>")
 			return template.HTML(s)

@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ticketing-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-your_db_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-your_strong_password_here}
+      POSTGRES_DB: ${DB_NAME:-ticketing_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-your_db_user} -d ${DB_NAME:-ticketing_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ticketing-network
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: gateway
+    container_name: ticketing-gateway
+    env_file: .env
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      ticket-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      admin-service:
+        condition: service_started
+    volumes:
+      - ./templates:/app/templates
+      - ./static:/app/static
+    networks:
+      - ticketing-network
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: auth-service
+    container_name: ticketing-auth
+    env_file: .env
+    ports:
+      - "${AUTH_SERVICE_PORT:-8081}:${AUTH_SERVICE_PORT:-8081}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./templates:/app/templates
+      - ./static:/app/static
+    networks:
+      - ticketing-network
+
+  ticket-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: ticket-service
+    container_name: ticketing-ticket
+    env_file: .env
+    ports:
+      - "${TICKET_SERVICE_PORT:-8082}:${TICKET_SERVICE_PORT:-8082}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./templates:/app/templates
+      - ./static:/app/static
+    networks:
+      - ticketing-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: notification-service
+    container_name: ticketing-notification
+    env_file: .env
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8083}:${NOTIFICATION_SERVICE_PORT:-8083}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./templates:/app/templates
+      - ./static:/app/static
+    networks:
+      - ticketing-network
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: admin-service
+    container_name: ticketing-admin
+    env_file: .env
+    ports:
+      - "${ADMIN_SERVICE_PORT:-8084}:${ADMIN_SERVICE_PORT:-8084}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./templates:/app/templates
+      - ./static:/app/static
+    networks:
+      - ticketing-network
+
+volumes:
+  postgres_data:
+
+networks:
+  ticketing-network:
+    driver: bridge
