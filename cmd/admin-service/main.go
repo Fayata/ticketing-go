@@ -43,6 +43,10 @@ func main() {
 			&models.Ticket{},
 			&models.KBCategory{},
 			&models.KBArticle{},
+			&models.Notification{},
+			&models.TicketReply{},
+			&models.TicketAssignmentHistory{},
+			&models.TicketRating{},
 		)
 		if err == nil {
 			break
