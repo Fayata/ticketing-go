@@ -78,7 +78,7 @@ func main() {
 	mux.Handle("/tiket/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(ticketHandler.HandleTicketDetail))))
 	
 	// Apply custom wrappers to CreateTicket
-	createTicketHandler := MethodValidator("POST")(InputSanitizer(ValidateTicketInput(http.HandlerFunc(ticketHandler.HandleCreateTicket))))
+	createTicketHandler := InputSanitizer(ValidateTicketInput(http.HandlerFunc(ticketHandler.HandleCreateTicket)))
 	mux.Handle("/kirim-tiket", middleware.AuthRequired(middleware.PortalUserRequired(createTicketHandler.ServeHTTP)))
 	
 	mux.Handle("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(ticketHandler.ShowTicketSuccess))))

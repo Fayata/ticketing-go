@@ -51,6 +51,11 @@ func InputSanitizer(next http.Handler) http.Handler {
 // ValidateTicketInput validates ticket creation input
 func ValidateTicketInput(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, "Invalid form data", http.StatusBadRequest)
 			return
