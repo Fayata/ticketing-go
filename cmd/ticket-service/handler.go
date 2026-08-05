@@ -63,7 +63,7 @@ func ValidateTicketInput(next http.Handler) http.Handler {
 
 		title := r.PostFormValue("title")
 		description := r.PostFormValue("description")
-		email := r.PostFormValue("email")
+		email := r.PostFormValue("reply_to_email")
 		priority := r.PostFormValue("priority")
 
 		if len(title) < 3 || len(title) > 200 {
