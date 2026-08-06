@@ -177,9 +177,9 @@ func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	data := AddBaseData(r, map[string]interface{}{
-		"title":         fmt.Sprintf("Tiket #%d - %s", detail.Ticket.ID, detail.Ticket.Title),
-		"page_title":    fmt.Sprintf("Detail Tiket #%d", detail.Ticket.ID),
-		"page_subtitle": detail.Ticket.Title,
+		"title":         fmt.Sprintf("Tiket %s - %s", detail.Ticket.GetTicketNumber(), detail.Ticket.Title),
+		"page_title":    "Detail Tiket",
+		"page_subtitle": detail.Ticket.GetTicketNumber(),
 		"nav_active":    "tickets",
 		"template_name": "tickets/ticket_detail",
 		"ticket":        detail.Ticket,
