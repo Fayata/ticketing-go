@@ -106,16 +106,27 @@ func main() {
 
 	// Admin KB Routes (StaffOrSuperAdmin)
 	kbAdminMux := http.NewServeMux()
-	kbAdminMux.HandleFunc("/knowledge-base", adminHandler.ListKBAdmin)
-	// Additional KB routes can be added here
+	kbAdminMux.HandleFunc("/", adminHandler.ListKBAdmin)
+	kbAdminMux.HandleFunc("/categories/create", adminHandler.CreateKBCategoryForm)
+	kbAdminMux.HandleFunc("/categories/create/post", adminHandler.CreateKBCategoryPost)
+	kbAdminMux.HandleFunc("/categories/edit/", adminHandler.EditKBCategory)
+	kbAdminMux.HandleFunc("/categories/delete/", adminHandler.DeleteKBCategory)
+	kbAdminMux.HandleFunc("/articles/create", adminHandler.CreateKBArticleForm)
+	kbAdminMux.HandleFunc("/articles/create/post", adminHandler.CreateKBArticlePost)
+	kbAdminMux.HandleFunc("/articles/edit/", adminHandler.EditKBArticle)
+	kbAdminMux.HandleFunc("/articles/delete/", adminHandler.DeleteKBArticle)
+	
 	mux.Handle("/admin/knowledge-base/", http.StripPrefix("/admin/knowledge-base", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(kbAdminMux.ServeHTTP))))
+	mux.Handle("/admin/knowledge-base", http.StripPrefix("/admin/knowledge-base", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(kbAdminMux.ServeHTTP))))
 
 	// Department Routes
 	deptMux := http.NewServeMux()
 	deptMux.HandleFunc("/dashboard", departmentHandler.ShowDashboard)
-	deptMux.HandleFunc("/tiket/claim", departmentHandler.ClaimTicket)
-	deptMux.HandleFunc("/tiket/release", departmentHandler.ReleaseTicket)
-	deptMux.HandleFunc("/tiket/close", departmentHandler.CloseTicket)
+	deptMux.HandleFunc("/all-tickets", departmentHandler.ShowAllTickets)
+	deptMux.HandleFunc("/tiket/", departmentHandler.HandleTicketDetail)
+	deptMux.HandleFunc("/tiket/claim/", departmentHandler.ClaimTicket)
+	deptMux.HandleFunc("/tiket/release/", departmentHandler.ReleaseTicket)
+	deptMux.HandleFunc("/tiket/close/", departmentHandler.CloseTicket)
 
 	mux.Handle("/departement/", http.StripPrefix("/departement", middleware.AuthRequired(middleware.DepartmentRequired(deptMux.ServeHTTP))))
 

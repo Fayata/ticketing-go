@@ -465,9 +465,9 @@
 }
 
 /* Priority Colors */
-.priority-HIGH { background-color: #fef2f2; color: #dc2626; }
-.priority-MEDIUM { background-color: #fefce8; color: #ca8a04; }
-.priority-LOW { background-color: #f0fdf4; color: #16a34a; }
+.priority-HIGH { background-color: #fef2f2 !important; color: #dc2626 !important; }
+.priority-MEDIUM { background-color: #fff7ed !important; color: #f97316 !important; }
+.priority-LOW { background-color: #fefce8 !important; color: #eab308 !important; }
 
 /* Status Colors: menunggu = abu-abu, in progress = hijau, closed = merah */
 .status-WAITING,
@@ -953,9 +953,9 @@
 }
 .staff-ticket-item:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .staff-ticket-bar { width: 4px; flex-shrink: 0; }
-.staff-priority-HIGH { background: var(--sd-red-500); }
-.staff-priority-MEDIUM { background: var(--sd-amber-500); }
-.staff-priority-LOW { background: var(--sd-green-500); }
+.staff-priority-HIGH { background: #dc2626 !important; }
+.staff-priority-MEDIUM { background: #f97316 !important; }
+.staff-priority-LOW { background: #eab308 !important; }
 .staff-ticket-inner { padding: 11px 13px; flex: 1; min-width: 0; }
 .staff-ticket-meta { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }
 .staff-ticket-id { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; color: var(--sd-green-700); }
@@ -1015,12 +1015,12 @@
     flex-shrink: 0;
 }
 .staff-mini-icon svg { width: 16px; height: 16px; }
-.staff-mini-icon.staff-priority-HIGH { background: #fef2f2; }
-.staff-mini-icon.staff-priority-HIGH svg { color: var(--sd-red-500); }
-.staff-mini-icon.staff-priority-MEDIUM { background: var(--sd-amber-50); }
-.staff-mini-icon.staff-priority-MEDIUM svg { color: var(--sd-amber-500); }
-.staff-mini-icon.staff-priority-LOW { background: var(--sd-green-50); }
-.staff-mini-icon.staff-priority-LOW svg { color: var(--sd-green-500); }
+.staff-mini-icon.staff-priority-HIGH { background: #fef2f2 !important; }
+.staff-mini-icon.staff-priority-HIGH svg { color: #dc2626 !important; }
+.staff-mini-icon.staff-priority-MEDIUM { background: #fff7ed !important; }
+.staff-mini-icon.staff-priority-MEDIUM svg { color: #f97316 !important; }
+.staff-mini-icon.staff-priority-LOW { background: #fefce8 !important; }
+.staff-mini-icon.staff-priority-LOW svg { color: #eab308 !important; }
 .staff-mini-body { flex: 1; min-width: 0; }
 .staff-mini-title { font-size: 12px; font-weight: 600; color: var(--sd-gray-900); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .staff-mini-meta { font-size: 11px; color: var(--sd-gray-400); margin-top: 2px; }

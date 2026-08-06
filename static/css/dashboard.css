@@ -807,15 +807,15 @@ body {
 
 /* Priority */
 .priority-high {
-    color: var(--error-color);
+    color: #dc2626 !important;
 }
 
 .priority-medium {
-    color: var(--warning-color);
+    color: #f97316 !important;
 }
 
 .priority-low {
-    color: var(--success-color);
+    color: #eab308 !important;
 }
 
 /* Quick Actions */
