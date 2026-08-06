@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -57,7 +58,7 @@ func ValidateTicketInput(next http.Handler) http.Handler {
 		}
 
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Invalid form data", http.StatusBadRequest)
+			http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Format data tidak valid"), http.StatusSeeOther)
 			return
 		}
 
@@ -67,23 +68,23 @@ func ValidateTicketInput(next http.Handler) http.Handler {
 		priority := r.PostFormValue("priority")
 
 		if len(title) < 3 || len(title) > 200 {
-			http.Error(w, "Title must be between 3 and 200 characters", http.StatusBadRequest)
+			http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Judul tiket harus antara 3 hingga 200 karakter"), http.StatusSeeOther)
 			return
 		}
 
 		if len(description) < 10 || len(description) > 10000 {
-			http.Error(w, "Description must be between 10 and 10000 characters", http.StatusBadRequest)
+			http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Deskripsi masalah minimal harus 10 karakter"), http.StatusSeeOther)
 			return
 		}
 
 		emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 		if !emailRegex.MatchString(email) {
-			http.Error(w, "Invalid email format", http.StatusBadRequest)
+			http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Format alamat email tidak valid"), http.StatusSeeOther)
 			return
 		}
 
 		if priority != "LOW" && priority != "MEDIUM" && priority != "HIGH" {
-			http.Error(w, "Priority must be LOW, MEDIUM, or HIGH", http.StatusBadRequest)
+			http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Prioritas tidak valid"), http.StatusSeeOther)
 			return
 		}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -52,6 +53,7 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 		"template_name": "tickets/create_ticket",
 		"departments":   departments,
 		"user":          user,
+		"error":         r.URL.Query().Get("error"),
 	})
 	RenderTemplate(w, "tickets/create_ticket", data)
 }
@@ -66,7 +68,7 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	priority := r.FormValue("priority")
 	departmentIDStr := r.FormValue("department")
 	if title == "" || description == "" || replyToEmail == "" {
-		http.Error(w, "Semua field wajib diisi", http.StatusBadRequest)
+		http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Semua field wajib diisi"), http.StatusSeeOther)
 		return
 	}
 	var departmentID *uint
@@ -81,7 +83,7 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	ticket, err := h.ticketService.CreateTicket(user.ID, title, description, replyToEmail, priority, departmentID)
 	if err != nil {
 		log.Printf("Failed to create ticket: %v", err)
-		http.Error(w, "Failed to create ticket", http.StatusInternalServerError)
+		http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Gagal membuat tiket: "+err.Error()), http.StatusSeeOther)
 		return
 	}
 	departmentName := "Tidak Ditentukan"

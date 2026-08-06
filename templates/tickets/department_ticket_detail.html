@@ -4,239 +4,479 @@
 
 {{define "tickets/department_ticket_detail_content"}}
 {{if .ticket}}
-    {{$ticket := .ticket}}
-    {{$currentUser := .user}}
-    
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="static/css/department_ticket_detail.css">
+{{$ticket := .ticket}}
+{{$currentUser := .user}}
 
-    <div class="topbar">
-        <div class="crumb">
-            <a class="crumb-link" href="department/all-tickets">Semua Tiket</a>
-            <span class="crumb-sep">›</span>
-            <span class="crumb-cur">{{$ticket.GetTicketNumber}}</span>
-        </div>
-        <a class="btn btn-ghost" href="department/all-tickets">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="19" y1="12" x2="5" y2="12"/>
-                <polyline points="12 19 5 12 12 5"/>
-            </svg>
-            Kembali
-        </a>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --radius-sm:6px; --radius-md:10px; --radius-lg:14px; }
+
+  html[data-theme="dark"]{
+    --bg: #0A0D14;
+    --surface: #10141D;
+    --surface-2: #171C28;
+    --border: #232938;
+    --border-strong: #333B4F;
+    --text-primary: #F1F2F6;
+    --text-secondary: #8D93A3;
+    --text-muted: #565D70;
+    --accent: #5471FF;
+    --accent-strong: #6E88FF;
+    --accent-tint: #1A2140;
+    --accent-tint-text: #A9B7FF;
+    --danger: #F97066;
+    --bubble-other: #1A2030;
+    --bubble-mine: #2A3566;
+    --bubble-mine-text: #E3E7FF;
+    --input-bg: #171C28;
+    --wallpaper-dot: rgba(255,255,255,0.025);
+  }
+
+  html[data-theme="light"]{
+    --bg: #EEF0F4;
+    --surface: #FFFFFF;
+    --surface-2: #F5F6F8;
+    --border: #E4E6EB;
+    --border-strong: #D2D5DC;
+    --text-primary: #14161C;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --accent: #4457E8;
+    --accent-strong: #3448D1;
+    --accent-tint: #EDF0FE;
+    --accent-tint-text: #3448D1;
+    --danger: #E13B32;
+    --bubble-other: #FFFFFF;
+    --bubble-mine: #E6EAFD;
+    --bubble-mine-text: #29379E;
+    --input-bg: #FFFFFF;
+    --wallpaper-dot: rgba(20,22,28,0.035);
+  }
+
+  /* Override portal global styles where necessary */
+  body{ height:100%; background:var(--bg) !important; color:var(--text-primary);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, monospace; }
+
+  .chat-app-container{
+    max-width: 1200px; margin:0 auto; padding: 20px 20px 20px;
+    height: 90vh; display:flex; flex-direction:column;
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; margin-bottom:16px; flex-shrink:0;
+  }
+  .topbar-left{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .back-btn{
+    width:34px; height:34px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text-secondary);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    text-decoration:none;
+  }
+  .back-btn:hover{ color:var(--text-primary); border-color:var(--border-strong); }
+  .back-btn svg{ width:16px; height:16px; }
+  .topbar-title{ min-width:0; }
+  .topbar-title h1{ font-size:15.5px; font-weight:700; margin:0; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .topbar-title .id{ font-size:11.5px; color:var(--text-muted); }
+
+  .topbar-right{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .icon-btn{
+    width:34px; height:34px; border-radius:9px; border:1px solid var(--border);
+    background:var(--surface); color:var(--text-secondary);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .icon-btn:hover{ color:var(--text-primary); border-color:var(--border-strong); }
+  .icon-btn.active{ color: var(--accent); border-color: var(--accent); }
+  .icon-btn svg{ width:15px; height:15px; }
+
+  /* ---------- WORKSPACE ---------- */
+  .workspace{
+    flex:1; min-height:0; display:flex; gap:16px;
+    background: var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
+    overflow:hidden;
+  }
+
+  /* ---------- CHAT PANE ---------- */
+  .chat-pane{ flex:1; min-width:0; display:flex; flex-direction:column; }
+
+  .chat-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 14px 20px; border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .chat-contact{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .contact-avatar{
+    width:38px; height:38px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; color:#fff;
+    background: linear-gradient(135deg,#2C7A56,#1B5A3F); /* green for user */
+  }
+  .contact-info h3{ font-size:14px; font-weight:700; margin:0 0 2px; }
+  .contact-status{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-secondary); }
+  .status-dot{ width:6px; height:6px; border-radius:50%; }
+  .status-dot.WAITING{ background:#F5A524; }
+  .status-dot.IN_PROGRESS{ background:#3b82f6; }
+  .status-dot.CLOSED{ background:#10b981; }
+
+  .thread{
+    flex:1; overflow-y:auto; padding: 18px 22px;
+    background-image: radial-gradient(var(--wallpaper-dot) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+
+  .msg-group{ display:flex; gap:10px; margin-bottom:16px; }
+  .msg-group.mine{ flex-direction:row-reverse; }
+  .avatar{
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11.5px; font-weight:700; color:#fff;
+    background: linear-gradient(135deg,#2C7A56,#1B5A3F);
+  }
+  .avatar.agent{ background: linear-gradient(135deg,#5471FF,#2E3F9E); }
+
+  .msg-stack{ display:flex; flex-direction:column; max-width:70%; }
+  .msg-group.mine .msg-stack{ align-items:flex-end; }
+  .msg-name{ font-size:12px; font-weight:600; color:var(--text-secondary); margin: 0 0 6px 2px; }
+  .msg-group.mine .msg-name{ margin-right:2px; }
+
+  .bubble-wrap{ position:relative; margin-bottom:3px; }
+  .bubble{
+    position:relative;
+    background: var(--bubble-other); color: var(--text-primary);
+    padding:9px 13px; border-radius: 12px;
+    font-size:13.5px; line-height:1.5; word-break: break-word;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+  }
+  .msg-group.mine .bubble{ background: var(--bubble-mine); color: var(--bubble-mine-text); }
+  .bubble-wrap:first-child .bubble{ border-top-left-radius:4px; }
+  .msg-group.mine .bubble-wrap:first-child .bubble{ border-top-left-radius:12px; border-top-right-radius:4px; }
+  .msg-time{ font-size:10.5px; color:var(--text-muted); margin-top:4px; display:block; }
+  .msg-group.mine .msg-time{ text-align:right; }
+
+  /* ---------- COMPOSER ---------- */
+  .composer{ border-top:1px solid var(--border); padding: 12px 18px; flex-shrink:0; }
+  .composer-box{
+    display:flex; align-items:flex-end; gap:8px;
+    background: var(--input-bg); border:1px solid var(--border-strong); border-radius:16px;
+    padding:6px 6px 6px 8px;
+  }
+  .composer-box textarea{
+    flex:1; border:none; background:transparent; outline:none; resize:none;
+    font-family:inherit; font-size:13.5px; color:var(--text-primary); line-height:1.5;
+    max-height:110px; min-height:20px; padding:8px 2px;
+  }
+  .composer-box textarea::placeholder{ color: var(--text-muted); }
+  .send-btn{
+    width:34px; height:34px; border-radius:50%; border:none; flex-shrink:0;
+    background: var(--accent); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .send-btn:hover{ background: var(--accent-strong); }
+  .send-btn svg{ width:14px; height:14px; }
+
+  /* ---------- INFO DRAWER ---------- */
+  .info-drawer{
+    width: 280px; flex-shrink:0; border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow-y:auto;
+    transition: margin-right .18s ease;
+  }
+  .info-drawer.hidden{ margin-right: -296px; }
+  .info-section{ padding: 18px 20px; border-bottom:1px solid var(--border); }
+  .info-section:last-child{ border-bottom:none; }
+  .info-section h4{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin:0 0 12px; }
+
+  .status-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; font-weight:600; padding:5px 11px; border-radius:999px;
+  }
+  .status-badge.WAITING{ color:#F5A524; border:1px solid rgba(245,165,36,0.35); background: rgba(245,165,36,0.08); }
+  .status-badge.IN_PROGRESS{ color:#3b82f6; border:1px solid rgba(59,130,246,0.35); background: rgba(59,130,246,0.08); }
+  .status-badge.CLOSED{ color:#10b981; border:1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.08); }
+
+  .info-title{ font-size:15px; font-weight:700; margin:0 0 14px; line-height: 1.4; }
+
+  .info-row{ display:flex; align-items:center; gap:10px; padding:8px 0; font-size:13px; }
+  .info-row svg{ width:14px; height:14px; color:var(--text-muted); flex-shrink:0; }
+  .info-row .k{ color:var(--text-secondary); flex:1; }
+  .info-row .v{ color:var(--text-primary); font-weight:600; }
+
+  .btn-outline{
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    background:transparent; border:1px solid var(--border-strong); color:var(--text-primary);
+    font-size:13px; font-weight:600; padding:10px 14px; border-radius:9px;
+    text-decoration:none; margin-bottom: 8px; cursor: pointer;
+  }
+  .btn-outline:hover{ border-color: var(--text-muted); }
+  
+  .btn-primary{
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    background:var(--accent); color:#fff; border:none;
+    font-size:13px; font-weight:600; padding:10px 14px; border-radius:9px;
+    text-decoration:none; margin-bottom: 8px; cursor: pointer;
+  }
+  .btn-primary:hover{ background:var(--accent-strong); }
+
+  .btn-danger{
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    background:var(--danger); color:#fff; border:none;
+    font-size:13px; font-weight:600; padding:10px 14px; border-radius:9px;
+    text-decoration:none; margin-bottom: 8px; cursor: pointer;
+  }
+  .btn-danger:hover{ opacity: 0.9; }
+
+  .btn-success{
+    display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+    background:#10b981; color:#fff; border:none;
+    font-size:13px; font-weight:600; padding:10px 14px; border-radius:9px;
+    text-decoration:none; margin-bottom: 8px; cursor: pointer;
+  }
+  .btn-success:hover{ opacity: 0.9; }
+
+  /* Assignment history */
+  .assignment-item{ border-left: 2px solid var(--border-strong); padding-left: 12px; margin-left: 6px; margin-bottom: 12px; position:relative; }
+  .assignment-item::before{ content:''; position:absolute; left:-6px; top:4px; width:10px; height:10px; border-radius:50%; background:var(--border-strong); }
+  .assignment-item.active::before{ background:var(--accent); box-shadow: 0 0 0 3px rgba(84,113,255,0.2); }
+  .assignment-item.completed::before{ background:#10b981; }
+  .assign-name{ font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+  .assign-time{ font-size: 11px; color: var(--text-muted); }
+  
+  .alert{ padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; font-size:13px;}
+  .alert-error{ background-color: rgba(249,112,102,0.1); border: 1px solid rgba(249,112,102,0.3); color: var(--danger); }
+
+  @media (max-width: 860px){
+    .info-drawer{ position:fixed; right:0; top:0; bottom:0; width:280px; background:var(--surface); z-index:50; box-shadow:-8px 0 24px rgba(0,0,0,0.25); }
+    .info-drawer.hidden{ transform: translateX(100%); margin-right:0; }
+    .info-drawer:not(.hidden){ transform: translateX(0); }
+    .msg-stack{ max-width:85%; }
+  }
+</style>
+
+<div class="chat-app-container">
+    {{if .error}}
+    <div class="alert alert-error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"></circle><path d="M12 8V12"></path><path d="M12 16H12.01"></path></svg>
+        {{.error}}
     </div>
+    {{end}}
 
-    <div class="content">
-        {{if .error}}
-        <div class="error-alert">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 8V12"/>
-                <path d="M12 16H12.01"/>
-            </svg>
-            <span>{{.error}}</span>
+  <div class="topbar">
+    <div class="topbar-left">
+      <a class="back-btn" href="department/all-tickets">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+      </a>
+      <div class="topbar-title">
+        <h1>{{$ticket.Title}}</h1>
+        <div class="id mono">{{$ticket.GetTicketNumber}}</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="themeToggle" title="Ganti tema">
+        <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+      <button class="icon-btn active" id="infoToggle" title="Info tiket">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="workspace">
+
+    <!-- CHAT PANE -->
+    <div class="chat-pane">
+      <div class="chat-header">
+        <div class="chat-contact">
+          <div class="contact-avatar">
+            {{slice $ticket.CreatedBy.Username 0 2 | upper}}
+          </div>
+          <div class="contact-info">
+            <h3>{{$ticket.CreatedBy.GetFullName}}</h3>
+            <div class="contact-status"><span class="status-dot {{$ticket.Status}}"></span>{{$ticket.GetStatusDisplay}}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="thread" id="chatThread">
+        <!-- Original Description as first message -->
+        <div class="msg-group">
+          <div class="avatar">
+            {{slice $ticket.CreatedBy.Username 0 2 | upper}}
+          </div>
+          <div class="msg-stack">
+            <div class="msg-name">{{$ticket.CreatedBy.GetFullName}}</div>
+            <div class="bubble-wrap">
+              <div class="bubble"><strong>{{$ticket.Title}}</strong><br/><br/>{{linebreaks $ticket.Description}}</div>
+              <span class="msg-time">{{date $ticket.CreatedAt}}</span>
+            </div>
+          </div>
+        </div>
+
+        {{range .replies}}
+        <div class="msg-group {{if and .User.IsStaff (eq .UserID $currentUser.ID)}}mine{{end}}">
+          <div class="avatar {{if .User.IsStaff}}agent{{end}}">
+            {{slice .User.Username 0 2 | upper}}
+          </div>
+          <div class="msg-stack">
+            <div class="msg-name">{{if eq .UserID $currentUser.ID}}Anda{{else}}{{getFullName .User}} {{if .User.IsStaff}}· Staff{{end}}{{end}}</div>
+            <div class="bubble-wrap">
+              <div class="bubble">{{linebreaks .Message}}</div>
+              <span class="msg-time">{{date .CreatedAt}}</span>
+            </div>
+          </div>
         </div>
         {{end}}
 
-        <!-- BANNER -->
-        <div class="ticket-banner">
-            <div>
-                <div class="t-id-pill">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    </svg>
-                    {{$ticket.GetTicketNumber}}
-                </div>
-                <div class="t-title">{{$ticket.Title}}</div>
-                <div class="t-meta">
-                    {{if eq $ticket.Status "WAITING"}}
-                    <span class="status-badge open"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
-                    {{else if eq $ticket.Status "IN_PROGRESS"}}
-                    <span class="status-badge in-progress"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
-                    {{else}}
-                    <span class="status-badge closed"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
-                    {{end}}
-                    <div class="meta-chip">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        {{date $ticket.CreatedAt}}
-                    </div>
-                    <div class="meta-chip">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                        {{$ticket.CreatedBy.Username}}
-                    </div>
-                    <div class="meta-chip">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                        {{len .replies}} balasan
-                    </div>
-                </div>
-            </div>
-            {{if $ticket.AssignedTo}}
-            <div class="handled-block">
-                <div class="handled-lbl">Ditangani oleh</div>
-                <div class="handled-person">
-                    <div class="h-avatar">{{slice $ticket.AssignedTo.Username 0 2 | upper}}</div>
-                    <span class="h-name">{{$ticket.AssignedTo.Username}}</span>
-                </div>
-            </div>
-            {{end}}
-        </div>
+      </div>
 
-        <!-- MAIN COL -->
-        <div class="main-col">
-            <div class="card">
-                <div class="card-hd"><h2>Deskripsi Masalah</h2></div>
-                <div class="card-bd">
-                    <p class="desc-text">{{linebreaks $ticket.Description}}</p>
-                </div>
-            </div>
-
-            {{if .replies}}
-            <div class="card">
-                <div class="card-hd"><h2>Riwayat Percakapan</h2></div>
-                <div class="card-bd">
-                    {{range .replies}}
-                    <div style="padding-bottom: 16px; border-bottom: 1px solid var(--border-2); margin-bottom: 16px;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                            <div style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #E74C3C, #C0392B); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff;">
-                                {{slice .User.Username 0 2 | upper}}
-                            </div>
-                            <span style="font-size: 12.5px; font-weight: 700; color: var(--txt-1);">{{getFullName .User}}</span>
-                            {{if .User.IsStaff}}<span class="badge b-green" style="font-size: 9px;">Staff</span>{{end}}
-                            <span style="font-size: 11px; color: var(--txt-3); margin-left: auto;">{{date .CreatedAt}}</span>
-                        </div>
-                        <p style="font-size: 13.5px; color: var(--txt-2); line-height: 1.85; margin: 0;">{{linebreaks .Message}}</p>
-                    </div>
-                    {{end}}
-                </div>
-            </div>
-            {{end}}
-
-            {{if .is_locked}}
-                {{if eq $ticket.Status "CLOSED"}}
-                <div class="card" style="background: #FEF2F2; border-color: #FECACA;">
-                    <div class="card-bd" style="text-align: center; padding: 2rem;">
-                        <h3 style="color: #991B1B; font-size: 15px; font-weight: 700; margin-bottom: 8px;">🔒 Tiket Terkunci</h3>
-                        <p style="color: #7F1D1D; font-size: 13px;">Tiket ini sudah ditutup dan tidak bisa dibalas.</p>
-                    </div>
-                </div>
-                {{else}}
-                <div class="card" style="background: #FEF2F2; border-color: #FECACA;">
-                    <div class="card-bd" style="text-align: center; padding: 2rem;">
-                        <h3 style="color: #991B1B; font-size: 15px; font-weight: 700; margin-bottom: 8px;">🔒 Tiket Terkunci</h3>
-                        <p style="color: #7F1D1D; font-size: 13px;">Tiket ini sedang dikerjakan oleh <strong>{{if $ticket.AssignedTo}}{{$ticket.AssignedTo.Username}}{{end}}</strong> dan tidak bisa dibalas.</p>
-                    </div>
-                </div>
-                {{end}}
-            {{else if not $ticket.AssignedToID}}
-                <div class="claim-card">
-                    <h3>Tiket ini belum diambil</h3>
-                    <a href="department/tiket/claim/{{$ticket.ID}}" class="btn btn-red">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 13l4 4L19 7"/>
-                        </svg>
-                        Ambil Tiket Ini (Claim)
-                    </a>
-                </div>
-            {{else if .is_owner}}
-                <div class="card">
-                    <div class="card-hd"><h2>Balas Pesan</h2></div>
-                    <div class="card-bd">
-                        <form method="POST" action="department/tiket/{{$ticket.ID}}">
-                            <textarea name="message" class="reply-box" placeholder="Tulis balasan ke pengguna… Gunakan bahasa yang jelas dan profesional." required></textarea>
-                            <div class="reply-footer">
-                                <span class="reply-hint">Balasan akan dikirim ke email pengguna</span>
-                                <button type="submit" class="btn btn-red">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="22" y1="2" x2="11" y2="13"/>
-                                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                                    </svg>
-                                    Kirim Balasan
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="done-card">
-                    <div class="done-text">
-                        <p>Masalah Sudah Selesai?</p>
-                        <span>Tandai tiket sebagai selesai dan tutup sesi ini</span>
-                    </div>
-                    <a href="department/tiket/close/{{$ticket.ID}}" onclick="event.preventDefault(); showCustomConfirm('Yakin tutup tiket ini? Tiket akan ditandai selesai dan tidak bisa dibalas lagi.', function(){ window.location.href='department/tiket/close/{{$ticket.ID}}'; }); return false;" class="btn btn-green">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
-                        </svg>
-                        Tandai Selesai
-                    </a>
-                </div>
-            {{else}}
-                <div class="card" style="background: var(--surface-2);">
-                    <div class="card-bd" style="text-align: center; padding: 2rem;">
-                        <h3 style="color: var(--txt-1); font-size: 15px; font-weight: 700; margin-bottom: 8px;">Tiket Sedang Dikerjakan</h3>
-                        <p style="color: var(--txt-2); font-size: 13px;">Oleh: <strong>{{if $ticket.AssignedTo}}{{$ticket.AssignedTo.Username}}{{end}}</strong></p>
-                    </div>
-                </div>
-            {{end}}
-        </div>
-
-        <!-- SIDE COL -->
-        <div class="side-col">
-            <div class="card">
-                <div class="card-hd"><h2>Info Pengguna</h2></div>
-                <div class="info-row"><span class="info-k">Nama</span><span class="info-v">{{$ticket.CreatedBy.GetFullName}}</span></div>
-                <div class="info-row"><span class="info-k">Email</span><span class="info-v mono">{{$ticket.CreatedBy.Email}}</span></div>
-                <div class="info-row">
-                    <span class="info-k">Prioritas</span>
-                    {{if eq $ticket.Priority "HIGH"}}
-                    <span class="badge" style="background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; font-size: 11px;">High</span>
-                    {{else if eq $ticket.Priority "MEDIUM"}}
-                    <span class="badge b-amber" style="font-size: 11px;">Medium</span>
-                    {{else}}
-                    <span class="badge b-blue" style="font-size: 11px;">Low</span>
-                    {{end}}
-                </div>
-                <div class="info-row">
-                    <span class="info-k">Status</span>
-                    {{if eq $ticket.Status "WAITING"}}
-                    <span class="status-badge open" style="font-size: 11px;"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
-                    {{else if eq $ticket.Status "IN_PROGRESS"}}
-                    <span class="status-badge in-progress" style="font-size: 11px;"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
-                    {{else}}
-                    <span class="status-badge closed" style="font-size: 11px;"><span class="badge-dot"></span> {{$ticket.GetStatusDisplay}}</span>
-                    {{end}}
-                </div>
-            </div>
-
-            {{if .assignment_history}}
-            <div class="card">
-                <div class="card-hd">
-                    <h2>Riwayat Staff</h2>
-                    <span class="pill">{{len .assignment_history}}</span>
-                </div>
-                {{range .assignment_history}}
-                <div class="staff-item">
-                    <div class="s-avatar">{{slice .Staff.Username 0 2 | upper}}</div>
-                    <div>
-                        <div class="s-name-row">
-                            <span class="s-name">{{getFullName .Staff}}</span>
-                            {{if .IsCompleted}}
-                            <span class="s-active">Selesai</span>
-                            {{else if .ReleasedAt}}
-                            <span style="font-size: 10px; font-weight: 700; padding: 1.5px 6px; border-radius: 8px; background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-bdr);">Dilepas</span>
-                            {{else}}
-                            <span class="s-active">Aktif</span>
-                            {{end}}
-                        </div>
-                        <div class="s-time">Ambil: {{date .AssignedAt}}{{if .ReleasedAt}}<br>Lepas: {{date .ReleasedAt}}{{end}}</div>
-                    </div>
-                </div>
-                {{end}}
-                {{if .is_owner}}
-                <button type="button" class="pool-btn" onclick="showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; });">Lepas ke Pool</button>
-                {{end}}
-            </div>
-            {{end}}
-        </div>
+      <!-- COMPOSER / STATES -->
+      {{if .is_locked}}
+          {{if eq $ticket.Status "CLOSED"}}
+          <div style="padding:15px; text-align:center; color:var(--text-muted); border-top:1px solid var(--border); font-size:13px; font-weight:500;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Tiket ini sudah ditutup dan tidak bisa dibalas.
+          </div>
+          {{else}}
+          <div style="padding:15px; text-align:center; color:var(--text-muted); border-top:1px solid var(--border); font-size:13px; font-weight:500;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Tiket ini sedang dikerjakan oleh <strong>{{if $ticket.AssignedTo}}{{$ticket.AssignedTo.Username}}{{end}}</strong>
+          </div>
+          {{end}}
+      {{else if not $ticket.AssignedToID}}
+          <div style="padding:15px; text-align:center; border-top:1px solid var(--border);">
+            <a href="department/tiket/claim/{{$ticket.ID}}" class="btn-primary" style="display:inline-flex; width:auto; padding:12px 24px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+              Ambil Tiket Ini (Claim)
+            </a>
+          </div>
+      {{else if .is_owner}}
+          <div class="composer">
+            <form method="POST" action="department/tiket/{{$ticket.ID}}" class="composer-box">
+              <textarea name="message" id="message" rows="1" placeholder="Tulis balasan ke pengguna... Gunakan bahasa profesional." required></textarea>
+              <button type="submit" class="send-btn">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20v-6l8-2-8-2V4l19 8Z"/></svg>
+              </button>
+            </form>
+          </div>
+      {{else}}
+          <div style="padding:15px; text-align:center; color:var(--text-muted); border-top:1px solid var(--border); font-size:13px; font-weight:500;">
+            Tiket Sedang Dikerjakan Oleh: <strong>{{if $ticket.AssignedTo}}{{$ticket.AssignedTo.Username}}{{end}}</strong>
+          </div>
+      {{end}}
     </div>
+
+    <!-- INFO DRAWER -->
+    <div class="info-drawer" id="infoDrawer">
+      <div class="info-section">
+        <h4>Detail Pengguna</h4>
+        <div class="info-title">{{$ticket.CreatedBy.GetFullName}}</div>
+        <div class="info-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          <span class="v mono" style="font-size:11.5px">{{$ticket.CreatedBy.Email}}</span>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h4>Status Tiket</h4>
+        <div class="info-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>
+          <span class="k">Status</span><span class="status-badge {{$ticket.Status}}">{{$ticket.GetStatusDisplay}}</span>
+        </div>
+        <div class="info-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+          <span class="k">Prioritas</span><span class="v">{{$ticket.GetPriorityDisplay}}</span>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h4>Aksi Tiket</h4>
+        {{if .is_owner}}
+        <a href="#" onclick="event.preventDefault(); showCustomConfirm('Yakin tutup tiket ini? Tiket akan ditandai selesai dan tidak bisa dibalas lagi.', function(){ window.location.href='department/tiket/close/{{$ticket.ID}}'; }); return false;" class="btn-success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Tandai Selesai
+        </a>
+        {{end}}
+        <a href="department/all-tickets" class="btn-outline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          Kembali ke Daftar
+        </a>
+      </div>
+
+      {{if .assignment_history}}
+      <div class="info-section" style="flex:1;">
+        <h4>Riwayat Staff</h4>
+        {{range .assignment_history}}
+        <div class="assignment-item {{if .IsCompleted}}completed{{else if .ReleasedAt}}{{else}}active{{end}}">
+            <div class="assign-name">{{getFullName .Staff}}</div>
+            <div class="assign-time">
+                {{if .IsCompleted}}Selesai: {{date .UpdatedAt}}
+                {{else if .ReleasedAt}}Dilepas: {{date .ReleasedAt}}
+                {{else}}Aktif Sejak: {{date .AssignedAt}}{{end}}
+            </div>
+        </div>
+        {{end}}
+
+        {{if .is_owner}}
+        <button type="button" class="btn-danger" style="margin-top: 10px;" onclick="showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; });">
+            Lepas ke Pool
+        </button>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+
+<script>
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('themeToggle');
+  const iconMoon = document.getElementById('iconMoon');
+  const sunPath = '<path d="M12 4V2M12 22v-2M4.9 4.9 3.5 3.5M20.5 20.5l-1.4-1.4M4 12H2M22 12h-2M4.9 19.1 3.5 20.5M20.5 3.5l-1.4 1.4"/><circle cx="12" cy="12" r="4"/>';
+  const moonPath = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>';
+  
+  const savedTheme = localStorage.getItem('ticket-theme') || 'dark';
+  root.setAttribute('data-theme', savedTheme);
+  iconMoon.innerHTML = savedTheme === 'dark' ? sunPath : moonPath;
+
+  themeBtn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    const newTheme = isDark ? 'light' : 'dark';
+    root.setAttribute('data-theme', newTheme);
+    iconMoon.innerHTML = newTheme === 'dark' ? sunPath : moonPath;
+    localStorage.setItem('ticket-theme', newTheme);
+  });
+
+  const infoBtn = document.getElementById('infoToggle');
+  const drawer = document.getElementById('infoDrawer');
+  infoBtn.addEventListener('click', () => {
+    drawer.classList.toggle('hidden');
+    infoBtn.classList.toggle('active');
+  });
+
+  const ta = document.getElementById('message');
+  if(ta) {
+      ta.addEventListener('input', function(){
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+      });
+      // Submit on enter
+      ta.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if(this.value.trim() !== '') {
+                  this.form.submit();
+              }
+          }
+      });
+  }
+
+  // scroll chat to bottom
+  const chatThread = document.getElementById('chatThread');
+  if(chatThread) {
+      chatThread.scrollTop = chatThread.scrollHeight;
+  }
+</script>
 {{end}}
 {{end}}
