@@ -3,7 +3,7 @@
 {{$currentUser := .user}}
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/ticket_detail.css">
+<link rel="stylesheet" href="static/css/ticket_detail.css">
 
 <div class="chat-app-container">
     {{if .success}}
@@ -122,7 +122,7 @@
         <form method="POST" action="tiket/{{$ticket.ID}}" class="composer-box">
           <textarea name="message" id="message" rows="1" placeholder="Tulis balasan Anda di sini..." required></textarea>
           <button type="submit" class="send-btn">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20v-6l8-2-8-2V4l19 8Z"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20v-6l8-2-8-2V4l19 8Z"/></svg>
           </button>
         </form>
       </div>
@@ -141,19 +141,19 @@
         <span class="status-badge {{$ticket.Status}}"><span class="status-dot {{$ticket.Status}}"></span>{{$ticket.GetStatusDisplay}}</span>
         <div class="info-title">{{$ticket.Title}}</div>
         <div class="info-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>
           <span class="k">Departemen</span><span class="v">{{if $ticket.Department}}{{$ticket.Department.Name}}{{else}}Tidak Ditentukan{{end}}</span>
         </div>
         <div class="info-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
           <span class="k">Prioritas</span><span class="v">{{$ticket.GetPriorityDisplay}}</span>
         </div>
         <div class="info-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           <span class="k">Dibuat</span><span class="v">{{dateShort $ticket.CreatedAt}}</span>
         </div>
         <div class="info-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>
           <span class="k">Total Balasan</span><span class="v">{{len .replies}}</span>
         </div>
       </div>
@@ -161,7 +161,7 @@
   </div>
 </div>
 
-<script src="/static/js/ticket_detail.js"></script>
+<script src="static/js/ticket_detail.js"></script>
 {{end}}
 
 {{define "tickets/ticket_detail"}}

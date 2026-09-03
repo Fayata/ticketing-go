@@ -1,0 +1,110 @@
+/* Common Page Styles (success, error pages) */
+
+/* Alert styles */
+.alert {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.alert-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+/* Success Page (ticket_success.html) */
+.success-container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.success-container h1 {
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+}
+
+.success-box {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+    padding: 15px;
+    border-radius: 6px;
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.success-message {
+    color: #374151;
+    margin-bottom: 30px;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.success-button {
+    display: inline-block;
+    text-decoration: none;
+    padding: 0.75rem 1.5rem;
+    background-color: #6366f1;
+    color: white;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.success-button:hover {
+    background-color: #4f46e5;
+}
+
+/* Error Page (setup_error.html) */
+.error-container {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 20px;
+    background-color: #fff1f0;
+    border: 1px solid #ffccc7;
+    color: #a8071a;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.error-container h2 {
+    color: #a8071a;
+    margin-bottom: 1rem;
+}
+
+.error-container p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.error-container a {
+    color: #6366f1;
+    text-decoration: underline;
+}
+
+.error-container a:hover {
+    color: #4f46e5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .success-container,
+    .error-container {
+        margin: 20px;
+        padding: 15px;
+    }
+}
+

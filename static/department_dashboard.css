@@ -1,0 +1,279 @@
+/* Ticketing/static/department_dashboard.css */
+
+/* Reset & Utilities untuk Halaman Ini */
+.department-layout {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    min-height: 100vh;
+    background-color: #f9fafb; /* bg-gray-50 */
+    color: #1f2937;
+    position: fixed; /* Override base layout */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999; /* Ensure it sits on top of base */
+}
+
+/* Sidebar Merah */
+.dept-sidebar {
+    width: 260px; /* w-64 approx */
+    background-color: #dc2626; /* bg-red-600 */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.dept-sidebar-header {
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #ef4444; /* border-red-500 */
+}
+
+.dept-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.dept-nav {
+    flex: 1;
+    padding: 1rem;
+}
+
+.dept-nav-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: white;
+    text-decoration: none;
+    transition: background-color 0.2s;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    text-align: left;
+    box-sizing: border-box; /* Fix padding calculation */
+}
+
+.dept-nav-item:hover {
+    background-color: #b91c1c; /* hover:bg-red-700 */
+}
+
+.dept-nav-item.active {
+    background-color: white;
+    color: #dc2626; /* text-red-600 */
+}
+
+.dept-nav-badge {
+    margin-left: auto;
+    background-color: #991b1b; /* bg-red-800 */
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+}
+
+.dept-profile-section {
+    padding: 1rem;
+    border-top: 1px solid #ef4444;
+}
+
+.dept-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.dept-avatar-circle {
+    width: 3rem;
+    height: 3rem;
+    background-color: #b91c1c;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.125rem;
+}
+
+/* Main Content Area */
+.dept-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dept-header {
+    background-color: white;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dept-content {
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+/* Stats Cards */
+.dept-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.dept-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+}
+
+.dept-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.dept-icon-wrapper {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+}
+
+.bg-orange-soft { background-color: #ffedd5; color: #ea580c; }
+.bg-blue-soft { background-color: #dbeafe; color: #2563eb; }
+.bg-green-soft { background-color: #dcfce7; color: #16a34a; }
+
+.dept-stat-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+/* Chart & Layout Grid */
+.dept-layout-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* 2/3 and 1/3 */
+    gap: 1.5rem;
+}
+
+/* Chart Visualization */
+.dept-chart-container {
+    height: 16rem; /* h-64 */
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.chart-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.chart-track {
+    width: 100%;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem 0.5rem 0 0;
+    position: relative;
+    height: 200px; /* Fixed height for track */
+}
+
+.chart-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(to top, #f87171, #dc2626);
+    border-radius: 0.5rem 0.5rem 0 0;
+    transition: height 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart-fill:hover {
+    background: linear-gradient(to top, #ef4444, #b91c1c);
+}
+
+.chart-value-label {
+    color: white;
+    font-weight: bold;
+    font-size: 0.875rem;
+}
+
+/* Ticket List */
+.dept-search-box {
+    position: relative;
+    margin-top: 1rem;
+}
+
+.dept-search-input {
+    width: 100%;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.dept-search-input:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.ticket-item-card {
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: white;
+}
+
+.ticket-item-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border-color: #fca5a5;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 500;
+}
+
+/* Priority Colors */
+.priority-HIGH { background-color: #fef2f2; color: #dc2626; }
+.priority-MEDIUM { background-color: #fefce8; color: #ca8a04; }
+.priority-LOW { background-color: #f0fdf4; color: #16a34a; }
+
+/* Status Colors */
+.status-WAITING { background-color: #fff7ed; color: #c2410c; }
+.status-IN_PROGRESS { background-color: #eff6ff; color: #2563eb; }
+.status-CLOSED { background-color: #f0fdf4; color: #16a34a; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .dept-layout-grid { grid-template-columns: 1fr; }
+    .dept-stats-grid { grid-template-columns: 1fr; }
+}

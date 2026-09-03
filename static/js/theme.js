@@ -6,11 +6,13 @@
   var STORAGE_KEY = 'theme';
 
   function getTheme() {
-    var t = 'dark';
     try {
-      t = localStorage.getItem(STORAGE_KEY) || 'dark';
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored === 'light' || stored === 'dark') return stored;
     } catch (e) {}
-    return t === 'light' ? 'light' : 'dark';
+    var current = document.documentElement.getAttribute('data-theme');
+    if (current === 'light' || current === 'dark') return current;
+    return 'light';
   }
 
   function setTheme(theme) {

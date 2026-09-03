@@ -73,3 +73,38 @@
 .uf-notes ul { margin: 0; padding-left: 1.25rem; }
 .uf-notes li { font-size: 0.875rem; color: #64748b; line-height: 1.7; }
 .uf-notes li strong { color: var(--text-primary, #1e293b); }
+
+/* Dark mode overrides */
+:root[data-theme="dark"] .uf-card {
+    background: #0f172a;
+    border-color: #1e293b;
+}
+:root[data-theme="dark"] .uf-card-title,
+:root[data-theme="dark"] .uf-field label,
+:root[data-theme="dark"] .uf-preview-name,
+:root[data-theme="dark"] .uf-preview-row .uf-pr-value,
+:root[data-theme="dark"] .uf-notes li strong {
+    color: #f1f5f9;
+}
+:root[data-theme="dark"] .uf-field input,
+:root[data-theme="dark"] .uf-field select {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+:root[data-theme="dark"] .uf-role-option {
+    border-color: #334155;
+    color: #f1f5f9;
+}
+:root[data-theme="dark"] .uf-role-option:hover {
+    background: rgba(16, 185, 129, 0.08);
+}
+:root[data-theme="dark"] .uf-role-option.active {
+    background: rgba(16, 185, 129, 0.14);
+    border-color: #10b981;
+}
+:root[data-theme="dark"] .uf-btn-cancel {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+}

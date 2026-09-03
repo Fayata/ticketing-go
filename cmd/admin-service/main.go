@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -102,7 +103,16 @@ func main() {
 	adminMux.HandleFunc("/departments", adminHandler.ListDepartments)
 	adminMux.HandleFunc("/departments/create", AuditLogWrapper("Create Department", adminHandler.CreateDepartmentForm))
 	
-	mux.Handle("/admin/", http.StripPrefix("/admin", middleware.AuthRequired(middleware.SuperAdminRequired(adminMux.ServeHTTP))))
+	adminHandlerFunc := middleware.AuthRequired(middleware.SuperAdminRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := strings.TrimPrefix(r.URL.Path, "/admin")
+		if p == "" || p == "/" {
+			p = "/dashboard"
+		}
+		r.URL.Path = p
+		adminMux.ServeHTTP(w, r)
+	})))
+	mux.Handle("/admin/", adminHandlerFunc)
+	mux.Handle("/admin", adminHandlerFunc)
 
 	// Admin KB Routes (StaffOrSuperAdmin)
 	kbAdminMux := http.NewServeMux()
@@ -116,8 +126,17 @@ func main() {
 	kbAdminMux.HandleFunc("/articles/edit/", adminHandler.EditKBArticle)
 	kbAdminMux.HandleFunc("/articles/delete/", adminHandler.DeleteKBArticle)
 	
-	mux.Handle("/admin/knowledge-base/", http.StripPrefix("/admin/knowledge-base", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(kbAdminMux.ServeHTTP))))
-	mux.Handle("/admin/knowledge-base", http.StripPrefix("/admin/knowledge-base", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(kbAdminMux.ServeHTTP))))
+	kbHandler := middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := strings.TrimPrefix(r.URL.Path, "/admin/knowledge-base")
+		if p == "" || p == "/" {
+			r.URL.Path = "/"
+		} else {
+			r.URL.Path = p
+		}
+		kbAdminMux.ServeHTTP(w, r)
+	})))
+	mux.Handle("/admin/knowledge-base/", kbHandler)
+	mux.Handle("/admin/knowledge-base", kbHandler)
 
 	// Department Routes
 	deptMux := http.NewServeMux()
@@ -127,8 +146,25 @@ func main() {
 	deptMux.HandleFunc("/tiket/claim/", departmentHandler.ClaimTicket)
 	deptMux.HandleFunc("/tiket/release/", departmentHandler.ReleaseTicket)
 	deptMux.HandleFunc("/tiket/close/", departmentHandler.CloseTicket)
+	deptMux.HandleFunc("/logout-release", departmentHandler.LogoutAndRelease)
 
-	mux.Handle("/departement/", http.StripPrefix("/departement", middleware.AuthRequired(middleware.DepartmentRequired(deptMux.ServeHTTP))))
+	deptHandler := middleware.AuthRequired(middleware.DepartmentRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		if strings.HasPrefix(p, "/departement") {
+			p = strings.TrimPrefix(p, "/departement")
+		} else if strings.HasPrefix(p, "/department") {
+			p = strings.TrimPrefix(p, "/department")
+		}
+		if p == "" || p == "/" {
+			p = "/dashboard"
+		}
+		r.URL.Path = p
+		deptMux.ServeHTTP(w, r)
+	})))
+	mux.Handle("/departement/", deptHandler)
+	mux.Handle("/departement", deptHandler)
+	mux.Handle("/department/", deptHandler)
+	mux.Handle("/department", deptHandler)
 
 	// Wrapper endpoints (from handler.go)
 	mux.HandleFunc("/health", HealthCheckHandler)

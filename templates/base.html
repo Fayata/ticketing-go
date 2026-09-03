@@ -8,7 +8,7 @@
     <title>{{if .title}}{{.title}}{{else}}Portal Ticketing{{end}}</title>
     <script>
       (function(){
-        var d = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; var t = localStorage.getItem('theme') || d;
+        var t = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
       })();
     </script>
@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="static/css/pages.css">
     <link rel="stylesheet" href="static/css/alerts.css">
     <link rel="stylesheet" href="static/css/notif-panel.css">
+    <link rel="stylesheet" href="static/css/ticket_detail.css">
 </head>
 <body>
     <div class="dashboard-container">
@@ -79,7 +80,7 @@
                 {{if and .user (or .user.IsStaff .user.IsSuperAdmin)}}
                 <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(16,185,129,0.15);">
                     <div style="font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 0 1rem 0.5rem;">Kelola</div>
-                    <a href="admin/knowledge-base" class="nav-item {{if eq .nav_active "admin_kb"}}active{{end}}">
+                    <a href="admin/knowledge-base/" class="nav-item {{if eq .nav_active "admin_kb"}}active{{end}}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                         </svg>
@@ -200,6 +201,7 @@
                             </div>
                         </div>
                     </div>
+                    <button type="button" class="dept-theme-toggle" id="themeToggle" data-theme-toggle aria-label="Toggle theme" style="background:var(--surface, #fff); border:1px solid var(--border, #e2e8f0); border-radius:9px; width:38px; height:38px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">🌙</button>
                     <a href="kirim-tiket" class="btn-primary">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -275,6 +277,7 @@
     <script src="static/js/dashboard.js"></script>
     <script src="static/js/alerts.js"></script>
     <script src="static/js/notif-panel.js"></script>
+    <script src="static/js/theme.js"></script>
 </body>
 </html>
 {{end}}

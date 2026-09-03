@@ -74,17 +74,21 @@ func main() {
 
 	// Register routes
 	mux.Handle("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.ShowDashboard))))
+	mux.Handle("/dashboard/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.ShowDashboard))))
 	mux.Handle("/tiket", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(ticketHandler.ShowMyTickets))))
 	mux.Handle("/tiket/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(ticketHandler.HandleTicketDetail))))
 	
 	// Apply custom wrappers to CreateTicket
 	createTicketHandler := InputSanitizer(ValidateTicketInput(http.HandlerFunc(ticketHandler.HandleCreateTicket)))
 	mux.Handle("/kirim-tiket", middleware.AuthRequired(middleware.PortalUserRequired(createTicketHandler.ServeHTTP)))
+	mux.Handle("/kirim-tiket/", middleware.AuthRequired(middleware.PortalUserRequired(createTicketHandler.ServeHTTP)))
 	
 	mux.Handle("/tiket/sukses/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(ticketHandler.ShowTicketSuccess))))
 	mux.Handle("/rating/", middleware.AuthRequired(http.HandlerFunc(ticketHandler.HandleRating)))
 	mux.Handle("/settings", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(settingsHandler.HandleSettings))))
+	mux.Handle("/settings/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(settingsHandler.HandleSettings))))
 	mux.Handle("/knowledge-base", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.ShowKnowledgeBase))))
+	mux.Handle("/knowledge-base/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.ShowKnowledgeBase))))
 	mux.Handle("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.ShowKBArticle))))
 	mux.Handle("/api/kb/article/view", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.RecordKBArticleView))))
 

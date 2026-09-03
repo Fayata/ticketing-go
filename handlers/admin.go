@@ -454,7 +454,7 @@ func (h *AdminHandler) ListKBAdmin(w http.ResponseWriter, r *http.Request) {
 		"articles":       articles,
 		"messages":       messages,
 	})
-	if user != nil && user.IsStaff {
+	if user != nil && user.IsStaff && !user.IsSuperAdmin {
 		data["nav_active"] = "kb_admin"
 		data["template_name"] = "department_kb_list"
 		RenderTemplate(w, "department_kb_list", data)
@@ -483,7 +483,7 @@ func (h *AdminHandler) CreateKBCategoryForm(w http.ResponseWriter, r *http.Reque
 		"template_name": "admin/kb_category_form",
 		"error":         errMsg,
 	})
-	if user != nil && user.IsStaff {
+	if user != nil && user.IsStaff && !user.IsSuperAdmin {
 		data["nav_active"] = "kb_admin"
 		data["template_name"] = "department_kb_category_form"
 		RenderTemplate(w, "department_kb_category_form", data)
@@ -550,7 +550,7 @@ func (h *AdminHandler) CreateKBArticleForm(w http.ResponseWriter, r *http.Reques
 		"categories":    categories,
 		"error":         errMsg,
 	})
-	if user != nil && user.IsStaff {
+	if user != nil && user.IsStaff && !user.IsSuperAdmin {
 		data["nav_active"] = "kb_admin"
 		data["template_name"] = "department_kb_article_form"
 		RenderTemplate(w, "department_kb_article_form", data)
@@ -789,7 +789,7 @@ func (h *AdminHandler) EditKBCategory(w http.ResponseWriter, r *http.Request) {
 		"category":      cat,
 		"error":         errMsg,
 	})
-	if user != nil && user.IsStaff {
+	if user != nil && user.IsStaff && !user.IsSuperAdmin {
 		data["nav_active"] = "kb_admin"
 		data["template_name"] = "department_kb_category_edit"
 		RenderTemplate(w, "department_kb_category_edit", data)
@@ -902,7 +902,7 @@ func (h *AdminHandler) EditKBArticle(w http.ResponseWriter, r *http.Request) {
 		"article_sections_next_index": len(articleSections),
 		"error":                     errMsg,
 	})
-	if user != nil && user.IsStaff {
+	if user != nil && user.IsStaff && !user.IsSuperAdmin {
 		data["nav_active"] = "kb_admin"
 		data["template_name"] = "department_kb_article_edit"
 		RenderTemplate(w, "department_kb_article_edit", data)

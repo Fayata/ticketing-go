@@ -8,7 +8,7 @@
 {{$currentUser := .user}}
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/ticket_detail.css">
+<link rel="stylesheet" href="static/css/ticket_detail.css">
 
 <div class="chat-app-container">
     {{if .error}}
@@ -72,37 +72,31 @@
       </div>
 
       <!-- COMPOSER / STATES -->
-      {{if .is_locked}}
-          {{if eq $ticket.Status "CLOSED"}}
+      {{if eq $ticket.Status "CLOSED"}}
           <div style="padding:15px; text-align:center; color:var(--text-muted); border-top:1px solid var(--border); font-size:13px; font-weight:500;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             Tiket ini sudah ditutup dan tidak bisa dibalas.
           </div>
-          {{else}}
-          <div style="padding:15px; text-align:center; color:var(--text-muted); border-top:1px solid var(--border); font-size:13px; font-weight:500;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            Tiket ini sedang dikerjakan oleh <strong>{{if $ticket.AssignedTo}}{{$ticket.AssignedTo.Username}}{{end}}</strong>
-          </div>
-          {{end}}
       {{else if not $ticket.AssignedToID}}
           <div style="padding:15px; text-align:center; border-top:1px solid var(--border);">
-            <a href="department/tiket/claim/{{$ticket.ID}}" class="btn-primary" style="display:inline-flex; width:auto; padding:12px 24px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
+            <a href="departement/tiket/claim/{{$ticket.ID}}" class="btn-primary" style="display:inline-flex; width:auto; padding:12px 24px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>
               Ambil Tiket Ini (Claim)
             </a>
           </div>
       {{else if .is_owner}}
           <div class="composer">
-            <form method="POST" action="department/tiket/{{$ticket.ID}}" class="composer-box">
+            <form method="POST" action="departement/tiket/{{$ticket.ID}}" class="composer-box">
               <textarea name="message" id="message" rows="1" placeholder="Tulis balasan ke pengguna... Gunakan bahasa profesional." required></textarea>
               <button type="submit" class="send-btn">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20v-6l8-2-8-2V4l19 8Z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 20v-6l8-2-8-2V4l19 8Z"/></svg>
               </button>
             </form>
           </div>
       {{else}}
           <div style="padding:15px; text-align:center; color:var(--text-muted); border-top:1px solid var(--border); font-size:13px; font-weight:500;">
-            Tiket Sedang Dikerjakan Oleh: <strong>{{if $ticket.AssignedTo}}{{$ticket.AssignedTo.Username}}{{end}}</strong>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:middle; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Tiket ini sedang dikerjakan oleh <strong>{{if $ticket.AssignedTo}}{{$ticket.AssignedTo.Username}}{{else}}staff lain{{end}}</strong>
           </div>
       {{end}}
     </div>
@@ -113,7 +107,7 @@
         <h4>Detail Pengguna</h4>
         <div class="info-title">{{$ticket.CreatedBy.GetFullName}}</div>
         <div class="info-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
           <span class="v mono" style="font-size:11.5px">{{$ticket.CreatedBy.Email}}</span>
         </div>
       </div>
@@ -121,11 +115,11 @@
       <div class="info-section">
         <h4>Status Tiket</h4>
         <div class="info-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg>
           <span class="k">Status</span><span class="status-badge {{$ticket.Status}}">{{$ticket.GetStatusDisplay}}</span>
         </div>
         <div class="info-row">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
           <span class="k">Prioritas</span><span class="v">{{$ticket.GetPriorityDisplay}}</span>
         </div>
       </div>
@@ -133,13 +127,13 @@
       <div class="info-section">
         <h4>Aksi Tiket</h4>
         {{if .is_owner}}
-        <a href="#" onclick="event.preventDefault(); showCustomConfirm('Yakin tutup tiket ini? Tiket akan ditandai selesai dan tidak bisa dibalas lagi.', function(){ window.location.href='department/tiket/close/{{$ticket.ID}}'; }); return false;" class="btn-success">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <a href="#" onclick="event.preventDefault(); showCustomConfirm('Yakin tutup tiket ini? Tiket akan ditandai selesai dan tidak bisa dibalas lagi.', function(){ window.location.href='departement/tiket/close/{{$ticket.ID}}'; }); return false;" class="btn-success">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           Tandai Selesai
         </a>
         {{end}}
-        <a href="department/all-tickets" class="btn-outline">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        <a href="departement/all-tickets" class="btn-outline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           Kembali ke Daftar
         </a>
       </div>
@@ -159,7 +153,7 @@
         {{end}}
 
         {{if .is_owner}}
-        <button type="button" class="btn-danger" style="margin-top: 10px;" onclick="showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='department/tiket/release/{{$ticket.ID}}'; });">
+        <button type="button" class="btn-danger" style="margin-top: 10px;" onclick="showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='departement/tiket/release/{{$ticket.ID}}'; });">
             Lepas ke Pool
         </button>
         {{end}}
@@ -169,6 +163,6 @@
   </div>
 </div>
 
-<script src="/static/js/ticket_detail.js"></script>
+<script src="static/js/ticket_detail.js"></script>
 {{end}}
 {{end}}

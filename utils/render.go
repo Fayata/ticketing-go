@@ -15,6 +15,7 @@ import (
 )
 
 var templates *template.Template
+var wibLocation = time.FixedZone("WIB", 7*3600)
 
 // InitTemplates memuat semua template HTML dan mendaftarkan helper (date, eq, len, dll) untuk dipakai di template.
 func InitTemplates() {
@@ -33,27 +34,33 @@ func InitTemplates() {
 			}
 			switch v := t.(type) {
 			case time.Time:
-				return v.Format("02 Jan 2006, 15:04")
-			case *time.Time:
-				if v == nil {
+				if v.IsZero() {
 					return ""
 				}
-				return v.Format("02 Jan 2006, 15:04")
+				return v.In(wibLocation).Format("02 Jan 2006, 15:04")
+			case *time.Time:
+				if v == nil || v.IsZero() {
+					return ""
+				}
+				return v.In(wibLocation).Format("02 Jan 2006, 15:04")
 			}
 			return ""
 		},
-		"dateShort":func(t interface{}) string {
+		"dateShort": func(t interface{}) string {
 			if t == nil {
 				return ""
 			}
 			switch v := t.(type) {
 			case time.Time:
-				return v.Format("02 Jan 2006")
-			case *time.Time:
-				if v == nil {
+				if v.IsZero() {
 					return ""
 				}
-				return v.Format("02 Jan 2006")
+				return v.In(wibLocation).Format("02 Jan 2006")
+			case *time.Time:
+				if v == nil || v.IsZero() {
+					return ""
+				}
+				return v.In(wibLocation).Format("02 Jan 2006")
 			}
 			return ""
 		},

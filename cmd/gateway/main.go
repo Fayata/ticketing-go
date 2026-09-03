@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -72,8 +73,11 @@ func main() {
 	mux.Handle("/api/notifications", notificationProxy)
 
 	// Admin routes
+	mux.Handle("/admin", adminProxy)
 	mux.Handle("/admin/", adminProxy)
+	mux.Handle("/departement", adminProxy)
 	mux.Handle("/departement/", adminProxy)
+	mux.Handle("/department", adminProxy)
 	mux.Handle("/department/", adminProxy)
 
 	// Static files
@@ -127,7 +131,18 @@ func newProxy(target string) http.Handler {
 	if err != nil {
 		log.Fatalf("Invalid target URL %s: %v", target, err)
 	}
-	return httputil.NewSingleHostReverseProxy(targetURL)
+	proxy := httputil.NewSingleHostReverseProxy(targetURL)
+	proxy.ModifyResponse = func(resp *http.Response) error {
+		if loc := resp.Header.Get("Location"); loc != "" {
+			if loc == "/" {
+				resp.Header.Set("Location", "/Ticketing/")
+			} else if strings.HasPrefix(loc, "/") && !strings.HasPrefix(loc, "/Ticketing") {
+				resp.Header.Set("Location", "/Ticketing"+loc)
+			}
+		}
+		return nil
+	}
+	return proxy
 }
 
 func applyGlobalMiddleware(next http.Handler) http.Handler {

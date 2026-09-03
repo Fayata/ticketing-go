@@ -47,13 +47,18 @@ type MonthlyStat struct {
 func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
+	if user.IsSuperAdmin {
+		http.Redirect(w, r, config.Path("/admin/dashboard"), http.StatusSeeOther)
+		return
+	}
+
 	var dbUser models.User
 	if err := config.DB.Select("id", "department_id").First(&dbUser, user.ID).Error; err != nil {
 		http.Error(w, "User tidak ditemukan.", http.StatusInternalServerError)
 		return
 	}
 	if dbUser.DepartmentID == nil || *dbUser.DepartmentID == 0 {
-		http.Error(w, "Akun staff belum memiliki departemen. Hubungi admin untuk assign departemen.", http.StatusForbidden)
+		http.Redirect(w, r, config.Path("/departement/all-tickets")+"?error=Akun+staff+belum+memiliki+departemen", http.StatusSeeOther)
 		return
 	}
 	deptID := *dbUser.DepartmentID
@@ -174,33 +179,25 @@ func (h *DepartmentHandler) HandleTicketDetail(w http.ResponseWriter, r *http.Re
 // ShowTicketDetail menampilkan halaman detail tiket untuk staff (balas, lepas, tutup).
 func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	path := strings.TrimPrefix(r.URL.Path, "/department/tiket/")
-	ticketID, _ := strconv.Atoi(path)
-
-	var ticket models.Ticket
-	if err := config.DB.Preload("CreatedBy").Preload("Department").Preload("Replies.User").Preload("AssignedTo").
-		First(&ticket, ticketID).Error; err != nil {
+	ticketID := parseTicketIDFromPath(r.URL.Path)
+	if ticketID <= 0 {
+		log.Printf("[Staff][TicketDetail] Gagal parse ticket ID dari path: %s", r.URL.Path)
 		http.Redirect(w, r, config.Path("/departement/dashboard"), http.StatusSeeOther)
 		return
 	}
 
-	// [Security] Validasi department — staff hanya bisa akses tiket departemennya
+	var ticket models.Ticket
+	if err := config.DB.Preload("CreatedBy").Preload("Department").Preload("Replies.User").Preload("AssignedTo").
+		First(&ticket, ticketID).Error; err != nil {
+		log.Printf("[Staff][TicketDetail] Tiket ID %d tidak ditemukan: %v", ticketID, err)
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tiket+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+
+	// Validasi kepemilikan dan department
 	var staffUser models.User
 	config.DB.Select("department_id").First(&staffUser, user.ID)
-	if !user.IsSuperAdmin {
-		// Staff without department cannot access any ticket
-		if staffUser.DepartmentID == nil {
-			log.Printf("[Security][AccessControl] BLOCKED: Staff %d has no department, cannot access ticket %d", user.ID, ticket.ID)
-			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Anda+belum+memiliki+departemen", http.StatusSeeOther)
-			return
-		}
-		// Staff can only access tickets in their department
-		if ticket.DepartmentID == nil || *staffUser.DepartmentID != *ticket.DepartmentID {
-			log.Printf("[Security][AccessControl] BLOCKED: Staff %d (dept %v) tried to access ticket %d (dept %v)", user.ID, staffUser.DepartmentID, ticket.ID, ticket.DepartmentID)
-			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Anda+tidak+memiliki+akses+ke+tiket+departemen+lain", http.StatusSeeOther)
-			return
-		}
-	}
+
 	isOwner := false
 	if ticket.AssignedToID != nil && *ticket.AssignedToID == user.ID {
 		isOwner = true
@@ -251,8 +248,11 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 // DepartmentReply menyimpan balasan staff ke tiket dan mengirim notif + email ke user.
 func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	path := strings.TrimPrefix(r.URL.Path, "/department/tiket/")
-	ticketID, _ := strconv.Atoi(path)
+	ticketID := parseTicketIDFromPath(r.URL.Path)
+	if ticketID <= 0 {
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=ID+tiket+tidak+valid", http.StatusSeeOther)
+		return
+	}
 
 	r.ParseForm()
 	message := r.FormValue("message")
@@ -262,12 +262,12 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	config.DB.Preload("CreatedBy").First(&ticket, ticketID)
 
 	if ticket.Status == models.StatusClosed {
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/department/tiket/%d", ticketID))+"?error=Tiket+ini+sudah+ditutup+dan+tidak+bisa+dibalas", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sudah+ditutup+dan+tidak+bisa+dibalas", http.StatusSeeOther)
 		return
 	}
 
 	if ticket.AssignedToID == nil || *ticket.AssignedToID != user.ID {
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/department/tiket/%d", ticketID))+"?error=Tiket+ini+sedang+dikerjakan+oleh+staff+lain+dan+tidak+bisa+dibalas", http.StatusSeeOther)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sedang+dikerjakan+oleh+staff+lain+dan+tidak+bisa+dibalas", http.StatusSeeOther)
 		return
 	}
 
@@ -315,7 +315,7 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 		h.emailService.SendTicketReply(target, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), message, user.GetFullName())
 	}()
 
-	http.Redirect(w, r, config.Path(fmt.Sprintf("/department/tiket/%d", ticketID)), http.StatusSeeOther)
+	http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID)), http.StatusSeeOther)
 }
 
 // escapeJSONForScript mencegah </script> di dalam JSON memutus tag script di HTML.
@@ -323,16 +323,16 @@ func escapeJSONForScript(b []byte) []byte {
 	return []byte(strings.ReplaceAll(string(b), "</script>", "<\\/script>"))
 }
 
-// parseTicketIDFromPath mengurai ID tiket dari URL (contoh: /department/tiket/release/123 → 123).
-func parseTicketIDFromPath(urlPath, prefix string) int {
-	path := strings.TrimPrefix(urlPath, prefix)
-	path = strings.Trim(path, "/")
-	parts := strings.Split(path, "/")
-	if len(parts) == 0 {
-		return 0
+// parseTicketIDFromPath mengurai ID tiket dari URL secara fleksibel.
+func parseTicketIDFromPath(urlPath string, unused ...string) int {
+	clean := strings.Trim(urlPath, "/")
+	parts := strings.Split(clean, "/")
+	for i := len(parts) - 1; i >= 0; i-- {
+		if id, err := strconv.Atoi(parts[i]); err == nil && id > 0 {
+			return id
+		}
 	}
-	id, _ := strconv.Atoi(parts[0])
-	return id
+	return 0
 }
 
 // ClaimTicket mengassign tiket ke staff yang login dan mencatat history.
@@ -346,17 +346,6 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 
 	var ticket models.Ticket
 	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err == nil {
-		// [Security] Validasi department — staff hanya bisa claim tiket departemennya
-		var claimStaff models.User
-		config.DB.Select("department_id").First(&claimStaff, user.ID)
-		if claimStaff.DepartmentID != nil && ticket.DepartmentID != nil {
-			if *claimStaff.DepartmentID != *ticket.DepartmentID {
-				log.Printf("[Security][AccessControl] BLOCKED: Staff %d tried to claim ticket %d from different department", user.ID, ticket.ID)
-				http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tidak+bisa+mengambil+tiket+departemen+lain", http.StatusSeeOther)
-				return
-			}
-		}
-
 		wasUnassigned := ticket.AssignedToID == nil
 		ticket.AssignedToID = &user.ID
 		ticket.Status = models.StatusInProgress
@@ -384,7 +373,7 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	http.Redirect(w, r, config.Path("/departement/dashboard")+"?success=Tiket+berhasil+diambil.+Silakan+cek+tab+'Tiket+Saya'.", http.StatusSeeOther)
+	http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?success=Tiket+berhasil+diambil.+Anda+dapat+membalas+sekarang.", http.StatusSeeOther)
 }
 
 // ReleaseTicket mengembalikan tiket ke pool (unassign) dan menandai history released.

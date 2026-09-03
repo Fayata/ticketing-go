@@ -112,7 +112,7 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 260px;
-    background: var(--brand-color);
+    background: #ffffff;
     border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
@@ -130,7 +130,7 @@ body {
 
 .sidebar-header {
     padding: 1.5rem;
-    border-bottom: 1px solid rgba(16,185,129,0.15);
+    border-bottom: 1px solid #f1f5f9;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -139,10 +139,7 @@ body {
 .logo {
     font-size: 1.25rem;
     font-weight: 700;
-    background: var(--brand-color);
-    
-    
-    
+    color: #059669;
     text-decoration: none;
     letter-spacing: -0.01em;
 }
@@ -183,15 +180,16 @@ body {
     gap: 0.75rem;
     padding: 0.75rem 1rem;
     margin-bottom: 0.25rem;
-    color: #64748b;
+    color: #475569;
     text-decoration: none;
     border-radius: 10px;
     transition: background 0.18s, color 0.18s;
     position: relative;
+    font-weight: 500;
 }
 
 .nav-item:hover {
-    background: rgba(16,185,129,0.1);
+    background: rgba(16,185,129,0.08);
     color: #059669;
 }
 
@@ -203,17 +201,15 @@ body {
 
 /* Dark mode: selaraskan dengan tema admin/staff (navy + teal) */
 :root[data-theme="dark"] .sidebar {
-    background: var(--brand-color);
+    background: #0f172a;
     border-right-color: rgba(148, 163, 184, 0.15);
 }
 :root[data-theme="dark"] .sidebar-header {
     border-bottom-color: rgba(148, 163, 184, 0.15);
 }
 :root[data-theme="dark"] .logo {
-    background: var(--brand-color);
-    
-    
-    
+    color: #34d399;
+    background: none;
 }
 :root[data-theme="dark"] .nav-item {
     color: rgba(226, 232, 240, 0.8);
@@ -1258,21 +1254,9 @@ body {
     text-align: center;
     animation: fadeUp 0.5s 0.05s both;
 }
-.kb-hero::before {
-    content: '';
-    position: absolute;
-    top: -100px; right: -100px;
-    width: 360px; height: 360px;
-    background: var(--brand-color);
-    pointer-events: none;
-}
+.kb-hero::before,
 .kb-hero::after {
-    content: '';
-    position: absolute;
-    bottom: -80px; left: 30%;
-    width: 280px; height: 280px;
-    background: var(--brand-color);
-    pointer-events: none;
+    display: none;
 }
 .kb-hero-icon { font-size: 2.5rem; margin-bottom: 0.75rem; display: block; position: relative; z-index: 1; }
 .kb-hero-title { font-size: 1.75rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; position: relative; z-index: 1; }
@@ -1285,11 +1269,13 @@ body {
     gap: 0.5rem;
     max-width: 640px;
     margin: 0 auto;
-    z-index: 1;
+    position: relative;
+    z-index: 2;
 }
 .kb-filter-wrap {
     position: relative;
     flex-shrink: 0;
+    z-index: 2;
 }
 .kb-filter-select {
     appearance: none;
@@ -1610,4 +1596,15 @@ body {
 }
 :root[data-theme="dark"] .dept-theme-toggle:hover { background: rgba(148, 163, 184, 0.12); }
 
-.sidebar, .sidebar a, .sidebar span, .sidebar .logo-text, .sidebar svg, :root[data-theme='dark'] .sidebar a, :root[data-theme='dark'] .sidebar span { color: var(--sidebar-text-color) !important; }
+/* Ticket detail SVG safety constraints */
+.info-row svg,
+.contact-status svg,
+.status-badge svg {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
+    flex-shrink: 0 !important;
+}

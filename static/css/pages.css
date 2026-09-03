@@ -1,11 +1,11 @@
 :root,
 :root[data-theme="light"] {
     --brand-color: #059669;
-    --sidebar-text-color: #ffffff; /* Darker green for light theme */
+    --sidebar-text-color: #1e293b;
 }
 :root[data-theme="dark"] {
     --brand-color: #059669;
-    --sidebar-text-color: #ffffff; /* Brighter neon green for dark theme */
+    --sidebar-text-color: #f1f5f9;
 }
 
 /* Common Page Styles (success, error pages) */
