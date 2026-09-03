@@ -28,6 +28,7 @@ type Ticket struct {
 	Priority     TicketPriority `gorm:"default:'MEDIUM'" json:"priority"`
 	ReplyToEmail string         `json:"reply_to_email"`
 	CreatedByID  uint           `gorm:"not null" json:"created_by_id"`
+	CompanyID    *uint          `gorm:"index" json:"company_id"`
 	DepartmentID *uint          `json:"department_id"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
@@ -38,6 +39,7 @@ type Ticket struct {
 
 	// Relations
 	CreatedBy  User          `gorm:"foreignKey:CreatedByID" json:"created_by"`
+	Company    *Company      `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
 	Department *Department   `gorm:"foreignKey:DepartmentID" json:"department"`
 	Replies    []TicketReply `gorm:"foreignKey:TicketID" json:"replies"`
 }

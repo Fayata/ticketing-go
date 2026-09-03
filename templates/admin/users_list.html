@@ -17,6 +17,19 @@
         </div>
     </div>
     
+    {{if .success}}
+    <div style="margin: 1rem 1.5rem 0 1.5rem; padding: 10px 14px; border-radius: 8px; background-color: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        {{.success}}
+    </div>
+    {{end}}
+    {{if .error}}
+    <div style="margin: 1rem 1.5rem 0 1.5rem; padding: 10px 14px; border-radius: 8px; background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        {{.error}}
+    </div>
+    {{end}}
+
     <div style="padding: 1rem; border-bottom: 1px solid #e5e7eb; display:flex; gap:0.5rem; flex-wrap:wrap;">
         <a href="admin/users" class="status-badge {{if eq .filter ""}}in-progress{{else}}closed{{end}}" style="text-decoration:none;">Semua</a>
         <a href="admin/users?role=staff" class="status-badge {{if eq .filter "staff"}}in-progress{{else}}closed{{end}}" style="text-decoration:none;">Staff</a>

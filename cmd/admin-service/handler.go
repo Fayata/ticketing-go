@@ -5,6 +5,9 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
+
+	"ticketing/config"
 )
 
 // HealthCheckHandler provides a simple health check endpoint for the admin service.
@@ -29,23 +32,23 @@ func AuditLogWrapper(action string, next http.HandlerFunc) http.HandlerFunc {
 func ValidateUserCreation(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			username := r.FormValue("username")
-			email := r.FormValue("email")
+			username := strings.TrimSpace(r.FormValue("username"))
+			email := strings.TrimSpace(r.FormValue("email"))
 			password := r.FormValue("password")
 
 			if len(username) < 3 {
-				http.Error(w, "Username must be at least 3 characters", http.StatusBadRequest)
+				http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Username+minimal+3+karakter", http.StatusSeeOther)
 				return
 			}
 
-			emailRegex := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+			emailRegex := regexp.MustCompile(`(?i)^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
 			if !emailRegex.MatchString(email) {
-				http.Error(w, "Invalid email format", http.StatusBadRequest)
+				http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Format+email+tidak+valid", http.StatusSeeOther)
 				return
 			}
 
 			if len(password) < 6 {
-				http.Error(w, "Password must be at least 6 characters", http.StatusBadRequest)
+				http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Password+minimal+6+karakter", http.StatusSeeOther)
 				return
 			}
 		}

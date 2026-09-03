@@ -14,8 +14,20 @@
             <label>Departemen</label>
             <select name="department_id" class="form-input" required>
                 <option value="">-- Pilih Departemen --</option>
-                {{range .departments}}
-                <option value="{{.ID}}">{{.Name}}</option>
+                {{if .companies}}
+                    {{range .companies}}
+                        {{if .Departments}}
+                        <optgroup label="{{.Name}} ({{.Code}})">
+                            {{range .Departments}}
+                            <option value="{{.ID}}">{{.Name}}</option>
+                            {{end}}
+                        </optgroup>
+                        {{end}}
+                    {{end}}
+                {{else}}
+                    {{range .departments}}
+                    <option value="{{.ID}}">{{.Name}}</option>
+                    {{end}}
                 {{end}}
             </select>
         </div>

@@ -50,6 +50,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	if err := config.AutoMigrate(
+		&models.Company{},
 		&models.User{},
 		&models.Group{},
 		&models.Department{},
@@ -98,6 +99,10 @@ func main() {
 	mux.HandleFunc("/admin/users/staff/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleStaffRole)))
 	mux.HandleFunc("/admin/departments", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListDepartments)))
 	mux.HandleFunc("/admin/departments/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateDepartmentForm)))
+	mux.HandleFunc("/admin/companies", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListCompanies)))
+	mux.HandleFunc("/admin/companies/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateCompanyForm)))
+	mux.HandleFunc("/admin/companies/edit/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.EditCompanyForm)))
+	mux.HandleFunc("/admin/companies/toggle/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleCompanyStatus)))
 	mux.HandleFunc("/admin/knowledge-base", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.ListKBAdmin)))
 	mux.HandleFunc("/admin/knowledge-base/categories/create", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryForm)))
 	mux.HandleFunc("/admin/knowledge-base/categories/create/post", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryPost)))
@@ -171,12 +176,28 @@ func main() {
 
 // seedDefaultData membuat group Portal Users, departemen default, dan user admin jika belum ada.
 func seedDefaultData() {
+	// Seed default company and backfill legacy departments & tickets
+	defaultCompany, err := models.SeedDefaultCompanyAndMigrate(config.DB)
+	if err != nil {
+		log.Printf("[Migration] Warning: SeedDefaultCompanyAndMigrate encountered error: %v", err)
+	}
+
 	var portalGroup models.Group
 	config.DB.FirstOrCreate(&portalGroup, models.Group{Name: "Portal Users"})
 	departments := []string{"Technical Support", "Customer Service", "Billing", "General"}
 	for _, deptName := range departments {
 		var dept models.Department
-		config.DB.FirstOrCreate(&dept, models.Department{Name: deptName})
+		if err := config.DB.Where("name = ?", deptName).First(&dept).Error; err != nil {
+			dept = models.Department{
+				Name: deptName,
+			}
+			if defaultCompany != nil {
+				dept.CompanyID = &defaultCompany.ID
+			}
+			config.DB.Create(&dept)
+		} else if (dept.CompanyID == nil || *dept.CompanyID == 0) && defaultCompany != nil {
+			config.DB.Model(&dept).Update("company_id", defaultCompany.ID)
+		}
 	}
 
 	const defaultAdminUsername = "admin"
@@ -185,7 +206,7 @@ func seedDefaultData() {
 	defaultAdminPassword := generateRandomPassword(16)
 
 	var existing models.User
-	err := config.DB.Where("email = ?", defaultAdminEmail).First(&existing).Error
+	err = config.DB.Where("email = ?", defaultAdminEmail).First(&existing).Error
 	if err == nil {
 		updates := map[string]interface{}{
 			"is_active":      true,

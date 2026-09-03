@@ -26,6 +26,10 @@
         pvAccess.textContent = accessMap[role] || 'Miliknya sendiri';
 
         deptContainer.classList.toggle('visible', role === 'staff');
+        var ufDept = document.getElementById('ufDept');
+        if (ufDept) {
+            ufDept.required = (role === 'staff');
+        }
 
         roleOptions.forEach(function(opt){
             var radio = opt.querySelector('input[type="radio"]');

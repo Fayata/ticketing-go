@@ -18,6 +18,13 @@
         <h2 class="uf-card-title">Buat Akun Baru</h2>
         <p class="uf-card-desc">Set akun sebagai User, Staff, atau Admin sesuai kebutuhan.</p>
 
+        {{if .error}}
+        <div class="alert alert-error" style="padding: 10px 14px; border-radius: 8px; margin-bottom: 1.25rem; background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; font-size: 0.875rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            {{.error}}
+        </div>
+        {{end}}
+
         <form method="POST" action="admin/users/create" id="userForm">
             <div class="uf-field">
                 <label>Username</label>
@@ -60,8 +67,20 @@
                     <label>Pilih Departemen <span class="uf-hint">(Wajib untuk Staff)</span></label>
                     <select name="department_id" id="ufDept">
                         <option value="">-- Pilih Departemen --</option>
-                        {{range .departments}}
-                        <option value="{{.ID}}">{{.Name}}</option>
+                        {{if .companies}}
+                            {{range .companies}}
+                                {{if .Departments}}
+                                <optgroup label="{{.Name}} ({{.Code}})">
+                                    {{range .Departments}}
+                                    <option value="{{.ID}}">{{.Name}}</option>
+                                    {{end}}
+                                </optgroup>
+                                {{end}}
+                            {{end}}
+                        {{else}}
+                            {{range .departments}}
+                            <option value="{{.ID}}">{{.Name}}</option>
+                            {{end}}
                         {{end}}
                     </select>
                 </div>

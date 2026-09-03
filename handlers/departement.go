@@ -116,16 +116,26 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
+	var staffUser models.User
+	config.DB.Select("id", "department_id", "is_super_admin", "is_staff").First(&staffUser, user.ID)
+
 	statusFilter := r.URL.Query().Get("status")
 	deptFilter := r.URL.Query().Get("department")
 	query := config.DB.Preload("Department").Preload("CreatedBy").Preload("AssignedTo").Model(&models.Ticket{})
 
-	if statusFilter != "" && statusFilter != "ALL" {
-		query = query.Where("status = ?", statusFilter)
+	// Strict Staff Isolation: Staff can only see tickets from their assigned department
+	if !user.IsSuperAdmin {
+		if staffUser.DepartmentID != nil {
+			query = query.Where("department_id = ?", *staffUser.DepartmentID)
+		} else {
+			query = query.Where("1 = 0")
+		}
+	} else if deptFilter != "" && deptFilter != "ALL" {
+		query = query.Where("department_id = ?", deptFilter)
 	}
 
-	if deptFilter != "" && deptFilter != "ALL" {
-		query = query.Where("department_id = ?", deptFilter)
+	if statusFilter != "" && statusFilter != "ALL" {
+		query = query.Where("status = ?", statusFilter)
 	}
 
 	var tickets []*models.Ticket
@@ -148,7 +158,11 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 	}
 
 	var departments []models.Department
-	config.DB.Find(&departments)
+	if !user.IsSuperAdmin && staffUser.DepartmentID != nil {
+		config.DB.Where("id = ?", *staffUser.DepartmentID).Find(&departments)
+	} else {
+		config.DB.Find(&departments)
+	}
 
 	data := h.addDepartmentData(r, map[string]interface{}{
 		"title":         "Semua Tiket - Department",
@@ -194,9 +208,15 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Validasi kepemilikan dan department
+	// Validasi kepemilikan dan department: Staff hanya boleh akses tiket departemennya sendiri
 	var staffUser models.User
-	config.DB.Select("department_id").First(&staffUser, user.ID)
+	config.DB.Select("id", "department_id", "is_super_admin").First(&staffUser, user.ID)
+	if !user.IsSuperAdmin {
+		if staffUser.DepartmentID == nil || ticket.DepartmentID == nil || *staffUser.DepartmentID != *ticket.DepartmentID {
+			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Akses+ditolak.+Tiket+berada+di+luar+departemen+Anda", http.StatusSeeOther)
+			return
+		}
+	}
 
 	isOwner := false
 	if ticket.AssignedToID != nil && *ticket.AssignedToID == user.ID {
@@ -346,6 +366,15 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 
 	var ticket models.Ticket
 	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err == nil {
+		var staffUser models.User
+		config.DB.Select("id", "department_id", "is_super_admin").First(&staffUser, user.ID)
+		if !user.IsSuperAdmin {
+			if staffUser.DepartmentID == nil || ticket.DepartmentID == nil || *staffUser.DepartmentID != *ticket.DepartmentID {
+				http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tidak+dapat+mengklaim+tiket+di+luar+departemen+Anda", http.StatusSeeOther)
+				return
+			}
+		}
+
 		wasUnassigned := ticket.AssignedToID == nil
 		ticket.AssignedToID = &user.ID
 		ticket.Status = models.StatusInProgress

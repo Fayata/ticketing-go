@@ -48,11 +48,12 @@ func main() {
 	var err error
 	for i := 0; i < 5; i++ {
 		err = config.DB.AutoMigrate(
+			&models.Company{},
+			&models.Department{},
 			&models.Ticket{},
 			&models.TicketReply{},
 			&models.TicketAssignmentHistory{},
 			&models.TicketRating{},
-			&models.Department{},
 			&models.KBCategory{},
 			&models.KBArticle{},
 		)

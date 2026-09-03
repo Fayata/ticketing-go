@@ -1,12 +1,47 @@
-/config
-app_ticketing
-.gitignore
-ticketing.exe
-docs/PERFORMA_PRODUCTION.md
-app.log
-static/uploads/
-# Graphify
-graphify-out/
-.agents/rules/graphify.md
-.agents/workflows/graphify.md
+# Environment & Secrets
 .env
+.env.*
+!.env.example
+
+# Binaries & Executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+app_ticketing
+ticketing.exe
+tmp.exe
+
+# Logs & Temp files
+*.log
+logs/
+*.tmp
+tmp/
+
+# Static Uploads (User generated files)
+static/uploads/
+
+# AI Agents & Scaffolding (Not needed in production)
+.agents/
+PROJECT.md
+TEST_INFRA.md
+graphify-out/
+
+# E2E Test Suite & Test Artifacts
+test/
+*.test
+*.test.exe
+coverage.out
+
+# IDE & OS Artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# Internal Docs
+docs/PERFORMA_PRODUCTION.md

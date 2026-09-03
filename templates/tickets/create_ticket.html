@@ -73,6 +73,23 @@
 
         <div class="form-row">
             <div class="form-group">
+                <label for="company_id">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                    </svg>
+                    Perusahaan (PT) <span class="required-mark">*</span>
+                </label>
+                <select name="company_id" id="company_id" class="form-input" required>
+                    <option value="">-- Pilih Perusahaan (PT) --</option>
+                    {{range .companies}}
+                    <option value="{{.ID}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+                <small>Pilih PT tujuan tiket Anda</small>
+            </div>
+
+            <div class="form-group">
                 <label for="department">
                     <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -80,15 +97,15 @@
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
-                    Departemen
+                    Departemen <span class="required-mark">*</span>
                 </label>
-                <select name="department" id="department" class="form-input">
-                    <option value="">Pilih Departemen</option>
+                <select name="department" id="department" class="form-input" required>
+                    <option value="">-- Pilih Departemen --</option>
                     {{range .departments}}
-                    <option value="{{.ID}}">{{.Name}}</option>
+                    <option value="{{.ID}}" data-company="{{if .CompanyID}}{{.CompanyID}}{{else}}0{{end}}">{{.Name}}{{if .Company}} ({{.Company.Name}}){{end}}</option>
                     {{end}}
                 </select>
-                <small>Pilih departemen yang sesuai dengan masalah Anda</small>
+                <small>Pilih departemen di PT yang dipilih</small>
             </div>
 
             <div class="form-group">
@@ -143,6 +160,7 @@
         </div>
     </form>
 </div>
+<script src="static/js/create_ticket.js"></script>
 {{end}}
 
 {{define "tickets/create_ticket"}}

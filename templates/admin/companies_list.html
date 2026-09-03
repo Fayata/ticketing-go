@@ -1,0 +1,112 @@
+{{define "admin/companies_list"}}
+{{template "admin_base" .}}
+{{end}}
+
+{{define "admin/companies_list_content"}}
+<div class="card">
+    <div class="card-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <div>
+                <h2>Daftar Perusahaan</h2>
+                <p style="margin-top:0.25rem; font-size:0.85rem; color:#6b7280;">
+                    Kelola entitas perusahaan (Multi-PT) dan departemen di dalamnya.
+                </p>
+            </div>
+            <a href="admin/companies/create" class="btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Tambah Perusahaan
+            </a>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead style="background-color: #f9fafb; text-align: left;">
+                    <tr>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Kode</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Nama Perusahaan</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Alamat & Telepon</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Departemen</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Status</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .companies}}
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <span style="background:#eff6ff; color:#1e40af; padding:4px 10px; border-radius:6px; font-weight:700; font-family:monospace; font-size:0.85rem; border:1px solid #dbeafe; display:inline-block;">
+                                {{.Code}}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <strong style="color:#111827; font-size:0.95rem;">{{.Name}}</strong>
+                                <span style="font-size:0.75rem; color:#6b7280;">ID: #{{.ID}}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top; max-width: 250px;">
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                {{if .Address}}
+                                <span style="font-size:0.85rem; color:#374151;">{{.Address}}</span>
+                                {{else}}
+                                <span style="font-size:0.8rem; color:#9ca3af; font-style:italic;">Tidak ada alamat</span>
+                                {{end}}
+                                {{if .Phone}}
+                                <span style="font-size:0.8rem; color:#6b7280;">Telp: {{.Phone}}</span>
+                                {{end}}
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top; min-width: 160px;">
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <span style="font-weight:600; color:#111827; font-size:0.85rem;">
+                                    {{len .Departments}} Departemen
+                                </span>
+                                {{if .Departments}}
+                                <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
+                                    {{range .Departments}}
+                                    <span style="background:#f3f4f6; color:#4b5563; padding:2px 8px; border-radius:4px; font-size:0.75rem; border:1px solid #e5e7eb;">
+                                        {{.Name}}
+                                    </span>
+                                    {{end}}
+                                </div>
+                                {{end}}
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            {{if .IsActive}}
+                            <span class="status-badge in-progress" style="background:#ecfdf3; color:#15803d; border-color:#bbf7d0;">Aktif</span>
+                            {{else}}
+                            <span class="status-badge closed" style="background:#fee2e2; color:#b91c1c; border-color:#fecaca;">Non-Aktif</span>
+                            {{end}}
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <a href="admin/companies/edit/{{.ID}}" style="font-size:0.85rem; color:#2563eb; text-decoration:underline; font-weight:500;">
+                                    Edit
+                                </a>
+                                <a href="admin/companies/toggle/{{.ID}}" 
+                                   onclick="return confirm('Apakah Anda yakin ingin mengubah status perusahaan ini?');"
+                                   style="font-size:0.85rem; {{if .IsActive}}color:#dc2626;{{else}}color:#059669;{{end}} text-decoration:underline; font-weight:500;">
+                                    {{if .IsActive}}Nonaktifkan{{else}}Aktifkan{{end}}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="6" style="padding: 3rem; text-align: center; color: #9ca3af;">
+                            Belum ada perusahaan. <a href="admin/companies/create" style="color: #059669; text-decoration: underline;">Tambah perusahaan pertama</a>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{{end}}

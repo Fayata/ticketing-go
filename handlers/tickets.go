@@ -44,6 +44,7 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 		RenderTemplate(w, "tickets/setup_error.html", map[string]interface{}{"title": "Error Konfigurasi"})
 		return
 	}
+	companies, _ := h.ticketService.GetCompaniesForCreate()
 	departments, _ := h.ticketService.GetDepartmentsForCreate()
 	data := AddBaseData(r, map[string]interface{}{
 		"title":         "Kirim Tiket Baru - Portal Ticketing",
@@ -51,6 +52,7 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 		"page_subtitle": "Sampaikan kendala atau pertanyaan Anda kepada tim support kami",
 		"nav_active":    "create",
 		"template_name": "tickets/create_ticket",
+		"companies":     companies,
 		"departments":   departments,
 		"user":          user,
 		"error":         r.URL.Query().Get("error"),
@@ -66,10 +68,19 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	description := r.FormValue("description")
 	replyToEmail := r.FormValue("reply_to_email")
 	priority := r.FormValue("priority")
+	companyIDStr := r.FormValue("company_id")
 	departmentIDStr := r.FormValue("department")
 	if title == "" || description == "" || replyToEmail == "" {
 		http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Semua field wajib diisi"), http.StatusSeeOther)
 		return
+	}
+	var companyID *uint
+	if companyIDStr != "" {
+		id, err := strconv.ParseUint(companyIDStr, 10, 32)
+		if err == nil {
+			uid := uint(id)
+			companyID = &uid
+		}
 	}
 	var departmentID *uint
 	if departmentIDStr != "" {
@@ -80,7 +91,7 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ticket, err := h.ticketService.CreateTicket(user.ID, title, description, replyToEmail, priority, departmentID)
+	ticket, err := h.ticketService.CreateTicket(user.ID, title, description, replyToEmail, priority, departmentID, companyID)
 	if err != nil {
 		log.Printf("Failed to create ticket: %v", err)
 		http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Gagal membuat tiket: "+err.Error()), http.StatusSeeOther)

@@ -58,10 +58,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
-		if security.ValidateUsername(username) != nil {
+		if security.ValidateUsername(username) != nil && security.ValidateEmail(username) != nil {
 			security.LogAudit(security.AuditEvent{Action: "LOGIN_FAILED", Details: "Invalid username format: " + username, Timestamp: time.Now()})
 			h.recordFailedLogin(ip)
-			http.Redirect(w, r, config.Path("/login")+"?error=Format+username+tidak+valid", http.StatusSeeOther)
+			http.Redirect(w, r, config.Path("/login")+"?error=Format+username+atau+email+tidak+valid", http.StatusSeeOther)
 			return
 		}
 

@@ -42,6 +42,12 @@
                     </svg>
                     <span class="dept-nav-label">Dashboard</span>
                 </a>
+                <a href="admin/companies" class="dept-nav-item {{if eq .nav_active "admin_companies"}}active{{end}}">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5m-4 0h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="dept-nav-label">Manajemen Perusahaan</span>
+                </a>
                 <a href="admin/users" class="dept-nav-item {{if eq .nav_active "admin_users"}}active{{end}}">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -127,8 +133,20 @@
                     {{end}}
                 </div>
                 {{end}}
+                {{if .success}}
+                <div class="alert alert-success" style="margin-bottom: 1rem;">{{.success}}</div>
+                {{end}}
+                {{if .error}}
+                <div class="alert alert-error" style="margin-bottom: 1rem;">{{.error}}</div>
+                {{end}}
                 {{if eq .template_name "admin/admin_dashboard"}}
                 {{template "admin/admin_dashboard_content" .}}
+                {{else if eq .template_name "admin/companies_list"}}
+                {{template "admin/companies_list_content" .}}
+                {{else if eq .template_name "admin/company_form"}}
+                {{template "admin/company_form_content" .}}
+                {{else if eq .template_name "admin/company_edit"}}
+                {{template "admin/company_edit_content" .}}
                 {{else if eq .template_name "admin/users_list"}}
                 {{template "admin/users_list_content" .}}
                 {{else if eq .template_name "admin/user_form"}}

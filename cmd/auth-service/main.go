@@ -38,7 +38,11 @@ func main() {
 	// Auto-migrate auth-related models with retry
 	var err error
 	for i := 0; i < 5; i++ {
-		err = config.AutoMigrate(&models.User{}, &models.Group{})
+		err = config.AutoMigrate(
+			&models.Company{},
+			&models.User{},
+			&models.Group{},
+		)
 		if err == nil {
 			break
 		}

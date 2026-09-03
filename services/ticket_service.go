@@ -35,15 +35,29 @@ func (s *TicketService) DepartmentCount() int64 {
 	return n
 }
 
+// GetCompaniesForCreate returns all active companies for create-ticket form.
+func (s *TicketService) GetCompaniesForCreate() ([]models.Company, error) {
+	var list []models.Company
+	err := config.DB.Where("is_active = ?", true).Order("name ASC").Find(&list).Error
+	return list, err
+}
+
 // GetDepartmentsForCreate returns all departments for create-ticket form.
 func (s *TicketService) GetDepartmentsForCreate() ([]models.Department, error) {
 	var list []models.Department
-	err := config.DB.Find(&list).Error
+	err := config.DB.Preload("Company").Order("name ASC").Find(&list).Error
 	return list, err
 }
 
 // CreateTicket creates a new ticket and notifies staff (async). Returns created ticket with Department preloaded.
-func (s *TicketService) CreateTicket(createdByID uint, title, description, replyToEmail, priority string, departmentID *uint) (*models.Ticket, error) {
+func (s *TicketService) CreateTicket(createdByID uint, title, description, replyToEmail, priority string, departmentID *uint, companyID *uint) (*models.Ticket, error) {
+	if companyID == nil && departmentID != nil {
+		var dept models.Department
+		if err := config.DB.Select("id", "company_id").First(&dept, *departmentID).Error; err == nil && dept.CompanyID != nil {
+			companyID = dept.CompanyID
+		}
+	}
+
 	ticket := models.Ticket{
 		Title:        title,
 		Description:  description,
@@ -52,11 +66,12 @@ func (s *TicketService) CreateTicket(createdByID uint, title, description, reply
 		Status:       models.StatusWaiting,
 		CreatedByID:  createdByID,
 		DepartmentID: departmentID,
+		CompanyID:    companyID,
 	}
 	if err := config.DB.Create(&ticket).Error; err != nil {
 		return nil, err
 	}
-	config.DB.Preload("Department").First(&ticket, ticket.ID)
+	config.DB.Preload("Department").Preload("Company").First(&ticket, ticket.ID)
 
 	if ticket.DepartmentID != nil {
 		go func() {

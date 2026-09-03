@@ -8,6 +8,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -84,7 +85,7 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	filter := r.URL.Query().Get("role")
 
 	var users []models.User
-	query := config.DB.Preload("Department").Model(&models.User{})
+	query := config.DB.Preload("Department.Company").Model(&models.User{})
 
 	if filter == "staff" {
 		query = query.Where("is_staff = ?", true)
@@ -103,6 +104,8 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		"users":         users,
 		"filter":        filter,
 		"user":          user,
+		"success":       r.URL.Query().Get("success"),
+		"error":         r.URL.Query().Get("error"),
 	})
 
 	RenderTemplate(w, "admin/users_list", data)
@@ -111,6 +114,9 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // CreateUserForm menampilkan form tambah user (GET) atau menyimpan user baru (POST).
 func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		var companies []models.Company
+		config.DB.Where("is_active = ?", true).Preload("Departments").Order("name ASC").Find(&companies)
+
 		var departments []models.Department
 		config.DB.Find(&departments)
 
@@ -119,27 +125,72 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 			"page_title":    "Tambah User",
 			"nav_active":    "admin_users",
 			"template_name": "admin/user_form",
-			"departments":   departments, 
+			"companies":     companies,
+			"departments":   departments,
+			"error":         r.URL.Query().Get("error"),
+			"success":       r.URL.Query().Get("success"),
 		})
 		RenderTemplate(w, "admin/user_form", data)
 		return
 	}
 
 	if r.Method == http.MethodPost {
-		username := r.FormValue("username")
-		email := r.FormValue("email")
+		username := strings.TrimSpace(r.FormValue("username"))
+		email := strings.TrimSpace(r.FormValue("email"))
 		password := r.FormValue("password")
-		role := r.FormValue("role")
-
-		deptIDStr := r.FormValue("department_id")
-		var departmentID *uint
-		if deptIDStr != "" {
-			id, _ := strconv.Atoi(deptIDStr)
-			uID := uint(id)
-			departmentID = &uID
+		role := strings.TrimSpace(r.FormValue("role"))
+		if role == "" {
+			role = "user"
 		}
 
-		hashedPassword, _ := utils.HashPassword(password)
+		if username == "" || len(username) < 3 {
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Username+minimal+3+karakter", http.StatusSeeOther)
+			return
+		}
+
+		if email == "" {
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Email+wajib+diisi", http.StatusSeeOther)
+			return
+		}
+
+		if len(password) < 6 {
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Password+minimal+6+karakter", http.StatusSeeOther)
+			return
+		}
+
+		// Cek apakah username sudah dipakai
+		var existingUser models.User
+		if err := config.DB.Where("LOWER(username) = LOWER(?)", username).First(&existingUser).Error; err == nil {
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Username+sudah+digunakan", http.StatusSeeOther)
+			return
+		}
+
+		// Cek apakah email sudah dipakai
+		if err := config.DB.Where("LOWER(email) = LOWER(?)", email).First(&existingUser).Error; err == nil {
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Email+sudah+terdaftar", http.StatusSeeOther)
+			return
+		}
+
+		deptIDStr := strings.TrimSpace(r.FormValue("department_id"))
+		var departmentID *uint
+		if deptIDStr != "" && deptIDStr != "0" {
+			id, err := strconv.Atoi(deptIDStr)
+			if err == nil && id > 0 {
+				uID := uint(id)
+				departmentID = &uID
+			}
+		}
+
+		if role == "staff" && departmentID == nil {
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Staff+wajib+memilih+departemen", http.StatusSeeOther)
+			return
+		}
+
+		hashedPassword, err := utils.HashPassword(password)
+		if err != nil {
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Gagal+memproses+password", http.StatusSeeOther)
+			return
+		}
 
 		newUser := models.User{
 			Username:     username,
@@ -147,15 +198,11 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 			Password:     hashedPassword,
 			IsActive:     true,
 			IsVerified:   true,
-			DepartmentID: departmentID, 
+			DepartmentID: departmentID,
 		}
 
 		if role == "staff" {
 			newUser.IsStaff = true
-			if departmentID == nil {
-				http.Error(w, "Staff wajib memiliki departemen", http.StatusBadRequest)
-				return
-			}
 		} else if role == "admin" {
 			newUser.IsStaff = true
 			newUser.IsSuperAdmin = true
@@ -164,7 +211,7 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 
 		if err := config.DB.Create(&newUser).Error; err != nil {
 			log.Printf("[Security][Admin] Failed to create user: %v", err)
-			http.Error(w, "Gagal membuat user. Silakan coba lagi.", http.StatusInternalServerError)
+			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Gagal+menyimpan+user", http.StatusSeeOther)
 			return
 		}
 
@@ -172,7 +219,7 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 		config.DB.FirstOrCreate(&portalGroup, models.Group{Name: "Portal Users"})
 		config.DB.Model(&newUser).Association("Groups").Append(&portalGroup)
 
-		http.Redirect(w, r, config.Path("/admin/users"), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/admin/users")+"?success=User+berhasil+dibuat", http.StatusSeeOther)
 	}
 }
 
@@ -200,8 +247,7 @@ func (h *AdminHandler) ToggleUserStatus(w http.ResponseWriter, r *http.Request) 
 
 // ToggleStaffRole mengubah user jadi staff (pilih dept) atau turunkan jadi user biasa.
 func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/admin/users/staff/")
-	userID, _ := strconv.Atoi(path)
+	userID := parseIDFromPath(r.URL.Path)
 
 	var targetUser models.User
 	if err := config.DB.Preload("Department").First(&targetUser, userID).Error; err != nil {
@@ -225,6 +271,9 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodGet && !targetUser.IsStaff {
+		var companies []models.Company
+		config.DB.Where("is_active = ?", true).Preload("Departments").Order("name ASC").Find(&companies)
+
 		var departments []models.Department
 		config.DB.Order("name ASC").Find(&departments)
 
@@ -235,6 +284,7 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 			"nav_active":    "admin_users",
 			"template_name": "admin/staff_assign_form",
 			"target_user":   targetUser,
+			"companies":     companies,
 			"departments":   departments,
 		})
 
@@ -272,7 +322,7 @@ func (h *AdminHandler) ToggleStaffRole(w http.ResponseWriter, r *http.Request) {
 // ListDepartments menampilkan daftar departemen dengan statistik rating dan tiket selesai.
 func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 	var departments []models.Department
-	config.DB.Preload("Tickets").Find(&departments)
+	config.DB.Preload("Tickets").Preload("Company").Find(&departments)
 
 	type deptRatingAgg struct {
 		DepartmentID   uint
@@ -346,6 +396,8 @@ func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 		"template_name": "admin/departments_list",
 		"departments":   departments,
 		"dept_stats":    stats,
+		"error":         r.URL.Query().Get("error"),
+		"success":       r.URL.Query().Get("success"),
 	})
 
 	RenderTemplate(w, "admin/departments_list", data)
@@ -354,36 +406,68 @@ func (h *AdminHandler) ListDepartments(w http.ResponseWriter, r *http.Request) {
 // CreateDepartmentForm menampilkan form tambah departemen (GET) atau menyimpan (POST).
 func (h *AdminHandler) CreateDepartmentForm(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
+		var companies []models.Company
+		config.DB.Where("is_active = ?", true).Order("name ASC").Find(&companies)
+
 		data := AddBaseData(r, map[string]interface{}{
 			"title":         "Tambah Departemen Baru",
 			"page_title":    "Tambah Departemen",
 			"nav_active":    "admin_departments",
 			"template_name": "admin/department_form",
+			"companies":     companies,
+			"error":         r.URL.Query().Get("error"),
+			"success":       r.URL.Query().Get("success"),
 		})
 		RenderTemplate(w, "admin/department_form", data)
 		return
 	}
 
 	if r.Method == http.MethodPost {
-		r.ParseForm()
-		name := r.FormValue("name")
-		
+		_ = r.ParseForm()
+		name := strings.TrimSpace(r.FormValue("name"))
+		companyIDStr := strings.TrimSpace(r.FormValue("company_id"))
+
 		if name == "" {
-			http.Error(w, "Nama departemen wajib diisi", http.StatusBadRequest)
+			http.Redirect(w, r, config.Path("/admin/departments/create")+"?error="+url.QueryEscape("Nama departemen wajib diisi"), http.StatusSeeOther)
 			return
 		}
 
+		if companyIDStr == "" {
+			http.Redirect(w, r, config.Path("/admin/departments/create")+"?error="+url.QueryEscape("Perusahaan wajib dipilih"), http.StatusSeeOther)
+			return
+		}
+
+		compID, err := strconv.Atoi(companyIDStr)
+		if err != nil || compID <= 0 {
+			http.Redirect(w, r, config.Path("/admin/departments/create")+"?error="+url.QueryEscape("Perusahaan tidak valid"), http.StatusSeeOther)
+			return
+		}
+
+		var comp models.Company
+		if err := config.DB.First(&comp, compID).Error; err != nil {
+			http.Redirect(w, r, config.Path("/admin/departments/create")+"?error="+url.QueryEscape("Perusahaan tidak ditemukan"), http.StatusSeeOther)
+			return
+		}
+
+		if !comp.IsActive {
+			http.Redirect(w, r, config.Path("/admin/departments/create")+"?error="+url.QueryEscape("Perusahaan yang dipilih sedang nonaktif"), http.StatusSeeOther)
+			return
+		}
+
+		uCompID := uint(compID)
 		newDept := models.Department{
-			Name: name,
+			Name:      name,
+			CompanyID: &uCompID,
 		}
 
 		if err := config.DB.Create(&newDept).Error; err != nil {
 			log.Printf("[Security][Admin] Failed to create department: %v", err)
-			http.Error(w, "Gagal membuat departemen. Silakan coba lagi.", http.StatusInternalServerError)
+			http.Redirect(w, r, config.Path("/admin/departments/create")+"?error="+url.QueryEscape("Gagal membuat departemen. Silakan coba lagi."), http.StatusSeeOther)
 			return
 		}
 
-		http.Redirect(w, r, config.Path("/admin/departments"), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/admin/departments")+"?success="+url.QueryEscape("Departemen berhasil dibuat"), http.StatusSeeOther)
+		return
 	}
 }
 
@@ -976,4 +1060,249 @@ func (h *AdminHandler) SearchAdmin(w http.ResponseWriter, r *http.Request) {
 		"ai_answer":     aiAnswer,
 	})
 	utils.RenderTemplate(w, "admin_search_results", data)
+}
+
+// --- Centralized Admin Management for Companies (Multi-PT) ---
+
+// parseIDFromPath extracts the numeric ID from the last segment of the URL path.
+// It safely strips query strings and handles both stripped ("/companies/edit/1") and unstripped ("/admin/companies/edit/1") paths.
+func parseIDFromPath(path string) int {
+	if idx := strings.Index(path, "?"); idx != -1 {
+		path = path[:idx]
+	}
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return 0
+	}
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 {
+		return 0
+	}
+	id, err := strconv.Atoi(parts[len(parts)-1])
+	if err != nil || id <= 0 {
+		return 0
+	}
+	return id
+}
+
+// ListCompanies menampilkan daftar perusahaan dengan relasi departemen.
+func (h *AdminHandler) ListCompanies(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var companies []models.Company
+	if err := config.DB.Preload("Departments").Order("id ASC").Find(&companies).Error; err != nil {
+		log.Printf("[Security][Admin] Failed to load companies: %v", err)
+	}
+
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         "Kelola Perusahaan - Admin Panel",
+		"page_title":    "Manajemen Perusahaan",
+		"page_subtitle": "Kelola entitas perusahaan (Multi-PT) dan departemen di dalamnya",
+		"nav_active":    "admin_companies",
+		"template_name": "admin/companies_list",
+		"companies":     companies,
+		"error":         r.URL.Query().Get("error"),
+		"success":       r.URL.Query().Get("success"),
+	})
+
+	RenderTemplate(w, "admin/companies_list", data)
+}
+
+// CreateCompanyForm menampilkan form tambah perusahaan (GET) atau menyimpan (POST).
+func (h *AdminHandler) CreateCompanyForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		data := AddBaseData(r, map[string]interface{}{
+			"title":         "Tambah Perusahaan Baru",
+			"page_title":    "Tambah Perusahaan",
+			"page_subtitle": "Tambah unit tenant perusahaan (Multi-PT)",
+			"nav_active":    "admin_companies",
+			"template_name": "admin/company_form",
+			"error":         r.URL.Query().Get("error"),
+			"success":       r.URL.Query().Get("success"),
+		})
+		RenderTemplate(w, "admin/company_form", data)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		_ = r.ParseForm()
+		name := strings.TrimSpace(r.FormValue("name"))
+		code := strings.ToUpper(strings.TrimSpace(r.FormValue("code")))
+		address := strings.TrimSpace(r.FormValue("address"))
+		phone := strings.TrimSpace(r.FormValue("phone"))
+
+		if name == "" {
+			http.Redirect(w, r, config.Path("/admin/companies/create")+"?error="+url.QueryEscape("Nama perusahaan wajib diisi"), http.StatusSeeOther)
+			return
+		}
+
+		if code == "" {
+			http.Redirect(w, r, config.Path("/admin/companies/create")+"?error="+url.QueryEscape("Kode perusahaan wajib diisi"), http.StatusSeeOther)
+			return
+		}
+
+		if len(code) > 20 {
+			http.Redirect(w, r, config.Path("/admin/companies/create")+"?error="+url.QueryEscape("Kode perusahaan maksimal 20 karakter"), http.StatusSeeOther)
+			return
+		}
+
+		var count int64
+		if err := config.DB.Model(&models.Company{}).Where("LOWER(code) = LOWER(?)", code).Count(&count).Error; err != nil {
+			log.Printf("[Security][Admin] Error checking company code uniqueness: %v", err)
+		}
+		if count > 0 {
+			http.Redirect(w, r, config.Path("/admin/companies/create")+"?error="+url.QueryEscape("Kode perusahaan sudah digunakan"), http.StatusSeeOther)
+			return
+		}
+
+		isActive := true
+		if val := strings.TrimSpace(r.FormValue("is_active")); val != "" {
+			if val == "false" || val == "0" {
+				isActive = false
+			}
+		}
+
+		newComp := models.Company{
+			Name:     name,
+			Code:     code,
+			Address:  address,
+			Phone:    phone,
+			IsActive: isActive,
+		}
+
+		if err := config.DB.Create(&newComp).Error; err != nil {
+			log.Printf("[Security][Admin] Failed to create company: %v", err)
+			http.Redirect(w, r, config.Path("/admin/companies/create")+"?error="+url.QueryEscape("Gagal menyimpan perusahaan"), http.StatusSeeOther)
+			return
+		}
+
+		http.Redirect(w, r, config.Path("/admin/companies")+"?success="+url.QueryEscape("Perusahaan berhasil dibuat"), http.StatusSeeOther)
+		return
+	}
+
+	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+}
+
+// EditCompanyForm menampilkan form edit perusahaan (GET) atau menyimpan pembaruan (POST).
+func (h *AdminHandler) EditCompanyForm(w http.ResponseWriter, r *http.Request) {
+	id := parseIDFromPath(r.URL.Path)
+	if id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/companies")+"?error="+url.QueryEscape("ID perusahaan tidak valid"), http.StatusSeeOther)
+		return
+	}
+
+	var comp models.Company
+	if err := config.DB.First(&comp, id).Error; err != nil {
+		http.Redirect(w, r, config.Path("/admin/companies")+"?error="+url.QueryEscape("Perusahaan tidak ditemukan"), http.StatusSeeOther)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		data := AddBaseData(r, map[string]interface{}{
+			"title":         "Edit Perusahaan - " + comp.Name,
+			"page_title":    "Edit Perusahaan",
+			"page_subtitle": "Perbarui informasi perusahaan",
+			"nav_active":    "admin_companies",
+			"template_name": "admin/company_edit",
+			"company":       comp,
+			"error":         r.URL.Query().Get("error"),
+			"success":       r.URL.Query().Get("success"),
+		})
+		RenderTemplate(w, "admin/company_edit", data)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		_ = r.ParseForm()
+		name := strings.TrimSpace(r.FormValue("name"))
+		code := strings.ToUpper(strings.TrimSpace(r.FormValue("code")))
+		address := strings.TrimSpace(r.FormValue("address"))
+		phone := strings.TrimSpace(r.FormValue("phone"))
+
+		editURL := fmt.Sprintf("%s?error=", config.Path(fmt.Sprintf("/admin/companies/edit/%d", id)))
+
+		if name == "" {
+			http.Redirect(w, r, editURL+url.QueryEscape("Nama perusahaan wajib diisi"), http.StatusSeeOther)
+			return
+		}
+
+		if code == "" {
+			http.Redirect(w, r, editURL+url.QueryEscape("Kode perusahaan wajib diisi"), http.StatusSeeOther)
+			return
+		}
+
+		if len(code) > 20 {
+			http.Redirect(w, r, editURL+url.QueryEscape("Kode perusahaan maksimal 20 karakter"), http.StatusSeeOther)
+			return
+		}
+
+		var count int64
+		if err := config.DB.Model(&models.Company{}).Where("LOWER(code) = LOWER(?) AND id != ?", code, id).Count(&count).Error; err != nil {
+			log.Printf("[Security][Admin] Error checking company code uniqueness on edit: %v", err)
+		}
+		if count > 0 {
+			http.Redirect(w, r, editURL+url.QueryEscape("Kode perusahaan sudah digunakan"), http.StatusSeeOther)
+			return
+		}
+
+		comp.Name = name
+		comp.Code = code
+		comp.Address = address
+		comp.Phone = phone
+
+		if val := strings.TrimSpace(r.FormValue("is_active")); val != "" {
+			if val == "false" || val == "0" {
+				comp.IsActive = false
+			} else if val == "true" || val == "1" || val == "on" {
+				comp.IsActive = true
+			}
+		}
+
+		if err := config.DB.Save(&comp).Error; err != nil {
+			log.Printf("[Security][Admin] Failed to update company: %v", err)
+			http.Redirect(w, r, editURL+url.QueryEscape("Gagal memperbarui perusahaan"), http.StatusSeeOther)
+			return
+		}
+
+		http.Redirect(w, r, config.Path("/admin/companies")+"?success="+url.QueryEscape("Perusahaan berhasil diperbarui"), http.StatusSeeOther)
+		return
+	}
+
+	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+}
+
+// ToggleCompanyStatus mengaktifkan atau menonaktifkan status perusahaan (mendukung GET dan POST).
+func (h *AdminHandler) ToggleCompanyStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := parseIDFromPath(r.URL.Path)
+	if id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/companies")+"?error="+url.QueryEscape("ID perusahaan tidak valid"), http.StatusSeeOther)
+		return
+	}
+
+	var comp models.Company
+	if err := config.DB.First(&comp, id).Error; err != nil {
+		http.Redirect(w, r, config.Path("/admin/companies")+"?error="+url.QueryEscape("Perusahaan tidak ditemukan"), http.StatusSeeOther)
+		return
+	}
+
+	comp.IsActive = !comp.IsActive
+	if err := config.DB.Save(&comp).Error; err != nil {
+		log.Printf("[Security][Admin] Failed to toggle company status: %v", err)
+		http.Redirect(w, r, config.Path("/admin/companies")+"?error="+url.QueryEscape("Gagal mengubah status perusahaan"), http.StatusSeeOther)
+		return
+	}
+
+	msg := "Perusahaan berhasil dinonaktifkan"
+	if comp.IsActive {
+		msg = "Perusahaan berhasil diaktifkan"
+	}
+	http.Redirect(w, r, config.Path("/admin/companies")+"?success="+url.QueryEscape(msg), http.StatusSeeOther)
 }

@@ -1,6 +1,6 @@
 /* Interaksi bintang di form rating (halaman detail tiket) */
 (function () {
-    var form = document.querySelector('form[action*="/rating/"]');
+    var form = document.querySelector('form[action*="rating/"]');
     if (!form) return;
 
     var stars = form.querySelectorAll('input[name="rating"]');

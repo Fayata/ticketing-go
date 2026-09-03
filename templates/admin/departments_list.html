@@ -28,6 +28,7 @@
                 <thead style="background-color: #f9fafb; text-align: left;">
                     <tr>
                         <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Departemen</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Perusahaan</th>
                         <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Rating</th>
                         <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Tiket & Selesai</th>
                         <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Dibuat</th>
@@ -44,6 +45,18 @@
                                 </span>
                                 <span style="font-size:0.75rem; color:#6b7280;">ID: #{{.ID}}</span>
                             </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            {{if .Company}}
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <span style="background:#f0fdf4; color:#166534; padding:4px 10px; border-radius:6px; font-size:0.85rem; font-weight:600; border:1px solid #bbf7d0; display:inline-block; width:fit-content;">
+                                    {{.Company.Name}}
+                                </span>
+                                <span style="font-size:0.75rem; color:#6b7280; font-family:monospace;">{{.Company.Code}}</span>
+                            </div>
+                            {{else}}
+                            <span style="color:#9ca3af; font-style:italic;">-</span>
+                            {{end}}
                         </td>
                         <td style="padding: 1rem; min-width: 180px;">
                             {{if gt $stat.RatingCount 0}}
@@ -75,7 +88,7 @@
                     </tr>
                     {{else}}
                     <tr>
-                        <td colspan="4" style="padding: 3rem; text-align: center; color: #9ca3af;">
+                        <td colspan="5" style="padding: 3rem; text-align: center; color: #9ca3af;">
                             Belum ada departemen. <a href="admin/departments/create" style="color: #059669; text-decoration: underline;">Buat departemen pertama</a>
                         </td>
                     </tr>

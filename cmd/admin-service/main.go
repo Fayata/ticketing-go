@@ -38,6 +38,7 @@ func main() {
 	var err error
 	for i := 0; i < 5; i++ {
 		err = db.AutoMigrate(
+			&models.Company{},
 			&models.User{},
 			&models.Department{},
 			&models.Group{},
@@ -102,6 +103,10 @@ func main() {
 	adminMux.HandleFunc("/users/staff/", AuditLogWrapper("Toggle Staff Role", adminHandler.ToggleStaffRole))
 	adminMux.HandleFunc("/departments", adminHandler.ListDepartments)
 	adminMux.HandleFunc("/departments/create", AuditLogWrapper("Create Department", adminHandler.CreateDepartmentForm))
+	adminMux.HandleFunc("/companies", adminHandler.ListCompanies)
+	adminMux.HandleFunc("/companies/create", AuditLogWrapper("Create Company", adminHandler.CreateCompanyForm))
+	adminMux.HandleFunc("/companies/edit/", AuditLogWrapper("Edit Company", adminHandler.EditCompanyForm))
+	adminMux.HandleFunc("/companies/toggle/", AuditLogWrapper("Toggle Company Status", adminHandler.ToggleCompanyStatus))
 	
 	adminHandlerFunc := middleware.AuthRequired(middleware.SuperAdminRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -201,12 +206,28 @@ func main() {
 }
 
 func seedDefaultData() {
+	// Seed default company and backfill legacy departments & tickets
+	defaultCompany, err := models.SeedDefaultCompanyAndMigrate(config.DB)
+	if err != nil {
+		log.Printf("[Migration] Warning: SeedDefaultCompanyAndMigrate encountered error: %v", err)
+	}
+
 	var portalGroup models.Group
 	config.DB.FirstOrCreate(&portalGroup, models.Group{Name: "Portal Users"})
 	departments := []string{"Technical Support", "Customer Service", "Billing", "General"}
 	for _, deptName := range departments {
 		var dept models.Department
-		config.DB.FirstOrCreate(&dept, models.Department{Name: deptName})
+		if err := config.DB.Where("name = ?", deptName).First(&dept).Error; err != nil {
+			dept = models.Department{
+				Name: deptName,
+			}
+			if defaultCompany != nil {
+				dept.CompanyID = &defaultCompany.ID
+			}
+			config.DB.Create(&dept)
+		} else if (dept.CompanyID == nil || *dept.CompanyID == 0) && defaultCompany != nil {
+			config.DB.Model(&dept).Update("company_id", defaultCompany.ID)
+		}
 	}
 
 	const defaultAdminUsername = "admin"
@@ -214,7 +235,7 @@ func seedDefaultData() {
 	defaultAdminPassword := generateRandomPassword(16)
 
 	var existing models.User
-	err := config.DB.Where("email = ?", defaultAdminEmail).First(&existing).Error
+	err = config.DB.Where("email = ?", defaultAdminEmail).First(&existing).Error
 	if err == nil {
 		updates := map[string]interface{}{
 			"is_active":      true,
