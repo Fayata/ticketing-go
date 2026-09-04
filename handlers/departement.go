@@ -283,34 +283,46 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	message := strings.TrimSpace(r.FormValue("message"))
 	newStatus := r.FormValue("status")
 
-	// Validate & process image attachments
-	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir)
+	var ticket models.Ticket
+	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err != nil {
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tiket+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+
+	if ticket.Status == models.StatusClosed {
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sudah+ditutup+dan+tidak+bisa+dibalas", http.StatusSeeOther)
+		return
+	}
+
+	if ticket.AssignedToID == nil || *ticket.AssignedToID != user.ID {
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sedang+dikerjakan+oleh+staff+lain+dan+tidak+bisa+dibalas", http.StatusSeeOther)
+		return
+	}
+
+	// Validate & process attachments
+	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir, ticket.GetTicketNumber())
 	if err != nil {
 		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 		return
 	}
 
 	if message == "" && len(attachments) == 0 {
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape("Pesan atau lampiran gambar harus diisi"), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape("Pesan atau lampiran berkas harus diisi"), http.StatusSeeOther)
 		return
 	}
 	if message == "" && len(attachments) > 0 {
-		message = "[Lampiran Gambar]"
-	}
-
-	var ticket models.Ticket
-	config.DB.Preload("CreatedBy").First(&ticket, ticketID)
-
-	if ticket.Status == models.StatusClosed {
-		utils.CleanupAttachments(attachments)
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sudah+ditutup+dan+tidak+bisa+dibalas", http.StatusSeeOther)
-		return
-	}
-
-	if ticket.AssignedToID == nil || *ticket.AssignedToID != user.ID {
-		utils.CleanupAttachments(attachments)
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sedang+dikerjakan+oleh+staff+lain+dan+tidak+bisa+dibalas", http.StatusSeeOther)
-		return
+		hasPDF := false
+		for _, a := range attachments {
+			if a.IsPDF() {
+				hasPDF = true
+				break
+			}
+		}
+		if hasPDF {
+			message = "[Lampiran Berkas]"
+		} else {
+			message = "[Lampiran Gambar]"
+		}
 	}
 
 	reply := models.TicketReply{TicketID: ticket.ID, UserID: user.ID, Message: message}
@@ -326,6 +338,7 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 		attachments[i].ReplyID = &reply.ID
 		if err := config.DB.Create(&attachments[i]).Error; err != nil {
 			log.Printf("[Staff][DepartmentReply] Gagal menyimpan lampiran: %v", err)
+			utils.CleanupAttachments(attachments[i : i+1])
 		}
 	}
 	

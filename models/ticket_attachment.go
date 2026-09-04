@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -30,7 +31,7 @@ func (TicketAttachment) TableName() string {
 }
 
 // GetFormattedSize returns human-readable file size.
-func (a *TicketAttachment) GetFormattedSize() string {
+func (a TicketAttachment) GetFormattedSize() string {
 	if a.FileSize < 1024 {
 		return fmt.Sprintf("%d B", a.FileSize)
 	} else if a.FileSize < 1024*1024 {
@@ -39,10 +40,44 @@ func (a *TicketAttachment) GetFormattedSize() string {
 	return fmt.Sprintf("%.1f MB", float64(a.FileSize)/(1024.0*1024.0))
 }
 
+// IsPDF returns true if attachment is a PDF document.
+func (a TicketAttachment) IsPDF() bool {
+	if a.MimeType == "application/pdf" {
+		return true
+	}
+	ext := strings.ToLower(filepath.Ext(a.FileName))
+	if ext == ".pdf" {
+		return true
+	}
+	return strings.ToLower(filepath.Ext(a.FilePath)) == ".pdf"
+}
+
+// IsImage returns true if attachment is an image.
+func (a TicketAttachment) IsImage() bool {
+	if a.IsPDF() {
+		return false
+	}
+	if strings.HasPrefix(a.MimeType, "image/") {
+		return true
+	}
+	ext := strings.ToLower(filepath.Ext(a.FileName))
+	if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" {
+		return true
+	}
+	pathExt := strings.ToLower(filepath.Ext(a.FilePath))
+	return pathExt == ".jpg" || pathExt == ".jpeg" || pathExt == ".png" || pathExt == ".gif" || pathExt == ".webp"
+}
+
 // AfterDelete hook cleans up the file on disk when an attachment record is deleted.
 func (a *TicketAttachment) AfterDelete(tx *gorm.DB) (err error) {
 	if a.FilePath != "" {
-		_ = os.Remove(filepath.FromSlash(a.FilePath))
+		p := filepath.FromSlash(a.FilePath)
+		if err := os.Remove(p); err != nil {
+			trimmed := strings.TrimLeft(a.FilePath, "/\\")
+			if trimmed != "" && trimmed != a.FilePath {
+				_ = os.Remove(filepath.FromSlash(trimmed))
+			}
+		}
 	}
 	return nil
 }

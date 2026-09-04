@@ -105,3 +105,143 @@ func TestTicketAttachment_AfterDelete(t *testing.T) {
 		t.Errorf("Expected file %s to be deleted, but it still exists", tmpPath)
 	}
 }
+
+func TestTicketAttachment_IsPDF_And_IsImage(t *testing.T) {
+	pdfAtt := models.TicketAttachment{
+		FileName: "invoice.pdf",
+		FilePath: "static/uploads/attachments/T26-0001-1725432000.pdf",
+		MimeType: "application/pdf",
+	}
+	if !pdfAtt.IsPDF() {
+		t.Errorf("expected IsPDF() to be true for PDF attachment")
+	}
+	if pdfAtt.IsImage() {
+		t.Errorf("expected IsImage() to be false for PDF attachment")
+	}
+
+	imgAtt := models.TicketAttachment{
+		FileName: "screenshot.png",
+		FilePath: "static/uploads/attachments/T26-0001-1725432000.png",
+		MimeType: "image/png",
+	}
+	if imgAtt.IsPDF() {
+		t.Errorf("expected IsPDF() to be false for PNG attachment")
+	}
+	if !imgAtt.IsImage() {
+		t.Errorf("expected IsImage() to be true for PNG attachment")
+	}
+
+	emptyAtt := models.TicketAttachment{}
+	if emptyAtt.IsPDF() {
+		t.Errorf("expected IsPDF() to be false for empty attachment")
+	}
+	if emptyAtt.IsImage() {
+		t.Errorf("expected IsImage() to be false for empty attachment")
+	}
+
+	txtAtt := models.TicketAttachment{
+		FileName: "notes.txt",
+		FilePath: "static/uploads/attachments/notes.txt",
+		MimeType: "text/plain",
+	}
+	if txtAtt.IsPDF() {
+		t.Errorf("expected IsPDF() to be false for txt file")
+	}
+	if txtAtt.IsImage() {
+		t.Errorf("expected IsImage() to be false for txt file")
+	}
+}
+
+func TestTicketAttachment_ValueReceiverInvocation(t *testing.T) {
+	ticket := models.Ticket{
+		ID: 1,
+		Attachments: []models.TicketAttachment{
+			{
+				FileName: "doc.pdf",
+				FilePath: "static/uploads/attachments/T26-0001-1725432000.pdf",
+				FileSize: 2048,
+				MimeType: "application/pdf",
+			},
+			{
+				FileName: "img.png",
+				FilePath: "static/uploads/attachments/T26-0001-1725432000.png",
+				FileSize: 512,
+				MimeType: "image/png",
+			},
+		},
+	}
+
+	initials := ticket.GetInitialAttachments()
+	if len(initials) != 2 {
+		t.Fatalf("expected 2 initial attachments, got %d", len(initials))
+	}
+
+	// Calling methods on value slice items directly (as html/template does)
+	if !initials[0].IsPDF() {
+		t.Errorf("expected initials[0].IsPDF() to be true")
+	}
+	if initials[0].IsImage() {
+		t.Errorf("expected initials[0].IsImage() to be false")
+	}
+	if initials[0].GetFormattedSize() != "2.0 KB" {
+		t.Errorf("expected '2.0 KB', got %s", initials[0].GetFormattedSize())
+	}
+
+	if initials[1].IsPDF() {
+		t.Errorf("expected initials[1].IsPDF() to be false")
+	}
+	if !initials[1].IsImage() {
+		t.Errorf("expected initials[1].IsImage() to be true")
+	}
+	if initials[1].GetFormattedSize() != "512 B" {
+		t.Errorf("expected '512 B', got %s", initials[1].GetFormattedSize())
+	}
+}
+
+func TestTicketAttachment_AfterDelete_LeadingSlashAndRelative(t *testing.T) {
+	// 1. Test relative path with forward slash
+	tmpDir, err := os.MkdirTemp("", "att_hook_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testFilePath := tmpDir + "/testfile.pdf"
+	if err := os.WriteFile(testFilePath, []byte("%PDF-dummy"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	att := models.TicketAttachment{FilePath: testFilePath}
+	if err := att.AfterDelete(nil); err != nil {
+		t.Errorf("AfterDelete failed: %v", err)
+	}
+	if _, err := os.Stat(testFilePath); !os.IsNotExist(err) {
+		t.Errorf("Expected %s to be deleted, but it still exists", testFilePath)
+	}
+
+	// 2. Test empty FilePath does not error
+	emptyAtt := models.TicketAttachment{FilePath: ""}
+	if err := emptyAtt.AfterDelete(nil); err != nil {
+		t.Errorf("AfterDelete on empty FilePath returned error: %v", err)
+	}
+}
+
+func TestTicket_NilPointerSafety(t *testing.T) {
+	var nilTicket *models.Ticket
+
+	if num := nilTicket.GetTicketNumber(); num != "T00-0000" {
+		t.Errorf("expected 'T00-0000' for nil ticket, got %s", num)
+	}
+	if atts := nilTicket.GetInitialAttachments(); atts != nil {
+		t.Errorf("expected nil initial attachments for nil ticket, got %+v", atts)
+	}
+	if status := nilTicket.GetStatusDisplay(); status != "" {
+		t.Errorf("expected empty status display for nil ticket, got %s", status)
+	}
+	if prio := nilTicket.GetPriorityDisplay(); prio != "" {
+		t.Errorf("expected empty priority display for nil ticket, got %s", prio)
+	}
+	if count := nilTicket.GetReplyCount(); count != 0 {
+		t.Errorf("expected 0 reply count for nil ticket, got %d", count)
+	}
+}

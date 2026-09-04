@@ -77,9 +77,8 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate & process image attachments
-	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir)
-	if err != nil {
+	// Pre-validate file attachments before creating ticket in DB
+	if err := utils.ValidateMultipartRequest(r, "attachments"); err != nil {
 		http.Redirect(w, r, config.Path("/kirim-tiket")+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 		return
 	}
@@ -101,12 +100,34 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ticket, err := h.ticketService.CreateTicketWithAttachments(user.ID, title, description, replyToEmail, priority, departmentID, companyID, attachments)
+	// Pre-validate attachments before ticket creation to prevent auto-increment ID sequence gaps on invalid files
+	if valErr := utils.ValidateMultipartRequest(r, "attachments"); valErr != nil {
+		http.Redirect(w, r, config.Path("/kirim-tiket")+"?error="+url.QueryEscape(valErr.Error()), http.StatusSeeOther)
+		return
+	}
+
+	ticket, err := h.ticketService.CreateTicket(user.ID, title, description, replyToEmail, priority, departmentID, companyID)
 	if err != nil {
-		utils.CleanupAttachments(attachments)
 		log.Printf("Failed to create ticket: %v", err)
 		http.Redirect(w, r, config.Path("/kirim-tiket")+"?error="+url.QueryEscape("Gagal membuat tiket: "+err.Error()), http.StatusSeeOther)
 		return
+	}
+
+	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir, ticket.GetTicketNumber())
+	if err != nil {
+		config.DB.Where("ticket_id = ?", ticket.ID).Delete(&models.Notification{})
+		config.DB.Delete(ticket)
+		http.Redirect(w, r, config.Path("/kirim-tiket")+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+
+	for i := range attachments {
+		attachments[i].TicketID = ticket.ID
+		attachments[i].ReplyID = nil
+		if err := config.DB.Create(&attachments[i]).Error; err != nil {
+			log.Printf("[TicketHandler] Gagal menyimpan lampiran tiket: %v", err)
+			utils.CleanupAttachments(attachments[i : i+1])
+		}
 	}
 	departmentName := "Tidak Ditentukan"
 	if ticket.Department != nil {
@@ -229,19 +250,40 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 	}
 	message := strings.TrimSpace(r.FormValue("message"))
 
-	// Validate & process image attachments
-	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir)
+	var tkt models.Ticket
+	if err := config.DB.Preload("CreatedBy").Where("id = ? AND created_by_id = ?", ticketID, user.ID).First(&tkt).Error; err != nil {
+		http.Redirect(w, r, config.Path("/tiket"), http.StatusSeeOther)
+		return
+	}
+	if tkt.Status == models.StatusClosed {
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error=Tiket+ini+sudah+ditutup+dan+tidak+bisa+dibalas", http.StatusSeeOther)
+		return
+	}
+
+	// Validate & process attachments
+	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir, tkt.GetTicketNumber())
 	if err != nil {
 		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 		return
 	}
 
 	if message == "" && len(attachments) == 0 {
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error="+url.QueryEscape("Pesan atau lampiran gambar harus diisi"), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error="+url.QueryEscape("Pesan atau lampiran berkas harus diisi"), http.StatusSeeOther)
 		return
 	}
 	if message == "" && len(attachments) > 0 {
-		message = "[Lampiran Gambar]"
+		hasPDF := false
+		for _, a := range attachments {
+			if a.IsPDF() {
+				hasPDF = true
+				break
+			}
+		}
+		if hasPDF {
+			message = "[Lampiran Berkas]"
+		} else {
+			message = "[Lampiran Gambar]"
+		}
 	}
 
 	reply, ticket, err := h.ticketService.AddReplyWithAttachments(uint(ticketID), user.ID, message, attachments)

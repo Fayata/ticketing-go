@@ -46,6 +46,9 @@ type Ticket struct {
 }
 
 func (t *Ticket) GetStatusDisplay() string {
+	if t == nil {
+		return ""
+	}
 	switch t.Status {
 	case StatusWaiting:
 		return "Menunggu Balasan"
@@ -59,6 +62,9 @@ func (t *Ticket) GetStatusDisplay() string {
 }
 
 func (t *Ticket) GetPriorityDisplay() string {
+	if t == nil {
+		return ""
+	}
 	switch t.Priority {
 	case PriorityLow:
 		return "Low"
@@ -72,20 +78,29 @@ func (t *Ticket) GetPriorityDisplay() string {
 }
 
 func (t *Ticket) GetReplyCount() int {
+	if t == nil {
+		return 0
+	}
 	return len(t.Replies)
 }
 
 func (t *Ticket) GetTicketNumber() string {
+	if t == nil {
+		return "T00-0000"
+	}
 	year := t.CreatedAt.Format("06")
 	if t.CreatedAt.IsZero() {
 		year = time.Now().Format("06")
 	}
 
-	return fmt.Sprintf("T%s-%04d ", year, t.ID)
+	return fmt.Sprintf("T%s-%04d", year, t.ID)
 }
 
 // GetInitialAttachments returns only attachments attached during initial ticket creation (ReplyID is nil or 0).
 func (t *Ticket) GetInitialAttachments() []TicketAttachment {
+	if t == nil {
+		return nil
+	}
 	var list []TicketAttachment
 	for _, a := range t.Attachments {
 		if a.ReplyID == nil || *a.ReplyID == 0 {

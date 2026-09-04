@@ -1,3 +1,6 @@
+(function() {
+  'use strict';
+
   const infoBtn = document.getElementById('infoToggle');
   const drawer = document.getElementById('infoDrawer');
   if (infoBtn && drawer) {
@@ -74,35 +77,44 @@
       const item = document.createElement('div');
       item.className = 'reply-preview-item';
 
-      const img = document.createElement('img');
-      img.className = 'reply-preview-img';
-      img.alt = file.name;
+      const isPDF = file.type === 'application/pdf' || file.name.match(/\.pdf$/i);
+      if (isPDF) {
+        item.classList.add('reply-preview-pdf');
+        const pdfBadge = document.createElement('div');
+        pdfBadge.className = 'reply-preview-pdf-badge';
+        pdfBadge.innerHTML = '<span class="pdf-tag">PDF</span><span class="pdf-name" title="' + file.name + '">' + file.name + '</span>';
+        item.appendChild(pdfBadge);
+      } else {
+        const img = document.createElement('img');
+        img.className = 'reply-preview-img';
+        img.alt = file.name;
 
-      let imgLoaded = false;
-      try {
-        const objectUrl = URL.createObjectURL(file);
-        activeReplyUrls.push(objectUrl);
-        img.src = objectUrl;
-        imgLoaded = true;
-      } catch (err) {
-        const errSpan = document.createElement('span');
-        errSpan.className = 'reply-preview-error';
-        errSpan.textContent = 'IMG';
-        item.appendChild(errSpan);
-      }
-
-      img.onerror = function() {
-        this.style.display = 'none';
-        if (!item.querySelector('.reply-preview-error')) {
+        let imgLoaded = false;
+        try {
+          const objectUrl = URL.createObjectURL(file);
+          activeReplyUrls.push(objectUrl);
+          img.src = objectUrl;
+          imgLoaded = true;
+        } catch (err) {
           const errSpan = document.createElement('span');
           errSpan.className = 'reply-preview-error';
-          errSpan.textContent = '!';
+          errSpan.textContent = 'IMG';
           item.appendChild(errSpan);
         }
-      };
 
-      if (imgLoaded) {
-        item.appendChild(img);
+        img.onerror = function() {
+          this.style.display = 'none';
+          if (!item.querySelector('.reply-preview-error')) {
+            const errSpan = document.createElement('span');
+            errSpan.className = 'reply-preview-error';
+            errSpan.textContent = '!';
+            item.appendChild(errSpan);
+          }
+        };
+
+        if (imgLoaded) {
+          item.appendChild(img);
+        }
       }
 
       const removeBtn = document.createElement('button');
@@ -127,7 +139,7 @@
   if (replyFileInput) {
     const maxFiles = 5;
     const maxSizeBytes = 5 * 1024 * 1024;
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
     replyFileInput.addEventListener('change', function() {
       clearReplyError();
@@ -135,15 +147,15 @@
 
       const incoming = Array.from(this.files);
       if (currentReplyFiles.length + incoming.length > maxFiles) {
-        showReplyError('Maksimal ' + maxFiles + ' file gambar yang dapat dilampirkan.');
+        showReplyError('Maksimal ' + maxFiles + ' file yang dapat dilampirkan.');
         return;
       }
 
       for (let i = 0; i < incoming.length; i++) {
         const f = incoming[i];
-        const isImage = allowedTypes.includes(f.type) || f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-        if (!isImage) {
-          showReplyError('Format file "' + f.name + '" tidak didukung. Hanya JPG, PNG, GIF, WebP yang diizinkan.');
+        const isSupported = allowedTypes.includes(f.type) || f.name.match(/\.(jpg|jpeg|png|gif|webp|pdf)$/i);
+        if (!isSupported) {
+          showReplyError('Format file "' + f.name + '" tidak didukung. Hanya file gambar (JPG, PNG, GIF, WebP) dan dokumen PDF yang diizinkan.');
           return;
         }
         if (f.size > maxSizeBytes) {
@@ -186,7 +198,7 @@
       const msg = ta ? ta.value.trim() : '';
       if (msg === '' && currentReplyFiles.length === 0) {
         e.preventDefault();
-        showReplyError('Pesan atau lampiran gambar harus diisi');
+        showReplyError('Pesan atau lampiran berkas harus diisi');
         return;
       }
 
@@ -302,3 +314,4 @@
       openLightbox(link.dataset.preview, link.dataset.filename);
     }
   });
+})();

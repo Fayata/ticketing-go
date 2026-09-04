@@ -2,7 +2,10 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -80,8 +83,37 @@ func (s *TicketService) CreateTicketWithAttachments(createdByID uint, title, des
 	for i := range attachments {
 		attachments[i].TicketID = ticket.ID
 		attachments[i].ReplyID = nil
+		ticketNumClean := strings.TrimSpace(ticket.GetTicketNumber())
+		ticketNumClean = strings.ReplaceAll(ticketNumClean, " ", "")
+		base := filepath.Base(attachments[i].FilePath)
+		if attachments[i].FilePath != "" && !strings.HasPrefix(base, ticketNumClean+"-") {
+			oldPath := filepath.FromSlash(attachments[i].FilePath)
+			timestamp := time.Now().Unix()
+			newName := utils.GenerateTicketAttachmentFileName(ticketNumClean, timestamp, i+1, len(attachments), attachments[i].FileName)
+			newPath := filepath.Join(filepath.Dir(oldPath), newName)
+			if _, err := os.Stat(newPath); err == nil {
+				ext := filepath.Ext(newName)
+				baseName := strings.TrimSuffix(newName, ext)
+				counter := 1
+				for {
+					candidateName := fmt.Sprintf("%s_%d%s", baseName, counter, ext)
+					candPath := filepath.Join(filepath.Dir(oldPath), candidateName)
+					if _, err := os.Stat(candPath); os.IsNotExist(err) {
+						newName = candidateName
+						newPath = candPath
+						break
+					}
+					counter++
+				}
+			}
+			if _, err := os.Stat(oldPath); err == nil {
+				_ = os.Rename(oldPath, newPath)
+			}
+			attachments[i].FilePath = filepath.ToSlash(newPath)
+		}
 		if err := config.DB.Create(&attachments[i]).Error; err != nil {
 			log.Printf("[TicketService] Gagal menyimpan lampiran tiket: %v", err)
+			utils.CleanupAttachments(attachments[i : i+1])
 		}
 	}
 
@@ -90,7 +122,9 @@ func (s *TicketService) CreateTicketWithAttachments(createdByID uint, title, des
 	if ticket.DepartmentID != nil {
 		go func() {
 			var ticketWithUser models.Ticket
-			config.DB.Preload("CreatedBy").First(&ticketWithUser, ticket.ID)
+			if err := config.DB.Preload("CreatedBy").First(&ticketWithUser, ticket.ID).Error; err != nil {
+				return
+			}
 			var staffUsers []models.User
 			config.DB.Where("department_id = ? AND is_staff = ? AND is_active = ?", ticket.DepartmentID, true, true).Find(&staffUsers)
 			for _, staff := range staffUsers {
@@ -207,8 +241,37 @@ func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, mess
 	for i := range attachments {
 		attachments[i].TicketID = tkt.ID
 		attachments[i].ReplyID = &reply.ID
+		ticketNumClean := strings.TrimSpace(tkt.GetTicketNumber())
+		ticketNumClean = strings.ReplaceAll(ticketNumClean, " ", "")
+		base := filepath.Base(attachments[i].FilePath)
+		if attachments[i].FilePath != "" && !strings.HasPrefix(base, ticketNumClean+"-") {
+			oldPath := filepath.FromSlash(attachments[i].FilePath)
+			timestamp := time.Now().Unix()
+			newName := utils.GenerateTicketAttachmentFileName(ticketNumClean, timestamp, i+1, len(attachments), attachments[i].FileName)
+			newPath := filepath.Join(filepath.Dir(oldPath), newName)
+			if _, err := os.Stat(newPath); err == nil {
+				ext := filepath.Ext(newName)
+				baseName := strings.TrimSuffix(newName, ext)
+				counter := 1
+				for {
+					candidateName := fmt.Sprintf("%s_%d%s", baseName, counter, ext)
+					candPath := filepath.Join(filepath.Dir(oldPath), candidateName)
+					if _, err := os.Stat(candPath); os.IsNotExist(err) {
+						newName = candidateName
+						newPath = candPath
+						break
+					}
+					counter++
+				}
+			}
+			if _, err := os.Stat(oldPath); err == nil {
+				_ = os.Rename(oldPath, newPath)
+			}
+			attachments[i].FilePath = filepath.ToSlash(newPath)
+		}
 		if err := config.DB.Create(&attachments[i]).Error; err != nil {
 			log.Printf("[TicketService] Gagal menyimpan lampiran balasan: %v", err)
+			utils.CleanupAttachments(attachments[i : i+1])
 		}
 	}
 
@@ -219,6 +282,10 @@ func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, mess
 	config.DB.First(&user, userID)
 	if !user.IsStaff && tkt.AssignedToID != nil {
 		go func() {
+			var check models.Ticket
+			if err := config.DB.First(&check, tkt.ID).Error; err != nil {
+				return
+			}
 			models.CreateNotification(config.DB, *tkt.AssignedToID, models.NotificationTypeReply,
 				"Balasan dari pengguna",
 				user.GetFullName()+" membalas tiket "+tkt.GetTicketNumber()+": "+utils.TruncateString(reply.Message, 80),

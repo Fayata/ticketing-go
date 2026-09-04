@@ -28,6 +28,8 @@ var testPNG = []byte{
 	0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
 }
 
+var testPDF = []byte("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\nxref\n0 2\n0000000000 65535 f \n0000000009 00000 n \ntrailer<</Size 2/Root 1 0 R>>\nstartxref\n50\n%%EOF\n")
+
 func buildMultipartRequest(targetURL string, fields map[string]string, files map[string][]byte) (*http.Request, error) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -727,4 +729,599 @@ func TestAttachment_SanitizePathTraversalFileName(t *testing.T) {
 	}
 
 	_ = os.Remove(filepath.FromSlash(att.FilePath))
+}
+
+func TestAttachment_CreateTicketWithPDF_And_NamingFormat(t *testing.T) {
+	db, cleanup := setupHandlerTestDB(t)
+	if db == nil {
+		return
+	}
+	defer cleanup()
+
+	root := findRepoRoot()
+	_ = os.Chdir(root)
+	utils.InitTemplates()
+
+	_ = db.AutoMigrate(&models.TicketReply{}, &models.TicketAttachment{})
+
+	cfg := config.LoadConfig()
+	jwtService := utils.NewJWTService(cfg)
+	ticketService := services.NewTicketService(jwtService)
+	emailService := utils.NewEmailService(cfg)
+	handler := NewTicketHandler(cfg, emailService, ticketService)
+
+	user := models.User{Username: "pdfcreator", Email: "pdfuser@example.com", IsActive: true, IsVerified: true}
+	db.Create(&user)
+	comp := models.Company{Name: "PT PDF", Code: "PTP", IsActive: true}
+	db.Create(&comp)
+	dept := models.Department{Name: "IT Support", CompanyID: &comp.ID}
+	db.Create(&dept)
+
+	fields := map[string]string{
+		"title":          "Laptop crash report",
+		"description":    "See the attached PDF report and screenshot.",
+		"reply_to_email": "pdfuser@example.com",
+		"priority":       "HIGH",
+		"company_id":     fmt.Sprintf("%d", comp.ID),
+		"department":     fmt.Sprintf("%d", dept.ID),
+	}
+	files := map[string][]byte{
+		"report.pdf":  testPDF,
+		"capture.png": testPNG,
+	}
+
+	req, err := buildMultipartRequest("/kirim-tiket", fields, files)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	req = withUserContext(req, &user)
+	w := httptest.NewRecorder()
+
+	handler.CreateTicket(w, req)
+	resp := w.Result()
+
+	loc := resp.Header.Get("Location")
+	if strings.Contains(loc, "error=") {
+		t.Fatalf("Expected success redirect, got error: %s", loc)
+	}
+
+	var createdTicket models.Ticket
+	if err := db.Where("created_by_id = ?", user.ID).First(&createdTicket).Error; err != nil {
+		t.Fatalf("Failed to find created ticket: %v", err)
+	}
+
+	var atts []models.TicketAttachment
+	db.Where("ticket_id = ?", createdTicket.ID).Find(&atts)
+	if len(atts) != 2 {
+		t.Fatalf("Expected 2 attachments, found %d", len(atts))
+	}
+
+	ticketNumClean := strings.TrimSpace(createdTicket.GetTicketNumber())
+	ticketNumClean = strings.ReplaceAll(ticketNumClean, " ", "")
+
+	for _, a := range atts {
+		base := filepath.Base(a.FilePath)
+		if !strings.HasPrefix(base, ticketNumClean+"-") {
+			t.Errorf("Expected base filename to start with %q, got %q", ticketNumClean+"-", base)
+		}
+		if a.FileName == "report.pdf" {
+			if !a.IsPDF() {
+				t.Errorf("Expected report.pdf IsPDF() to be true")
+			}
+			if a.MimeType != "application/pdf" {
+				t.Errorf("Expected mime_type application/pdf, got %s", a.MimeType)
+			}
+		}
+		if a.FileName == "capture.png" {
+			if a.IsPDF() {
+				t.Errorf("Expected capture.png IsPDF() to be false")
+			}
+			if a.MimeType != "image/png" {
+				t.Errorf("Expected mime_type image/png, got %s", a.MimeType)
+			}
+		}
+		_ = os.Remove(filepath.FromSlash(a.FilePath))
+	}
+}
+
+func TestAttachment_StaffReplyWithPDFOnly(t *testing.T) {
+	db, cleanup := setupHandlerTestDB(t)
+	if db == nil {
+		return
+	}
+	defer cleanup()
+
+	root := findRepoRoot()
+	_ = os.Chdir(root)
+	utils.InitTemplates()
+
+	_ = db.AutoMigrate(&models.TicketReply{}, &models.TicketAttachment{})
+
+	cfg := config.LoadConfig()
+	emailService := utils.NewEmailService(cfg)
+	staffService := services.NewStaffDashboardService()
+	deptHandler := NewDepartmentHandler(cfg, emailService, staffService)
+
+	dept := models.Department{Name: "Finance"}
+	db.Create(&dept)
+
+	staffUser := models.User{
+		Username:     "staff_pdf",
+		Email:        "staff_pdf@example.com",
+		IsActive:     true,
+		IsVerified:   true,
+		IsStaff:      true,
+		DepartmentID: &dept.ID,
+	}
+	db.Create(&staffUser)
+
+	ticket := models.Ticket{
+		Title:        "Invoice Request",
+		Description:  "Please send invoice PDF",
+		DepartmentID: &dept.ID,
+		AssignedToID: &staffUser.ID,
+		Status:       models.StatusInProgress,
+	}
+	db.Create(&ticket)
+
+	fields := map[string]string{
+		"message": "",
+		"status":  string(models.StatusInProgress),
+	}
+	files := map[string][]byte{
+		"invoice.pdf": testPDF,
+	}
+
+	req, err := buildMultipartRequest(fmt.Sprintf("/departement/tiket/%d", ticket.ID), fields, files)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	req = withUserContext(req, &staffUser)
+	w := httptest.NewRecorder()
+
+	deptHandler.DepartmentReply(w, req)
+	resp := w.Result()
+
+	loc := resp.Header.Get("Location")
+	if strings.Contains(loc, "error=") {
+		t.Fatalf("Expected successful staff PDF reply, got error: %s", loc)
+	}
+
+	var latestReply models.TicketReply
+	db.Where("ticket_id = ?", ticket.ID).Order("id DESC").First(&latestReply)
+	if latestReply.Message != "[Lampiran Berkas]" {
+		t.Errorf("Expected staff fallback message '[Lampiran Berkas]', got %q", latestReply.Message)
+	}
+
+	var atts []models.TicketAttachment
+	db.Where("reply_id = ?", latestReply.ID).Find(&atts)
+	if len(atts) != 1 {
+		t.Fatalf("Expected 1 attachment for staff reply, got %d", len(atts))
+	}
+	if atts[0].FileName != "invoice.pdf" {
+		t.Errorf("Expected filename invoice.pdf, got %s", atts[0].FileName)
+	}
+	if !atts[0].IsPDF() {
+		t.Errorf("Expected IsPDF() to be true")
+	}
+	_ = os.Remove(filepath.FromSlash(atts[0].FilePath))
+}
+
+func TestAttachment_UserReplyWithPDFOnly(t *testing.T) {
+	db, cleanup := setupHandlerTestDB(t)
+	if db == nil {
+		return
+	}
+	defer cleanup()
+
+	root := findRepoRoot()
+	_ = os.Chdir(root)
+	utils.InitTemplates()
+
+	_ = db.AutoMigrate(&models.TicketReply{}, &models.TicketAttachment{})
+
+	cfg := config.LoadConfig()
+	jwtService := utils.NewJWTService(cfg)
+	ticketService := services.NewTicketService(jwtService)
+	emailService := utils.NewEmailService(cfg)
+	handler := NewTicketHandler(cfg, emailService, ticketService)
+
+	user := models.User{Username: "user_pdf", Email: "user_pdf@example.com", IsActive: true, IsVerified: true}
+	db.Create(&user)
+
+	ticket := models.Ticket{
+		Title:        "Signed Contract",
+		Description:  "Sending signed document",
+		CreatedByID:  user.ID,
+		ReplyToEmail: user.Email,
+		Status:       models.StatusWaiting,
+	}
+	db.Create(&ticket)
+
+	fields := map[string]string{
+		"message": "",
+	}
+	files := map[string][]byte{
+		"contract.pdf": testPDF,
+	}
+
+	req, err := buildMultipartRequest(fmt.Sprintf("/tiket/%d", ticket.ID), fields, files)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	req = withUserContext(req, &user)
+	w := httptest.NewRecorder()
+
+	handler.AddReply(w, req)
+	resp := w.Result()
+
+	loc := resp.Header.Get("Location")
+	if strings.Contains(loc, "error=") {
+		t.Fatalf("Expected successful reply, got: %s", loc)
+	}
+
+	var latestReply models.TicketReply
+	db.Where("ticket_id = ?", ticket.ID).Order("id DESC").First(&latestReply)
+	if latestReply.Message != "[Lampiran Berkas]" {
+		t.Errorf("Expected fallback message '[Lampiran Berkas]', got %q", latestReply.Message)
+	}
+
+	var atts []models.TicketAttachment
+	db.Where("reply_id = ?", latestReply.ID).Find(&atts)
+	if len(atts) != 1 {
+		t.Fatalf("Expected 1 attachment, got %d", len(atts))
+	}
+	if !atts[0].IsPDF() {
+		t.Errorf("Expected IsPDF() to be true")
+	}
+	_ = os.Remove(filepath.FromSlash(atts[0].FilePath))
+}
+
+func TestAttachment_CreateTicketWith5MixedFiles(t *testing.T) {
+	db, cleanup := setupHandlerTestDB(t)
+	if db == nil {
+		return
+	}
+	defer cleanup()
+
+	root := findRepoRoot()
+	_ = os.Chdir(root)
+	utils.InitTemplates()
+
+	_ = db.AutoMigrate(&models.TicketReply{}, &models.TicketAttachment{})
+
+	cfg := config.LoadConfig()
+	jwtService := utils.NewJWTService(cfg)
+	ticketService := services.NewTicketService(jwtService)
+	emailService := utils.NewEmailService(cfg)
+	handler := NewTicketHandler(cfg, emailService, ticketService)
+
+	user := models.User{Username: "mixedcreator", Email: "mixed@example.com", IsActive: true, IsVerified: true}
+	db.Create(&user)
+	comp := models.Company{Name: "PT Mixed", Code: "PTM", IsActive: true}
+	db.Create(&comp)
+	dept := models.Department{Name: "IT Operations", CompanyID: &comp.ID}
+	db.Create(&dept)
+
+	fields := map[string]string{
+		"title":          "Multiple issues with attachments",
+		"description":    "See all 5 files attached: 3 PNG screenshots and 2 PDF reports.",
+		"reply_to_email": "mixed@example.com",
+		"priority":       "HIGH",
+		"company_id":     fmt.Sprintf("%d", comp.ID),
+		"department":     fmt.Sprintf("%d", dept.ID),
+	}
+	files := map[string][]byte{
+		"screen1.png": testPNG,
+		"report1.pdf": testPDF,
+		"screen2.png": testPNG,
+		"screen3.png": testPNG,
+		"report2.pdf": testPDF,
+	}
+
+	req, err := buildMultipartRequest("/kirim-tiket", fields, files)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	req = withUserContext(req, &user)
+	w := httptest.NewRecorder()
+
+	handler.CreateTicket(w, req)
+	resp := w.Result()
+
+	loc := resp.Header.Get("Location")
+	if strings.Contains(loc, "error=") {
+		t.Fatalf("Expected success redirect, got error: %s", loc)
+	}
+
+	var createdTicket models.Ticket
+	if err := db.Where("created_by_id = ?", user.ID).First(&createdTicket).Error; err != nil {
+		t.Fatalf("Failed to find created ticket: %v", err)
+	}
+
+	var atts []models.TicketAttachment
+	db.Where("ticket_id = ?", createdTicket.ID).Order("id ASC").Find(&atts)
+	if len(atts) != 5 {
+		t.Fatalf("Expected 5 attachments, found %d", len(atts))
+	}
+
+	ticketNumClean := strings.TrimSpace(createdTicket.GetTicketNumber())
+	ticketNumClean = strings.ReplaceAll(ticketNumClean, " ", "")
+
+	pdfCount := 0
+	imgCount := 0
+	foundIndexes := make(map[string]bool)
+
+	for _, a := range atts {
+		base := filepath.Base(a.FilePath)
+		if !strings.HasPrefix(base, ticketNumClean+"-") {
+			t.Errorf("Expected base filename to start with %q, got %q", ticketNumClean+"-", base)
+		}
+		for idx := 1; idx <= 5; idx++ {
+			if strings.Contains(base, fmt.Sprintf("_%d.", idx)) {
+				foundIndexes[fmt.Sprintf("_%d", idx)] = true
+			}
+		}
+
+		if strings.HasSuffix(a.FileName, ".pdf") {
+			pdfCount++
+			if !a.IsPDF() {
+				t.Errorf("Expected %s IsPDF() to be true", a.FileName)
+			}
+			if a.IsImage() {
+				t.Errorf("Expected %s IsImage() to be false", a.FileName)
+			}
+		} else if strings.HasSuffix(a.FileName, ".png") {
+			imgCount++
+			if a.IsPDF() {
+				t.Errorf("Expected %s IsPDF() to be false", a.FileName)
+			}
+			if !a.IsImage() {
+				t.Errorf("Expected %s IsImage() to be true", a.FileName)
+			}
+		}
+
+		_ = os.Remove(filepath.FromSlash(a.FilePath))
+	}
+
+	if pdfCount != 2 {
+		t.Errorf("Expected 2 PDF attachments, got %d", pdfCount)
+	}
+	if imgCount != 3 {
+		t.Errorf("Expected 3 PNG attachments, got %d", imgCount)
+	}
+	if len(foundIndexes) != 5 {
+		t.Errorf("Expected 5 unique sequence indexes (_1 through _5), got %d: %+v", len(foundIndexes), foundIndexes)
+	}
+}
+
+func TestAttachment_StaffReplyWith5MixedFiles(t *testing.T) {
+	db, cleanup := setupHandlerTestDB(t)
+	if db == nil {
+		return
+	}
+	defer cleanup()
+
+	root := findRepoRoot()
+	_ = os.Chdir(root)
+	utils.InitTemplates()
+
+	_ = db.AutoMigrate(&models.TicketReply{}, &models.TicketAttachment{})
+
+	cfg := config.LoadConfig()
+	emailService := utils.NewEmailService(cfg)
+	staffService := services.NewStaffDashboardService()
+	deptHandler := NewDepartmentHandler(cfg, emailService, staffService)
+
+	dept := models.Department{Name: "Engineering"}
+	db.Create(&dept)
+
+	staffUser := models.User{
+		Username:     "staff_mixed",
+		Email:        "staff_mixed@example.com",
+		IsActive:     true,
+		IsVerified:   true,
+		IsStaff:      true,
+		DepartmentID: &dept.ID,
+	}
+	db.Create(&staffUser)
+
+	ticket := models.Ticket{
+		Title:        "System diagnostics",
+		Description:  "Sending diagnostic logs",
+		DepartmentID: &dept.ID,
+		AssignedToID: &staffUser.ID,
+		Status:       models.StatusInProgress,
+	}
+	db.Create(&ticket)
+
+	fields := map[string]string{
+		"message": "", // empty message -> should trigger fallback [Lampiran Berkas]
+		"status":  string(models.StatusInProgress),
+	}
+	files := map[string][]byte{
+		"diag1.png": testPNG,
+		"spec.pdf":  testPDF,
+		"diag2.png": testPNG,
+		"log.pdf":   testPDF,
+		"diag3.png": testPNG,
+	}
+
+	req, err := buildMultipartRequest(fmt.Sprintf("/departement/tiket/%d", ticket.ID), fields, files)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	req = withUserContext(req, &staffUser)
+	w := httptest.NewRecorder()
+
+	deptHandler.DepartmentReply(w, req)
+	resp := w.Result()
+
+	loc := resp.Header.Get("Location")
+	if strings.Contains(loc, "error=") {
+		t.Fatalf("Expected successful staff mixed reply, got error: %s", loc)
+	}
+
+	var latestReply models.TicketReply
+	db.Where("ticket_id = ?", ticket.ID).Order("id DESC").First(&latestReply)
+	if latestReply.Message != "[Lampiran Berkas]" {
+		t.Errorf("Expected staff fallback message '[Lampiran Berkas]', got %q", latestReply.Message)
+	}
+
+	var atts []models.TicketAttachment
+	db.Where("reply_id = ?", latestReply.ID).Order("id ASC").Find(&atts)
+	if len(atts) != 5 {
+		t.Fatalf("Expected 5 attachments for staff reply, got %d", len(atts))
+	}
+
+	ticketNumClean := strings.TrimSpace(ticket.GetTicketNumber())
+	ticketNumClean = strings.ReplaceAll(ticketNumClean, " ", "")
+	foundIndexes := make(map[string]bool)
+
+	for _, a := range atts {
+		base := filepath.Base(a.FilePath)
+		if !strings.HasPrefix(base, ticketNumClean+"-") {
+			t.Errorf("Expected FilePath base to start with %q, got %q", ticketNumClean+"-", base)
+		}
+		for idx := 1; idx <= 5; idx++ {
+			if strings.Contains(base, fmt.Sprintf("_%d.", idx)) {
+				foundIndexes[fmt.Sprintf("_%d", idx)] = true
+			}
+		}
+		_ = os.Remove(filepath.FromSlash(a.FilePath))
+	}
+
+	if len(foundIndexes) != 5 {
+		t.Errorf("Expected 5 sequence suffixes (_1 through _5), got %d: %+v", len(foundIndexes), foundIndexes)
+	}
+}
+
+func TestAttachment_RejectCorruptedPDFUpload(t *testing.T) {
+	db, cleanup := setupHandlerTestDB(t)
+	if db == nil {
+		return
+	}
+	defer cleanup()
+
+	root := findRepoRoot()
+	_ = os.Chdir(root)
+	utils.InitTemplates()
+
+	_ = db.AutoMigrate(&models.TicketReply{}, &models.TicketAttachment{})
+
+	cfg := config.LoadConfig()
+	jwtService := utils.NewJWTService(cfg)
+	ticketService := services.NewTicketService(jwtService)
+	emailService := utils.NewEmailService(cfg)
+	handler := NewTicketHandler(cfg, emailService, ticketService)
+
+	user := models.User{Username: "badpdfuser", Email: "badpdf@example.com", IsActive: true, IsVerified: true}
+	db.Create(&user)
+	comp := models.Company{Name: "PT Bad", Code: "PTB", IsActive: true}
+	db.Create(&comp)
+	dept := models.Department{Name: "IT", CompanyID: &comp.ID}
+	db.Create(&dept)
+
+	fields := map[string]string{
+		"title":          "Corrupted attachment attempt",
+		"description":    "This ticket attaches a corrupted PDF file.",
+		"reply_to_email": "badpdf@example.com",
+		"priority":       "LOW",
+		"company_id":     fmt.Sprintf("%d", comp.ID),
+		"department":     fmt.Sprintf("%d", dept.ID),
+	}
+	files := map[string][]byte{
+		"fake.pdf": []byte("This is plain text pretending to be PDF"),
+	}
+
+	req, err := buildMultipartRequest("/kirim-tiket", fields, files)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	req = withUserContext(req, &user)
+	w := httptest.NewRecorder()
+
+	handler.CreateTicket(w, req)
+	resp := w.Result()
+
+	loc := resp.Header.Get("Location")
+	if !strings.Contains(loc, "error=") {
+		t.Fatalf("Expected rejection error redirect for fake PDF, got: %s", loc)
+	}
+
+	// Verify no ticket was left created in database
+	var count int64
+	db.Model(&models.Ticket{}).Where("created_by_id = ?", user.ID).Count(&count)
+	if count != 0 {
+		t.Errorf("Expected 0 tickets created after rejected upload, found %d", count)
+	}
+}
+
+func TestAttachment_CreateTicket_RollbackCleansNotifications(t *testing.T) {
+	db, cleanup := setupHandlerTestDB(t)
+	if db == nil {
+		return
+	}
+	defer cleanup()
+
+	root := findRepoRoot()
+	_ = os.Chdir(root)
+	utils.InitTemplates()
+
+	_ = db.AutoMigrate(&models.TicketReply{}, &models.TicketAttachment{}, &models.Notification{})
+
+	cfg := config.LoadConfig()
+	jwtService := utils.NewJWTService(cfg)
+	ticketService := services.NewTicketService(jwtService)
+	emailService := utils.NewEmailService(cfg)
+	handler := NewTicketHandler(cfg, emailService, ticketService)
+
+	user := models.User{Username: "rollbackuser", Email: "rollback@example.com", IsActive: true, IsVerified: true}
+	db.Create(&user)
+	comp := models.Company{Name: "PT Rollback", Code: "PTR", IsActive: true}
+	db.Create(&comp)
+	dept := models.Department{Name: "Support", CompanyID: &comp.ID}
+	db.Create(&dept)
+
+	staff := models.User{Username: "supportstaff", Email: "staff@example.com", IsActive: true, IsVerified: true, IsStaff: true, DepartmentID: &dept.ID}
+	db.Create(&staff)
+
+	fields := map[string]string{
+		"title":          "Failing ticket creation",
+		"description":    "Valid description with corrupted file.",
+		"reply_to_email": "rollback@example.com",
+		"priority":       "LOW",
+		"company_id":     fmt.Sprintf("%d", comp.ID),
+		"department":     fmt.Sprintf("%d", dept.ID),
+	}
+	files := map[string][]byte{
+		"invalid.pdf": []byte("not-a-valid-pdf"),
+	}
+
+	req, err := buildMultipartRequest("/kirim-tiket", fields, files)
+	if err != nil {
+		t.Fatalf("Failed to build request: %v", err)
+	}
+	req = withUserContext(req, &user)
+	w := httptest.NewRecorder()
+
+	handler.CreateTicket(w, req)
+	resp := w.Result()
+
+	loc := resp.Header.Get("Location")
+	if !strings.Contains(loc, "error=") {
+		t.Fatalf("Expected error redirect, got: %s", loc)
+	}
+
+	var ticketCount int64
+	db.Model(&models.Ticket{}).Where("created_by_id = ?", user.ID).Count(&ticketCount)
+	if ticketCount != 0 {
+		t.Errorf("Expected 0 tickets after rollback, found %d", ticketCount)
+	}
+
+	var notifCount int64
+	db.Model(&models.Notification{}).Where("title LIKE ?", "%Tiket baru masuk%").Count(&notifCount)
+	if notifCount != 0 {
+		t.Errorf("Expected 0 orphaned notifications after rollback, found %d", notifCount)
+	}
 }

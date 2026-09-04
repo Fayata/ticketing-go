@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"ticketing/models"
 	"ticketing/utils"
@@ -63,6 +64,8 @@ var (
 	animatedGifBytes = []byte(
 		"GIF89a\x02\x00\x02\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x00\x0a\x00\x00\x00,\x00\x00\x00\x00\x02\x00\x02\x00\x00\x02\x02D\x01\x00!\xf9\x04\x00\x0a\x00\x00\x00,\x00\x00\x00\x00\x02\x00\x02\x00\x00\x02\x02D\x01\x00;",
 	)
+
+	pdfBytes = []byte("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\nxref\n0 2\n0000000000 65535 f \n0000000009 00000 n \ntrailer<</Size 2/Root 1 0 R>>\nstartxref\n50\n%%EOF\n")
 )
 
 func createMultipartRequest(t *testing.T, formKey string, files map[string][]byte) *http.Request {
@@ -189,7 +192,7 @@ func TestValidateAttachmentHeader_RejectsExceedingSize(t *testing.T) {
 
 func TestValidateAttachmentHeader_RejectsInvalidExtension(t *testing.T) {
 	invalidExtensions := []string{
-		"script.sh", "program.exe", "document.pdf", "image.svg", "file.php", "data.json",
+		"script.sh", "program.exe", "archive.zip", "image.svg", "file.php", "data.json",
 	}
 
 	for _, filename := range invalidExtensions {
@@ -447,5 +450,313 @@ func TestConcurrentUniqueFileNames(t *testing.T) {
 			t.Errorf("duplicate filename generated under concurrency: %s", n)
 		}
 		seen[n] = true
+	}
+}
+
+func TestValidateAttachmentHeader_ValidPDF(t *testing.T) {
+	req := createMultipartRequest(t, "attachments", map[string][]byte{"document.pdf": pdfBytes})
+	if err := req.ParseMultipartForm(32 << 20); err != nil {
+		t.Fatalf("ParseMultipartForm failed: %v", err)
+	}
+	fh := req.MultipartForm.File["attachments"][0]
+
+	mimeType, err := utils.ValidateAttachmentHeader(fh)
+	if err != nil {
+		t.Fatalf("unexpected error validating valid PDF: %v", err)
+	}
+	if mimeType != "application/pdf" {
+		t.Errorf("expected MIME application/pdf, got %s", mimeType)
+	}
+}
+
+func TestValidateAttachmentHeader_RejectsFakePDF(t *testing.T) {
+	// PDF file with missing %PDF- magic bytes
+	fakePDF := []byte("This is just plain text masquerading as a pdf file.")
+	req := createMultipartRequest(t, "attachments", map[string][]byte{"fake.pdf": fakePDF})
+	if err := req.ParseMultipartForm(32 << 20); err != nil {
+		t.Fatalf("ParseMultipartForm failed: %v", err)
+	}
+	fh := req.MultipartForm.File["attachments"][0]
+
+	_, err := utils.ValidateAttachmentHeader(fh)
+	if err == nil {
+		t.Fatal("expected error for fake PDF without magic bytes, got nil")
+	}
+	if !strings.Contains(err.Error(), "tidak valid") {
+		t.Errorf("unexpected error message for fake PDF: %v", err)
+	}
+}
+
+func TestGenerateTicketAttachmentFileName(t *testing.T) {
+	// Single file: [NomorTiket]-[Timestamp].[ext]
+	single := utils.GenerateTicketAttachmentFileName("T26-0001", 1725432000, 1, 1, "photo.png")
+	if single != "T26-0001-1725432000.png" {
+		t.Errorf("expected 'T26-0001-1725432000.png', got %q", single)
+	}
+
+	singlePDF := utils.GenerateTicketAttachmentFileName("T26-0001", 1725432000, 1, 1, "report.pdf")
+	if singlePDF != "T26-0001-1725432000.pdf" {
+		t.Errorf("expected 'T26-0001-1725432000.pdf', got %q", singlePDF)
+	}
+
+	// Multiple files: [NomorTiket]-[Timestamp]_[index].[ext]
+	multi1 := utils.GenerateTicketAttachmentFileName("T26-0001", 1725432000, 1, 2, "screenshot.png")
+	if multi1 != "T26-0001-1725432000_1.png" {
+		t.Errorf("expected 'T26-0001-1725432000_1.png', got %q", multi1)
+	}
+
+	multi2 := utils.GenerateTicketAttachmentFileName("T26-0001", 1725432000, 2, 2, "document.pdf")
+	if multi2 != "T26-0001-1725432000_2.pdf" {
+		t.Errorf("expected 'T26-0001-1725432000_2.pdf', got %q", multi2)
+	}
+
+	// Ticket number with spaces trimmed
+	multiTrim := utils.GenerateTicketAttachmentFileName("T26-0001 ", 1725432000, 1, 1, "test.jpg")
+	if multiTrim != "T26-0001-1725432000.jpg" {
+		t.Errorf("expected trimmed ticket number, got %q", multiTrim)
+	}
+}
+
+func TestProcessMultipartAttachments_WithTicketNumber(t *testing.T) {
+	tmpDir := filepath.Join(os.TempDir(), "ticketing_test_ticket_naming")
+	_ = os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir)
+
+	files := map[string][]byte{
+		"first.png":  pngBytes,
+		"second.pdf": pdfBytes,
+	}
+	req := createMultipartRequest(t, "attachments", files)
+	atts, err := utils.ProcessMultipartAttachments(req, "attachments", tmpDir, "T26-0001")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(atts) != 2 {
+		t.Fatalf("expected 2 attachments, got %d", len(atts))
+	}
+
+	for _, a := range atts {
+		base := filepath.Base(a.FilePath)
+		if !strings.HasPrefix(base, "T26-0001-") {
+			t.Errorf("expected FilePath base to start with 'T26-0001-', got %q", base)
+		}
+		if !strings.Contains(base, "_1.") && !strings.Contains(base, "_2.") {
+			t.Errorf("expected sequence index suffix in %q", base)
+		}
+	}
+}
+
+func TestValidateMultipartRequest(t *testing.T) {
+	// Valid request with image and PDF
+	files := map[string][]byte{
+		"valid.png": pngBytes,
+		"valid.pdf": pdfBytes,
+	}
+	reqValid := createMultipartRequest(t, "attachments", files)
+	if err := utils.ValidateMultipartRequest(reqValid, "attachments"); err != nil {
+		t.Errorf("expected valid request to pass validation, got: %v", err)
+	}
+
+	// Invalid request with unsupported extension
+	badFiles := map[string][]byte{
+		"bad.sh": []byte("#!/bin/bash"),
+	}
+	reqBad := createMultipartRequest(t, "attachments", badFiles)
+	if err := utils.ValidateMultipartRequest(reqBad, "attachments"); err == nil {
+		t.Errorf("expected bad request to fail validation, got nil")
+	}
+}
+
+func TestValidateAttachmentHeader_ZeroBytePDF(t *testing.T) {
+	req := createMultipartRequest(t, "attachments", map[string][]byte{"empty.pdf": {}})
+	if err := req.ParseMultipartForm(32 << 20); err != nil {
+		t.Fatalf("ParseMultipartForm failed: %v", err)
+	}
+	fh := req.MultipartForm.File["attachments"][0]
+
+	_, err := utils.ValidateAttachmentHeader(fh)
+	if err == nil {
+		t.Fatal("expected error for 0-byte PDF, got nil")
+	}
+	if !strings.Contains(err.Error(), "kosong (0 byte)") {
+		t.Errorf("unexpected error message for 0-byte PDF: %v", err)
+	}
+}
+
+func TestValidateAttachmentHeader_DisguisedBinaryPDF(t *testing.T) {
+	// Binary file (ELF header or arbitrary binary) renamed to .pdf
+	fakeBinaryPDF := []byte("\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+	req := createMultipartRequest(t, "attachments", map[string][]byte{"malware.pdf": fakeBinaryPDF})
+	if err := req.ParseMultipartForm(32 << 20); err != nil {
+		t.Fatalf("ParseMultipartForm failed: %v", err)
+	}
+	fh := req.MultipartForm.File["attachments"][0]
+
+	_, err := utils.ValidateAttachmentHeader(fh)
+	if err == nil {
+		t.Fatal("expected error for binary disguised as PDF, got nil")
+	}
+	if !strings.Contains(err.Error(), "tidak valid") {
+		t.Errorf("unexpected error message for disguised binary PDF: %v", err)
+	}
+}
+
+func TestValidateAttachmentHeader_DisguisedPDFAsImage(t *testing.T) {
+	// Valid PDF bytes renamed to .png
+	req := createMultipartRequest(t, "attachments", map[string][]byte{"pdf_as_image.png": pdfBytes})
+	if err := req.ParseMultipartForm(32 << 20); err != nil {
+		t.Fatalf("ParseMultipartForm failed: %v", err)
+	}
+	fh := req.MultipartForm.File["attachments"][0]
+
+	_, err := utils.ValidateAttachmentHeader(fh)
+	if err == nil {
+		t.Fatal("expected error when PDF is uploaded with .png extension, got nil")
+	}
+	if !strings.Contains(err.Error(), "tidak valid") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestGenerateTicketAttachmentFileName_SanitizesTicketNumber(t *testing.T) {
+	// Path traversal sequences in ticket number
+	traversal := utils.GenerateTicketAttachmentFileName("../../T26-0001", 1725432000, 1, 1, "doc.pdf")
+	if traversal != "T26-0001-1725432000.pdf" {
+		t.Errorf("expected sanitized traversal ticket number, got %q", traversal)
+	}
+
+	// Slashes in ticket number
+	slashTicket := utils.GenerateTicketAttachmentFileName("T26/0001", 1725432000, 1, 1, "photo.png")
+	if slashTicket != "T260001-1725432000.png" {
+		t.Errorf("expected sanitized slash ticket number, got %q", slashTicket)
+	}
+}
+
+func TestSaveUploadedAttachmentWithTicket_CollisionAvoidance(t *testing.T) {
+	tmpDir := filepath.Join(os.TempDir(), "ticketing_test_collision")
+	_ = os.RemoveAll(tmpDir)
+	_ = os.MkdirAll(tmpDir, 0755)
+	defer os.RemoveAll(tmpDir)
+
+	req1 := createMultipartRequest(t, "attachments", map[string][]byte{"file1.png": pngBytes})
+	_ = req1.ParseMultipartForm(32 << 20)
+	fh1 := req1.MultipartForm.File["attachments"][0]
+
+	req2 := createMultipartRequest(t, "attachments", map[string][]byte{"file2.png": pngBytes})
+	_ = req2.ParseMultipartForm(32 << 20)
+	fh2 := req2.MultipartForm.File["attachments"][0]
+
+	fixedTimestamp := int64(1725432000)
+	att1, err1 := utils.SaveUploadedAttachmentWithTicket(fh1, tmpDir, "T26-0001", fixedTimestamp, 1, 1)
+	if err1 != nil {
+		t.Fatalf("first upload failed: %v", err1)
+	}
+
+	// Second upload in same second with totalFiles=1
+	att2, err2 := utils.SaveUploadedAttachmentWithTicket(fh2, tmpDir, "T26-0001", fixedTimestamp, 1, 1)
+	if err2 != nil {
+		t.Fatalf("second upload failed: %v", err2)
+	}
+
+	if att1.FilePath == att2.FilePath {
+		t.Errorf("expected different filepaths for collision avoidance, but got identical: %s", att1.FilePath)
+	}
+
+	// Verify both files physically exist on disk
+	if _, err := os.Stat(filepath.FromSlash(att1.FilePath)); os.IsNotExist(err) {
+		t.Errorf("expected first file to still exist on disk: %s", att1.FilePath)
+	}
+	if _, err := os.Stat(filepath.FromSlash(att2.FilePath)); os.IsNotExist(err) {
+		t.Errorf("expected second file to exist on disk: %s", att2.FilePath)
+	}
+}
+
+func TestSaveUploadedAttachmentWithTicket_RejectsSpoofedSizeHeader(t *testing.T) {
+	tmpDir := filepath.Join(os.TempDir(), "ticketing_test_spoof")
+	_ = os.RemoveAll(tmpDir)
+	_ = os.MkdirAll(tmpDir, 0755)
+	defer os.RemoveAll(tmpDir)
+
+	// Create a payload larger than 5 MB (e.g. 5 MB + 1 KB) starting with valid PNG bytes
+	oversized := make([]byte, utils.MaxAttachmentSizeBytes+1024)
+	copy(oversized, pngBytes)
+
+	req := createMultipartRequest(t, "attachments", map[string][]byte{"large.png": oversized})
+	_ = req.ParseMultipartForm(32 << 20)
+	fh := req.MultipartForm.File["attachments"][0]
+
+	// Tamper header size to pretend it's small
+	fh.Size = 100
+
+	att, err := utils.SaveUploadedAttachmentWithTicket(fh, tmpDir, "T26-0001", time.Now().Unix(), 1, 1)
+	if err == nil {
+		t.Fatalf("expected error for spoofed oversized stream, but got nil; saved attachment: %+v", att)
+	}
+	if !strings.Contains(err.Error(), "melebihi batas maksimal 5 MB") {
+		t.Errorf("expected 5 MB limit error, got %v", err)
+	}
+
+	// Verify no partial file remains in tmpDir
+	files, _ := os.ReadDir(tmpDir)
+	if len(files) != 0 {
+		t.Errorf("expected 0 files left in directory after error, found %d", len(files))
+	}
+}
+
+func TestValidateMultipartRequest_MalformedStream(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/kirim-tiket", bytes.NewReader([]byte("--boundary\r\ninvalid-data")))
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=boundary")
+
+	err := utils.ValidateMultipartRequest(req, "attachments")
+	if err == nil {
+		t.Fatal("expected error for malformed multipart request, got nil")
+	}
+	if !strings.Contains(err.Error(), "gagal memproses") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestProcessMultipartAttachments_MalformedStream(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/kirim-tiket", bytes.NewReader([]byte("--boundary\r\ninvalid-data")))
+	req.Header.Set("Content-Type", "multipart/form-data; boundary=boundary")
+
+	atts, err := utils.ProcessMultipartAttachments(req, "attachments", utils.DefaultUploadDir, "T26-0001")
+	if err == nil {
+		t.Fatal("expected error for malformed multipart request in ProcessMultipartAttachments, got nil")
+	}
+	if len(atts) != 0 {
+		t.Errorf("expected 0 attachments returned on error, got %d", len(atts))
+	}
+}
+
+func TestGenerateTicketAttachmentFileName_FiltersWindowsIllegalChars(t *testing.T) {
+	name := utils.GenerateTicketAttachmentFileName("T26:0001*?<|>\"", 1725432000, 1, 1, "test.pdf")
+	if strings.ContainsAny(name, ":*?<|>\"") {
+		t.Errorf("expected name without illegal Windows chars, got %s", name)
+	}
+	if !strings.HasPrefix(name, "T260001-1725432000.pdf") {
+		t.Errorf("expected T260001-1725432000.pdf, got %s", name)
+	}
+}
+
+func TestCleanupAttachments_WithLeadingSlashes(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "att_clean_test_*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	filePath := filepath.Join(tmpDir, "dummy.png")
+	if err := os.WriteFile(filePath, []byte("fake"), 0644); err != nil {
+		t.Fatalf("Failed to write file: %v", err)
+	}
+
+	// Clean up using normal path
+	atts := []models.TicketAttachment{
+		{FilePath: filePath},
+	}
+	utils.CleanupAttachments(atts)
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+		t.Errorf("expected file to be cleaned up, but it still exists: %s", filePath)
 	}
 }

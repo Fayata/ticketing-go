@@ -1,4 +1,7 @@
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function() {
     var companySelect = document.getElementById('company_id');
     var deptSelect = document.getElementById('department');
     if (!companySelect || !deptSelect) return;
@@ -45,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dropzone && fileInput) {
         var maxFiles = 5;
         var maxSizeBytes = 5 * 1024 * 1024;
-        var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
         var currentFiles = [];
         var activePreviewUrls = [];
 
@@ -116,35 +119,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 var thumbWrap = document.createElement('div');
                 thumbWrap.className = 'preview-thumb-wrap';
 
-                var img = document.createElement('img');
-                img.className = 'preview-thumb';
-                img.alt = file.name;
+                var isPDF = file.type === 'application/pdf' || file.name.match(/\.pdf$/i);
+                if (isPDF) {
+                    var pdfWrap = document.createElement('div');
+                    pdfWrap.className = 'preview-pdf-icon';
+                    pdfWrap.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><span class="preview-pdf-tag">PDF</span>';
+                    thumbWrap.appendChild(pdfWrap);
+                } else {
+                    var img = document.createElement('img');
+                    img.className = 'preview-thumb';
+                    img.alt = file.name;
 
-                var imgLoaded = false;
-                try {
-                    var objectUrl = URL.createObjectURL(file);
-                    activePreviewUrls.push(objectUrl);
-                    img.src = objectUrl;
-                    imgLoaded = true;
-                } catch (err) {
-                    var errIcon = document.createElement('span');
-                    errIcon.className = 'preview-fallback-icon';
-                    errIcon.textContent = 'IMG';
-                    thumbWrap.appendChild(errIcon);
-                }
-
-                img.onerror = function() {
-                    this.style.display = 'none';
-                    if (!thumbWrap.querySelector('.preview-error-badge')) {
-                        var errBadge = document.createElement('div');
-                        errBadge.className = 'preview-error-badge';
-                        errBadge.textContent = 'Preview tidak tersedia';
-                        thumbWrap.appendChild(errBadge);
+                    var imgLoaded = false;
+                    try {
+                        var objectUrl = URL.createObjectURL(file);
+                        activePreviewUrls.push(objectUrl);
+                        img.src = objectUrl;
+                        imgLoaded = true;
+                    } catch (err) {
+                        var errIcon = document.createElement('span');
+                        errIcon.className = 'preview-fallback-icon';
+                        errIcon.textContent = 'IMG';
+                        thumbWrap.appendChild(errIcon);
                     }
-                };
 
-                if (imgLoaded) {
-                    thumbWrap.appendChild(img);
+                    img.onerror = function() {
+                        this.style.display = 'none';
+                        if (!thumbWrap.querySelector('.preview-error-badge')) {
+                            var errBadge = document.createElement('div');
+                            errBadge.className = 'preview-error-badge';
+                            errBadge.textContent = 'Preview tidak tersedia';
+                            thumbWrap.appendChild(errBadge);
+                        }
+                    };
+
+                    if (imgLoaded) {
+                        thumbWrap.appendChild(img);
+                    }
                 }
 
                 var removeBtn = document.createElement('button');
@@ -188,15 +199,15 @@ document.addEventListener('DOMContentLoaded', function() {
             clearError();
             var incoming = Array.from(fileList);
             if (currentFiles.length + incoming.length > maxFiles) {
-                showError('Maksimal ' + maxFiles + ' file gambar yang dapat dilampirkan.');
+                showError('Maksimal ' + maxFiles + ' file yang dapat dilampirkan.');
                 return;
             }
 
             for (var i = 0; i < incoming.length; i++) {
                 var f = incoming[i];
-                var isImage = allowedTypes.indexOf(f.type) !== -1 || f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                if (!isImage) {
-                    showError('Format file "' + f.name + '" tidak didukung. Hanya JPG, PNG, GIF, WebP yang diizinkan.');
+                var isSupported = allowedTypes.indexOf(f.type) !== -1 || f.name.match(/\.(jpg|jpeg|png|gif|webp|pdf)$/i);
+                if (!isSupported) {
+                    showError('Format file "' + f.name + '" tidak didukung. Hanya file gambar (JPG, PNG, GIF, WebP) dan dokumen PDF yang diizinkan.');
                     return;
                 }
                 if (f.size > maxSizeBytes) {
@@ -308,5 +319,5 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-    }
-});
+    });
+})();
