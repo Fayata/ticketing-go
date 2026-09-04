@@ -52,6 +52,7 @@ func main() {
 			&models.Department{},
 			&models.Ticket{},
 			&models.TicketReply{},
+			&models.TicketAttachment{},
 			&models.TicketAssignmentHistory{},
 			&models.TicketRating{},
 			&models.KBCategory{},
@@ -98,10 +99,11 @@ func main() {
 
 	// Apply logging middleware
 	loggedMux := middleware.LoggingMiddleware(mux)
+	handler := http.MaxBytesHandler(loggedMux, 32<<20)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
-		Handler: loggedMux,
+		Handler: handler,
 	}
 
 	go func() {

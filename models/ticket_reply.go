@@ -12,6 +12,7 @@ type TicketReply struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	// Relations
-	Ticket Ticket `gorm:"foreignKey:TicketID" json:"ticket"`
-	User   User   `gorm:"foreignKey:UserID" json:"user"`
+	Ticket      Ticket             `gorm:"foreignKey:TicketID" json:"ticket"`
+	User        User               `gorm:"foreignKey:UserID" json:"user"`
+	Attachments []TicketAttachment `gorm:"foreignKey:ReplyID;constraint:OnDelete:CASCADE;" json:"attachments"`
 }

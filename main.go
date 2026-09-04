@@ -56,6 +56,7 @@ func main() {
 		&models.Department{},
 		&models.Ticket{},
 		&models.TicketReply{},
+		&models.TicketAttachment{},
 		&models.TicketAssignmentHistory{},
 		&models.TicketRating{},
 		&models.Notification{},
@@ -118,6 +119,12 @@ func main() {
 	mux.HandleFunc("/department/tiket/close/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.CloseTicket)))
 	mux.HandleFunc("/department/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
 	mux.HandleFunc("/department/all-tickets", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets)))
+	mux.HandleFunc("/departement/tiket/claim/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ClaimTicket)))
+	mux.HandleFunc("/departement/tiket/release/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ReleaseTicket)))
+	mux.HandleFunc("/departement/tiket/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.HandleTicketDetail)))
+	mux.HandleFunc("/departement/tiket/close/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.CloseTicket)))
+	mux.HandleFunc("/departement/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
+	mux.HandleFunc("/departement/all-tickets", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets)))
 
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard)))
 	mux.HandleFunc("/tiket", middleware.AuthRequired(middleware.PortalUserRequired(ticketHandler.ShowMyTickets)))
@@ -167,8 +174,8 @@ func main() {
 		})
 	}
 
-	// [Security] Request body size limiter (10MB)
-	handler = http.MaxBytesHandler(handler, 10<<20)
+	// [Security] Request body size limiter (32MB for up to 5x 5MB attachments + form data)
+	handler = http.MaxBytesHandler(handler, 32<<20)
 	if err := http.ListenAndServe(":"+cfg.Port, handler); err != nil {
 		log.Fatal(err)
 	}

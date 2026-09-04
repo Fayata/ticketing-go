@@ -19,21 +19,34 @@ tmp.exe
 logs/
 *.tmp
 tmp/
+log_app.txt
+log_*.txt
 
 # Static Uploads (User generated files)
 static/uploads/
+
+# Local Database Files
+*.db
+*.sqlite
+*.sqlite3
 
 # AI Agents & Scaffolding (Not needed in production)
 .agents/
 PROJECT.md
 TEST_INFRA.md
+ORIGINAL_REQUEST.md
 graphify-out/
+
+# One-off / Temporary Scripts & Orphan Artifacts
+*.py
+forgot-password
 
 # E2E Test Suite & Test Artifacts
 test/
 *.test
 *.test.exe
 coverage.out
+*.out
 
 # IDE & OS Artifacts
 .DS_Store

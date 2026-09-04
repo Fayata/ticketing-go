@@ -41,7 +41,8 @@ type Ticket struct {
 	CreatedBy  User          `gorm:"foreignKey:CreatedByID" json:"created_by"`
 	Company    *Company      `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
 	Department *Department   `gorm:"foreignKey:DepartmentID" json:"department"`
-	Replies    []TicketReply `gorm:"foreignKey:TicketID" json:"replies"`
+	Replies     []TicketReply      `gorm:"foreignKey:TicketID" json:"replies"`
+	Attachments []TicketAttachment `gorm:"foreignKey:TicketID;constraint:OnDelete:CASCADE;" json:"attachments"`
 }
 
 func (t *Ticket) GetStatusDisplay() string {
@@ -81,6 +82,17 @@ func (t *Ticket) GetTicketNumber() string {
 	}
 
 	return fmt.Sprintf("T%s-%04d ", year, t.ID)
+}
+
+// GetInitialAttachments returns only attachments attached during initial ticket creation (ReplyID is nil or 0).
+func (t *Ticket) GetInitialAttachments() []TicketAttachment {
+	var list []TicketAttachment
+	for _, a := range t.Attachments {
+		if a.ReplyID == nil || *a.ReplyID == 0 {
+			list = append(list, a)
+		}
+	}
+	return list
 }
 
 // TicketAssignmentHistory tracks which staff members have worked on a ticket

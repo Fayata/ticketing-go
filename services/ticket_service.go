@@ -51,6 +51,11 @@ func (s *TicketService) GetDepartmentsForCreate() ([]models.Department, error) {
 
 // CreateTicket creates a new ticket and notifies staff (async). Returns created ticket with Department preloaded.
 func (s *TicketService) CreateTicket(createdByID uint, title, description, replyToEmail, priority string, departmentID *uint, companyID *uint) (*models.Ticket, error) {
+	return s.CreateTicketWithAttachments(createdByID, title, description, replyToEmail, priority, departmentID, companyID, nil)
+}
+
+// CreateTicketWithAttachments creates a new ticket with optional attachments.
+func (s *TicketService) CreateTicketWithAttachments(createdByID uint, title, description, replyToEmail, priority string, departmentID *uint, companyID *uint, attachments []models.TicketAttachment) (*models.Ticket, error) {
 	if companyID == nil && departmentID != nil {
 		var dept models.Department
 		if err := config.DB.Select("id", "company_id").First(&dept, *departmentID).Error; err == nil && dept.CompanyID != nil {
@@ -71,7 +76,16 @@ func (s *TicketService) CreateTicket(createdByID uint, title, description, reply
 	if err := config.DB.Create(&ticket).Error; err != nil {
 		return nil, err
 	}
-	config.DB.Preload("Department").Preload("Company").First(&ticket, ticket.ID)
+
+	for i := range attachments {
+		attachments[i].TicketID = ticket.ID
+		attachments[i].ReplyID = nil
+		if err := config.DB.Create(&attachments[i]).Error; err != nil {
+			log.Printf("[TicketService] Gagal menyimpan lampiran tiket: %v", err)
+		}
+	}
+
+	config.DB.Preload("Department").Preload("Company").Preload("Attachments").First(&ticket, ticket.ID)
 
 	if ticket.DepartmentID != nil {
 		go func() {
@@ -153,7 +167,7 @@ type TicketDetailForUser struct {
 // GetTicketDetailForUser returns ticket if it belongs to user. Rating info included when closed.
 func (s *TicketService) GetTicketDetailForUser(userID uint, ticketID int) (*TicketDetailForUser, error) {
 	var ticket models.Ticket
-	if err := config.DB.Preload("CreatedBy").Preload("Department").Preload("Replies.User").
+	if err := config.DB.Preload("CreatedBy").Preload("Department").Preload("Replies.User").Preload("Replies.Attachments").Preload("Attachments").
 		Where("id = ? AND created_by_id = ?", ticketID, userID).First(&ticket).Error; err != nil {
 		return nil, err
 	}
@@ -173,15 +187,32 @@ func (s *TicketService) GetTicketDetailForUser(userID uint, ticketID int) (*Tick
 
 // AddReply adds a reply to user's ticket and notifies staff. Returns reply and ticket for email.
 func (s *TicketService) AddReply(ticketID uint, userID uint, message string) (reply *models.TicketReply, ticket *models.Ticket, err error) {
+	return s.AddReplyWithAttachments(ticketID, userID, message, nil)
+}
+
+// AddReplyWithAttachments adds a reply with attachments to user's ticket.
+func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, message string, attachments []models.TicketAttachment) (reply *models.TicketReply, ticket *models.Ticket, err error) {
 	var tkt models.Ticket
 	if err := config.DB.Preload("CreatedBy").Where("id = ? AND created_by_id = ?", ticketID, userID).First(&tkt).Error; err != nil {
 		return nil, nil, err
+	}
+	if tkt.Status == models.StatusClosed {
+		return nil, nil, errors.New("tiket ini sudah ditutup dan tidak bisa dibalas")
 	}
 	reply = &models.TicketReply{TicketID: tkt.ID, UserID: userID, Message: message}
 	if err := config.DB.Create(reply).Error; err != nil {
 		return nil, nil, err
 	}
-	config.DB.Preload("User").First(reply, reply.ID)
+
+	for i := range attachments {
+		attachments[i].TicketID = tkt.ID
+		attachments[i].ReplyID = &reply.ID
+		if err := config.DB.Create(&attachments[i]).Error; err != nil {
+			log.Printf("[TicketService] Gagal menyimpan lampiran balasan: %v", err)
+		}
+	}
+
+	config.DB.Preload("User").Preload("Attachments").First(reply, reply.ID)
 	config.DB.Model(&tkt).Update("updated_at", time.Now())
 
 	var user models.User

@@ -63,7 +63,9 @@ func (h *TicketHandler) ShowCreateTicket(w http.ResponseWriter, r *http.Request)
 // CreateTicket menyimpan tiket baru dan mengirim email konfirmasi ke user.
 func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
-	r.ParseForm()
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		_ = r.ParseForm()
+	}
 	title := r.FormValue("title")
 	description := r.FormValue("description")
 	replyToEmail := r.FormValue("reply_to_email")
@@ -71,9 +73,17 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	companyIDStr := r.FormValue("company_id")
 	departmentIDStr := r.FormValue("department")
 	if title == "" || description == "" || replyToEmail == "" {
-		http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Semua field wajib diisi"), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/kirim-tiket")+"?error="+url.QueryEscape("Semua field wajib diisi"), http.StatusSeeOther)
 		return
 	}
+
+	// Validate & process image attachments
+	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir)
+	if err != nil {
+		http.Redirect(w, r, config.Path("/kirim-tiket")+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+
 	var companyID *uint
 	if companyIDStr != "" {
 		id, err := strconv.ParseUint(companyIDStr, 10, 32)
@@ -91,10 +101,11 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ticket, err := h.ticketService.CreateTicket(user.ID, title, description, replyToEmail, priority, departmentID, companyID)
+	ticket, err := h.ticketService.CreateTicketWithAttachments(user.ID, title, description, replyToEmail, priority, departmentID, companyID, attachments)
 	if err != nil {
+		utils.CleanupAttachments(attachments)
 		log.Printf("Failed to create ticket: %v", err)
-		http.Redirect(w, r, "/kirim-tiket?error="+url.QueryEscape("Gagal membuat tiket: "+err.Error()), http.StatusSeeOther)
+		http.Redirect(w, r, config.Path("/kirim-tiket")+"?error="+url.QueryEscape("Gagal membuat tiket: "+err.Error()), http.StatusSeeOther)
 		return
 	}
 	departmentName := "Tidak Ditentukan"
@@ -213,15 +224,30 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, config.Path("/tiket"), http.StatusSeeOther)
 		return
 	}
-	r.ParseForm()
-	message := r.FormValue("message")
-	if message == "" {
-		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		_ = r.ParseForm()
+	}
+	message := strings.TrimSpace(r.FormValue("message"))
+
+	// Validate & process image attachments
+	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir)
+	if err != nil {
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 		return
 	}
-	reply, ticket, err := h.ticketService.AddReply(uint(ticketID), user.ID, message)
+
+	if message == "" && len(attachments) == 0 {
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error="+url.QueryEscape("Pesan atau lampiran gambar harus diisi"), http.StatusSeeOther)
+		return
+	}
+	if message == "" && len(attachments) > 0 {
+		message = "[Lampiran Gambar]"
+	}
+
+	reply, ticket, err := h.ticketService.AddReplyWithAttachments(uint(ticketID), user.ID, message, attachments)
 	if err != nil {
-		http.Error(w, "Ticket not found", http.StatusNotFound)
+		utils.CleanupAttachments(attachments)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
 		return
 	}
 	log.Printf("Reply added to ticket #%d by user %s", ticketID, user.Username)

@@ -155,8 +155,16 @@ func applyGlobalMiddleware(next http.Handler) http.Handler {
 		}
 		w.Header().Set("X-Correlation-ID", reqID)
 
-		// Limit Body Size (10MB)
-		r.Body = http.MaxBytesReader(w, r.Body, 10*1024*1024)
+		// Limit Body Size (32MB for up to 5x 5MB attachments + form fields)
+		r.Body = http.MaxBytesReader(w, r.Body, 32*1024*1024)
+
+		// Strip /Ticketing prefix if present (from base href / redirects)
+		if strings.HasPrefix(r.URL.Path, "/Ticketing") {
+			r.URL.Path = strings.TrimPrefix(r.URL.Path, "/Ticketing")
+			if r.URL.Path == "" {
+				r.URL.Path = "/"
+			}
+		}
 
 		// Security Headers
 		w.Header().Set("X-XSS-Protection", "1; mode=block")

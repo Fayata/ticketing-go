@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -201,7 +202,7 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 	}
 
 	var ticket models.Ticket
-	if err := config.DB.Preload("CreatedBy").Preload("Department").Preload("Replies.User").Preload("AssignedTo").
+	if err := config.DB.Preload("CreatedBy").Preload("Department").Preload("Replies.User").Preload("Replies.Attachments").Preload("Attachments").Preload("AssignedTo").
 		First(&ticket, ticketID).Error; err != nil {
 		log.Printf("[Staff][TicketDetail] Tiket ID %d tidak ditemukan: %v", ticketID, err)
 		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tiket+tidak+ditemukan", http.StatusSeeOther)
@@ -243,6 +244,7 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 	config.DB.Model(&models.Ticket{}).Where("status = ?", models.StatusWaiting).Count(&waitingCount)
 
 	errorMsg := r.URL.Query().Get("error")
+	successMsg := r.URL.Query().Get("success")
 
 	data := map[string]interface{}{
 		"title":              "Kelola Tiket " + ticket.GetTicketNumber(),
@@ -259,6 +261,7 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 		"assignment_history":  assignmentHistory,
 		"has_rating":          hasRating,
 		"rating":              rating,
+		"success":             successMsg,
 		"error":               errorMsg,
 	}
 
@@ -274,27 +277,59 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	r.ParseForm()
-	message := r.FormValue("message")
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		_ = r.ParseForm()
+	}
+	message := strings.TrimSpace(r.FormValue("message"))
 	newStatus := r.FormValue("status")
+
+	// Validate & process image attachments
+	attachments, err := utils.ProcessMultipartAttachments(r, "attachments", utils.DefaultUploadDir)
+	if err != nil {
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+
+	if message == "" && len(attachments) == 0 {
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape("Pesan atau lampiran gambar harus diisi"), http.StatusSeeOther)
+		return
+	}
+	if message == "" && len(attachments) > 0 {
+		message = "[Lampiran Gambar]"
+	}
 
 	var ticket models.Ticket
 	config.DB.Preload("CreatedBy").First(&ticket, ticketID)
 
 	if ticket.Status == models.StatusClosed {
+		utils.CleanupAttachments(attachments)
 		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sudah+ditutup+dan+tidak+bisa+dibalas", http.StatusSeeOther)
 		return
 	}
 
 	if ticket.AssignedToID == nil || *ticket.AssignedToID != user.ID {
+		utils.CleanupAttachments(attachments)
 		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+ini+sedang+dikerjakan+oleh+staff+lain+dan+tidak+bisa+dibalas", http.StatusSeeOther)
 		return
 	}
 
 	reply := models.TicketReply{TicketID: ticket.ID, UserID: user.ID, Message: message}
-	config.DB.Create(&reply)
+	if err := config.DB.Create(&reply).Error; err != nil {
+		utils.CleanupAttachments(attachments)
+		log.Printf("[Staff][DepartmentReply] Gagal menyimpan balasan: %v", err)
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape("Gagal menyimpan balasan: "+err.Error()), http.StatusSeeOther)
+		return
+	}
+
+	for i := range attachments {
+		attachments[i].TicketID = ticket.ID
+		attachments[i].ReplyID = &reply.ID
+		if err := config.DB.Create(&attachments[i]).Error; err != nil {
+			log.Printf("[Staff][DepartmentReply] Gagal menyimpan lampiran: %v", err)
+		}
+	}
 	
-	config.DB.Preload("User").First(&reply, reply.ID)
+	config.DB.Preload("User").Preload("Attachments").First(&reply, reply.ID)
 
 	oldStatus := ticket.Status
 	if newStatus != "" {

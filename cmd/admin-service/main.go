@@ -47,6 +47,7 @@ func main() {
 			&models.KBArticle{},
 			&models.Notification{},
 			&models.TicketReply{},
+			&models.TicketAttachment{},
 			&models.TicketAssignmentHistory{},
 			&models.TicketRating{},
 		)
