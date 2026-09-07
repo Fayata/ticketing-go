@@ -14,7 +14,7 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="static/css/dashboard.css?v=7">
+    <link rel="stylesheet" href="static/css/dashboard.css?v=8">
     <link rel="stylesheet" href="static/css/pages.css?v=5">
     <link rel="stylesheet" href="static/css/alerts.css">
     <link rel="stylesheet" href="static/css/notif-panel.css">
@@ -49,7 +49,7 @@
                 </a>
                 
                 <a href="tiket" class="nav-item {{if eq .nav_active "tickets"}}active{{end}}">
-                    <img src="static/icons/ticket.png" alt="Tiket" class="nav-icon-img" width="20" height="20">
+                    <img src="static/icons/ticket.png?v=2" alt="Tiket" class="nav-icon-img" width="20" height="20">
                     <span>Tiket Saya</span>
                     {{if .unread_replies_count}}
                     <span class="nav-badge">{{.unread_replies_count}}</span>

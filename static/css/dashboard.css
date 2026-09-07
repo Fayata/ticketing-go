@@ -687,7 +687,7 @@ body {
     background: rgba(168, 85, 247, 0.15);
 }
 
-:root[data-theme="dark"] .stat-icon-img[src$="ticket.png"],
+:root[data-theme="dark"] .stat-icon-img[src*="ticket.png"],
 :root[data-theme="dark"] .empty-ticket-icon {
     filter: invert(1) brightness(1.8);
 }
