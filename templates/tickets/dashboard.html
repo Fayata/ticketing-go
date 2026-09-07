@@ -8,11 +8,7 @@
                 <h3>{{.waiting_tickets}}</h3>
             </div>
             <div class="stat-icon orange">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
+                <img src="static/icons/wait.gif" alt="Menunggu Balasan" class="stat-icon-img" width="34" height="34">
             </div>
         </div>
     </div>
@@ -23,11 +19,8 @@
                 <p>Dalam Progress</p>
                 <h3>{{.in_progress_tickets}}</h3>
             </div>
-            <div class="stat-icon red">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
+            <div class="stat-icon blue">
+                <img src="static/icons/discussion.gif" alt="Dalam Progress" class="stat-icon-img" width="34" height="34">
             </div>
         </div>
     </div>
@@ -53,11 +46,8 @@
                 <p>Total Tiket</p>
                 <h3>{{.total_tickets}}</h3>
             </div>
-            <div class="stat-icon red">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
+            <div class="stat-icon purple">
+                <img src="static/icons/ticket.png" alt="Total Tiket" class="stat-icon-img" width="30" height="30">
             </div>
         </div>
     </div>
@@ -115,10 +105,7 @@
                     {{end}}
                 {{else}}
                     <div style="text-align: center; padding: 3rem; color: #6b7280;">
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin: 0 auto 1rem;">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                        </svg>
+                        <img src="static/icons/ticket.png" alt="Belum ada tiket" width="56" height="56" class="empty-ticket-icon" style="margin: 0 auto 1rem; display: block; opacity: 0.65;">
                         <p style="font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem;">Belum ada tiket</p>
                         <p style="font-size: 0.875rem;">Buat tiket pertama Anda untuk mendapatkan bantuan</p>
                     </div>

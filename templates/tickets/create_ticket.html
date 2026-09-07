@@ -1,28 +1,24 @@
 {{define "tickets/create_ticket_content"}}
-<link rel="stylesheet" href="static/css/create_ticket.css">
+<link rel="stylesheet" href="static/css/create_ticket.css?v=6">
 <div class="form-container">
     <div class="form-header">
         <h2>Buat Tiket Support Baru</h2>
-        <p>Isi formulir di bawah ini dengan lengkap. Tim support kami akan segera merespons tiket Anda.</p>
+        <p>Isi formulir di bawah ini untuk mengirimkan tiket bantuan ke tim support kami</p>
     </div>
 
     {{if .error}}
-    <div style="background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+    <div class="alert alert-error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
-            <path d="M12 8V12"></path>
-            <path d="M12 16H12.01"></path>
+            <line x1="15" y1="9" x2="9" y2="15"></line>
+            <line x1="9" y1="9" x2="15" y2="15"></line>
         </svg>
         <span>{{.error}}</span>
     </div>
     {{end}}
 
     <div class="form-info-box">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
+        <img src="static/icons/idea.png" alt="Tips" class="form-info-icon" width="28" height="28">
         <p>
             <strong>Tips:</strong> Berikan informasi yang detail dan lengkap agar tim support dapat membantu Anda dengan
             lebih cepat dan efektif.

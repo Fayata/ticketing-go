@@ -26,32 +26,50 @@
 
 .form-info-box {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.25rem;
     margin: 1.5rem 2rem;
-    background: var(--primary-red-light);
-    border: 1px solid rgba(220, 20, 60, 0.2);
+    background: #fffbeb;
+    border: 1px solid rgba(245, 158, 11, 0.3);
     border-radius: var(--radius-sm);
 }
 
-.form-info-box svg {
-    width: 1.25rem;
-    height: 1.25rem;
-    color: var(--primary-red);
+.form-info-box svg,
+.form-info-box .form-info-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    object-fit: contain;
     flex-shrink: 0;
-    margin-top: 0.125rem;
 }
 
 .form-info-box p {
     margin: 0;
     font-size: 0.875rem;
-    color: var(--primary-red);
+    color: #92400e;
     line-height: 1.5;
 }
 
 .form-info-box strong {
-    font-weight: 600;
+    font-weight: 700;
+    color: #b45309;
+}
+
+:root[data-theme="dark"] .form-info-box {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.25);
+}
+
+:root[data-theme="dark"] .form-info-box p {
+    color: #fde68a;
+}
+
+:root[data-theme="dark"] .form-info-box strong {
+    color: #f59e0b;
+}
+
+:root[data-theme="dark"] .form-info-box .form-info-icon {
+    filter: invert(1) brightness(1.8);
 }
 
 .form-container form {
