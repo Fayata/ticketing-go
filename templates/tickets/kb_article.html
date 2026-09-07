@@ -1,127 +1,246 @@
 {{define "tickets/kb_article_content"}}
-<div class="content kb-article-content kb-article-layout">
-    <div class="kb-article-main">
-        <div class="card">
-            <div class="card-header" style="display: block;">
-                <a href="knowledge-base" class="view-all-link" style="margin-bottom: 0.5rem; display: inline-flex;">← Kembali ke Knowledge Base</a>
-                {{if .article.Category}}<span class="article-cat-badge {{.article.Category.ColorClass}}" style="margin-left: 0.5rem;">{{.article.Category.Name}}</span>{{end}}
-                <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-top: 0.75rem;">{{.article.Title}}</h1>
-                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                    <span id="articleViewsCount">{{.article.Views}}</span> views · Diperbarui {{date .article.UpdatedAt}}
-                </div>
-            </div>
-            <div class="card-body" style="padding: 1.5rem 1.4rem;">
-                <div class="kb-article-body" id="kbArticleBody">
-                    {{if .article_sections}}
-                    {{if .article.Content}}<div class="kb-article-intro">{{linebreaks .article.Content}}</div>{{end}}
-                    {{range .article_sections}}
-                    <section class="kb-article-section">
-                        {{if .Subtitle}}<h2 class="kb-section-title">{{.Subtitle}}</h2>{{end}}
-                        {{if .Content}}<div class="kb-section-content">{{linebreaks .Content}}</div>{{end}}
-                        {{if .ImagePath}}
-                        <div class="kb-section-image-wrap kb-section-image--{{.ImageLayout}}">
-                            <img src="{{$.static_base}}/{{.ImagePath}}" alt="{{.Subtitle}}" class="kb-section-img" loading="lazy">
-                        </div>
+<link rel="stylesheet" href="static/css/kb_article.css">
+
+<div class="kb-article-wrapper">
+    <div class="kb-article-layout" data-article-id="{{.article.ID}}">
+        <!-- Main Article Column -->
+        <main class="kb-article-main">
+            <article class="kb-card">
+                <!-- Header -->
+                <header class="kb-article-header">
+                    <nav class="kb-nav-bar" aria-label="Navigasi breadcrumb">
+                        <a href="knowledge-base" class="kb-back-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                            <span>Kembali ke Knowledge Base</span>
+                        </a>
+                        {{if .article.Category}}
+                        <span class="kb-article-cat-badge {{.article.Category.ColorClass}}">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                            </svg>
+                            {{.article.Category.Name}}
+                        </span>
                         {{end}}
-                    </section>
-                    {{end}}
+                    </nav>
+
+                    <h1 class="kb-article-title">{{.article.Title}}</h1>
+
+                    <div class="kb-article-meta">
+                        <span class="kb-meta-item">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <span id="articleViewsCount">{{.article.Views}}</span> pembaca
+                        </span>
+                        <span class="kb-meta-item">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            Diperbarui {{date .article.UpdatedAt}}
+                        </span>
+                        <span class="kb-meta-item">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Panduan Resmi
+                        </span>
+                    </div>
+                </header>
+
+                <!-- Body Content -->
+                <div class="kb-article-content-body" id="kbArticleBody">
+                    {{if .article_sections}}
+                        {{if .article.Content}}
+                        <div class="kb-article-intro">{{linebreaks .article.Content}}</div>
+                        {{end}}
+
+                        {{range $i, $sec := .article_sections}}
+                        <section class="kb-article-section" id="section-{{add $i 1}}">
+                            {{if $sec.Subtitle}}
+                            <h2 class="kb-section-title">{{$sec.Subtitle}}</h2>
+                            {{end}}
+                            {{if $sec.Content}}
+                            <div class="kb-section-content">{{linebreaks $sec.Content}}</div>
+                            {{end}}
+                            {{if $sec.ImagePath}}
+                            <div class="kb-section-image-wrap kb-section-image--{{$sec.ImageLayout}}">
+                                <img src="{{$.static_base}}/{{$sec.ImagePath}}" alt="{{$sec.Subtitle}}" class="kb-section-img" loading="lazy">
+                            </div>
+                            {{end}}
+                        </section>
+                        {{end}}
                     {{else}}
-                    {{linebreaks .article.Content}}
+                        {{linebreaks .article.Content}}
                     {{end}}
                 </div>
-            </div>
-        </div>
-    </div>
-    <aside class="kb-article-sidebar">
-        <div class="card">
-            <div class="card-header kb-sidebar-tabs">
-                <button type="button" class="kb-tab active" data-tab="related" aria-pressed="true">Artikel terkait</button>
-                <button type="button" class="kb-tab" data-tab="popular" aria-pressed="false">Artikel populer</button>
-            </div>
-            <div class="card-body" style="padding: 0.75rem;">
-                <div id="kbTabRelated" class="kb-tab-pane">
-                    <div class="article-list">
+
+                <!-- Footer Actions -->
+                <footer class="kb-article-footer">
+                    <button type="button" class="kb-share-btn" id="kbShareBtn" title="Salin tautan artikel ini">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                        <span>Bagikan Artikel</span>
+                    </button>
+                    <a href="knowledge-base" class="kb-back-btn">
+                        <span>Telusuri Topik Lainnya ›</span>
+                    </a>
+                </footer>
+            </article>
+        </main>
+
+        <!-- Right Sidebar Area -->
+        <aside class="kb-article-sidebar">
+            <div class="kb-sticky-sidebar">
+                {{if .article_sections}}
+                <!-- Widget 1: Table of Contents -->
+                <div class="kb-card kb-toc-card">
+                    <div class="kb-toc-header">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        <span>Pada Artikel Ini</span>
+                    </div>
+                    <ul class="kb-toc-list">
+                        {{range $i, $sec := .article_sections}}
+                        {{if $sec.Subtitle}}
+                        <li>
+                            <a href="#section-{{add $i 1}}" class="kb-toc-link" title="{{$sec.Subtitle}}">
+                                {{$sec.Subtitle}}
+                            </a>
+                        </li>
+                        {{end}}
+                        {{end}}
+                    </ul>
+                </div>
+                {{end}}
+
+                <!-- Widget 2: Tabbed Articles (Terkait & Populer) -->
+                <div class="kb-card">
+                    <div class="kb-sidebar-tabs">
+                        <button type="button" class="kb-tab-btn active" data-tab="related" aria-pressed="true">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            Terkait
+                        </button>
+                        <button type="button" class="kb-tab-btn" data-tab="popular" aria-pressed="false">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                            Populer
+                        </button>
+                    </div>
+
+                    <div id="kbTabRelated" class="kb-sidebar-list">
                         {{range .related_articles}}
-                        <a class="article-item" href="knowledge-base/article/{{.ID}}">
-                            <div class="article-body" style="flex:1;min-width:0;">
-                                <div class="article-title" style="font-size:0.9rem;">{{.Title}}</div>
-                                <div class="article-meta" style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.2rem;">
+                        <a class="kb-mini-article" href="knowledge-base/article/{{.ID}}">
+                            <div style="flex: 1; min-width: 0;">
+                                <div class="kb-mini-title">{{.Title}}</div>
+                                <div class="kb-mini-meta">
                                     {{if .Category}}<span class="article-cat-badge {{.Category.ColorClass}}">{{.Category.Name}}</span>{{end}}
                                     <span>{{.Views}} views</span>
                                 </div>
                             </div>
-                            <span class="article-arrow">›</span>
+                            <span class="kb-mini-arrow">›</span>
                         </a>
                         {{end}}
                         {{if not .related_articles}}
-                        <p class="kb-sidebar-empty">Tidak ada artikel lain dalam kategori ini.</p>
+                        <div class="kb-sidebar-empty-state">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <span>Tidak ada artikel lain dalam kategori ini.</span>
+                        </div>
                         {{end}}
                     </div>
-                </div>
-                <div id="kbTabPopular" class="kb-tab-pane" hidden>
-                    <div class="article-list">
+
+                    <div id="kbTabPopular" class="kb-sidebar-list" hidden>
                         {{range .popular_articles_sidebar}}
-                        <a class="article-item" href="knowledge-base/article/{{.ID}}">
-                            <div class="article-body" style="flex:1;min-width:0;">
-                                <div class="article-title" style="font-size:0.9rem;">{{.Title}}</div>
-                                <div class="article-meta" style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.2rem;">
+                        <a class="kb-mini-article" href="knowledge-base/article/{{.ID}}">
+                            <div style="flex: 1; min-width: 0;">
+                                <div class="kb-mini-title">{{.Title}}</div>
+                                <div class="kb-mini-meta">
                                     {{if .Category}}<span class="article-cat-badge {{.Category.ColorClass}}">{{.Category.Name}}</span>{{end}}
                                     <span>{{.Views}} views</span>
                                 </div>
                             </div>
-                            <span class="article-arrow">›</span>
+                            <span class="kb-mini-arrow">›</span>
                         </a>
                         {{end}}
                         {{if not .popular_articles_sidebar}}
-                        <p class="kb-sidebar-empty">Belum ada artikel populer.</p>
+                        <div class="kb-sidebar-empty-state">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <span>Belum ada artikel populer.</span>
+                        </div>
                         {{end}}
                     </div>
                 </div>
+
+                <!-- Widget 3: Support Assistance Card -->
+                <div class="kb-card kb-support-card">
+                    <div class="kb-support-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="kb-support-title">Masih Butuh Bantuan?</h3>
+                    <p class="kb-support-desc">Pertanyaan Anda belum teratasi oleh panduan ini? Kirim tiket langsung ke tim support kami.</p>
+                    <a href="kirim-tiket" class="kb-support-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Buat Tiket Bantuan</span>
+                    </a>
+                </div>
+
+                <!-- Widget 4: Feedback Widget -->
+                <div class="kb-card kb-feedback-card">
+                    <div class="kb-feedback-title">Apakah artikel ini membantu?</div>
+                    <div class="kb-feedback-actions" id="kbFeedbackActions">
+                        <button type="button" class="kb-feedback-btn" data-value="yes">
+                            <span>👍</span>
+                            <span>Ya, membantu</span>
+                        </button>
+                        <button type="button" class="kb-feedback-btn" data-value="no">
+                            <span>👎</span>
+                            <span>Kurang</span>
+                        </button>
+                    </div>
+                    <div class="kb-feedback-thanks" id="kbFeedbackResponse" hidden></div>
+                </div>
             </div>
-        </div>
-    </aside>
+        </aside>
+    </div>
 </div>
-<script>
-(function(){
-    var articleId = {{.article.ID}};
-    var viewRecorded = false;
-    var body = document.getElementById('kbArticleBody');
-    if (body) {
-        function checkScroll() {
-            if (viewRecorded) return;
-            var rect = body.getBoundingClientRect();
-            if (rect.bottom <= window.innerHeight + 50) {
-                viewRecorded = true;
-                fetch('api/kb/article/view', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    body: JSON.stringify({ article_id: articleId })
-                }).then(function(r){ return r.json(); }).then(function(data){
-                    if (data && data.ok) {
-                        var el = document.getElementById('articleViewsCount');
-                        if (el) el.textContent = parseInt(el.textContent, 10) + 1;
-                    }
-                }).catch(function(){});
-            }
-        }
-        window.addEventListener('scroll', checkScroll, { passive: true });
-        window.addEventListener('resize', checkScroll, { passive: true });
-        checkScroll();
-    }
-    // Tab: Artikel terkait / Artikel populer
-    var tabs = document.querySelectorAll('.kb-tab');
-    var panes = { related: document.getElementById('kbTabRelated'), popular: document.getElementById('kbTabPopular') };
-    tabs.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var t = this.getAttribute('data-tab');
-            tabs.forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
-            this.classList.add('active'); this.setAttribute('aria-pressed', 'true');
-            if (panes.related) { panes.related.hidden = t !== 'related'; }
-            if (panes.popular) { panes.popular.hidden = t !== 'popular'; }
-        });
-    });
-})();
-</script>
+
+<div id="kbToast" class="kb-toast" aria-live="polite"></div>
+
+<script src="static/js/kb_article.js"></script>
 {{end}}
 
 {{define "tickets/kb_article"}}

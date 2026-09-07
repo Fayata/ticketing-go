@@ -1191,23 +1191,7 @@ body {
    ═══════════════════════════════════════════════════════ */
 .kb-page-body { padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.75rem; }
 
-/* KB Article detail: main + sidebar */
-.kb-article-layout {
-    display: flex;
-    gap: 1.5rem;
-    align-items: start;
-    flex-wrap: wrap;
-}
-.kb-article-main {
-    flex: 1 1 0;
-    min-width: 0;
-    max-width: 800px;
-}
-.kb-article-sidebar {
-    flex: 0 0 300px;
-    min-width: 280px;
-}
-.kb-article-sidebar .card { position: sticky; top: 1rem; }
+/* KB Article detail: managed cleanly in static/css/kb_article.css */
 .kb-sidebar-tabs {
     display: flex;
     gap: 0;
@@ -1568,8 +1552,6 @@ body {
     .kb-filter-wrap { width: 100%; }
     .kb-filter-select { min-width: 0; width: 100%; }
     .search-wrap { width: 100%; }
-    .kb-article-main { max-width: none; }
-    .kb-article-sidebar { flex: 1 1 100%; min-width: 0; }
 }
 
 .dept-theme-toggle {
