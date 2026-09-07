@@ -1,35 +1,36 @@
-﻿/* ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════
    Knowledge Base Article Detail Stylesheet
    Modern, dynamic, responsive for Mobile & Desktop
    ═══════════════════════════════════════════════════════ */
 
 .kb-article-wrapper {
-    width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
-    padding: 0 0.5rem 3rem 0.5rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 2.5rem 0 !important;
 }
 
-/* Dynamic Grid Layout */
+/* Dynamic Full-Width Grid Layout */
 .kb-article-layout {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 360px !important;
-    gap: 2rem !important;
+    grid-template-columns: minmax(0, 1fr) 340px !important;
+    gap: 1.75rem !important;
     align-items: start !important;
     width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
 }
 
 .kb-article-main {
-    flex: none !important;
+    flex: 1 1 0% !important;
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
 }
 
 .kb-article-sidebar {
-    flex: none !important;
     width: 100% !important;
+    max-width: 340px !important;
     min-width: 0 !important;
     display: flex;
     flex-direction: column;
@@ -586,6 +587,8 @@
         position: static;
     }
     .kb-article-sidebar {
+        width: 100% !important;
+        max-width: 100% !important;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 1.25rem;

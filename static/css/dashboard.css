@@ -1191,7 +1191,42 @@ body {
    ═══════════════════════════════════════════════════════ */
 .kb-page-body { padding: 1.75rem 2rem; display: flex; flex-direction: column; gap: 1.75rem; }
 
-/* KB Article detail: managed cleanly in static/css/kb_article.css */
+/* KB Article detail: dynamic width expansion & responsive layout */
+.kb-article-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0 2rem 0 !important;
+}
+.kb-article-layout {
+    display: flex !important;
+    gap: 1.75rem !important;
+    align-items: start !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.kb-article-main {
+    flex: 1 1 0% !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+}
+.kb-article-sidebar {
+    flex: 0 0 340px !important;
+    width: 340px !important;
+    min-width: 280px !important;
+    max-width: 340px !important;
+}
+@media (max-width: 992px) {
+    .kb-article-layout {
+        flex-direction: column !important;
+    }
+    .kb-article-sidebar {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
 .kb-sidebar-tabs {
     display: flex;
     gap: 0;
