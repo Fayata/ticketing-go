@@ -1,12 +1,17 @@
 (function() {
     'use strict';
 
-    document.addEventListener('DOMContentLoaded', function() {
-    var companySelect = document.getElementById('company_id');
-    var deptSelect = document.getElementById('department');
-    if (!companySelect || !deptSelect) return;
+    function initCreateTicket() {
+        initDepartmentFilter();
+        initAttachmentHandling();
+    }
 
-    var allDeptOptions = Array.from(deptSelect.querySelectorAll('option[data-company]'));
+    function initDepartmentFilter() {
+        var companySelect = document.getElementById('company_id');
+        var deptSelect = document.getElementById('department');
+        if (!companySelect || !deptSelect) return;
+
+        var allDeptOptions = Array.from(deptSelect.querySelectorAll('option[data-company]'));
 
     function filterDepartments() {
         var selectedCompany = companySelect.value;
@@ -37,15 +42,16 @@
         filterDepartments();
     });
 
-    filterDepartments();
+        filterDepartments();
+    }
 
-    // Attachment Handling
-    var dropzone = document.getElementById('ticketDropzone');
-    var fileInput = document.getElementById('attachmentsInput');
-    var previewList = document.getElementById('previewList');
-    var errorBox = document.getElementById('attachmentError');
+    function initAttachmentHandling() {
+        var dropzone = document.getElementById('ticketDropzone');
+        var fileInput = document.getElementById('attachmentsInput');
+        var previewList = document.getElementById('previewList');
+        var errorBox = document.getElementById('attachmentError');
 
-    if (dropzone && fileInput) {
+        if (!fileInput) return;
         var maxFiles = 5;
         var maxSizeBytes = 5 * 1024 * 1024;
         var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
@@ -224,37 +230,35 @@
             renderPreviews();
         }
 
-        dropzone.addEventListener('click', function() {
-            fileInput.click();
-        });
-
         fileInput.addEventListener('change', function() {
             if (this.files && this.files.length > 0) {
                 handleNewFiles(this.files);
             }
         });
 
-        ['dragenter', 'dragover'].forEach(function(eventName) {
-            dropzone.addEventListener(eventName, function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropzone.classList.add('dragover');
+        if (dropzone) {
+            ['dragenter', 'dragover'].forEach(function(eventName) {
+                dropzone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('dragover');
+                });
             });
-        });
 
-        ['dragleave', 'drop'].forEach(function(eventName) {
-            dropzone.addEventListener(eventName, function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                dropzone.classList.remove('dragover');
+            ['dragleave', 'drop'].forEach(function(eventName) {
+                dropzone.addEventListener(eventName, function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('dragover');
+                });
             });
-        });
 
-        dropzone.addEventListener('drop', function(e) {
-            if (e.dataTransfer && e.dataTransfer.files) {
-                handleNewFiles(e.dataTransfer.files);
-            }
-        });
+            dropzone.addEventListener('drop', function(e) {
+                if (e.dataTransfer && e.dataTransfer.files) {
+                    handleNewFiles(e.dataTransfer.files);
+                }
+            });
+        }
 
         var ticketForm = dropzone.closest('form');
         if (ticketForm) {
@@ -319,5 +323,11 @@
                 }
             });
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCreateTicket);
+    } else {
+        initCreateTicket();
+    }
 })();

@@ -358,6 +358,7 @@
 }
 
 .upload-dropzone {
+    display: block;
     position: relative;
     border: 2px dashed var(--border-color);
     border-radius: var(--radius-md);
@@ -366,6 +367,8 @@
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .upload-dropzone:hover,
