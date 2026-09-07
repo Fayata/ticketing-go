@@ -223,10 +223,40 @@ body {
     color: #34d399;
 }
 
-.nav-item svg {
+.nav-item svg,
+.nav-icon-img {
     width: 1.25rem;
     height: 1.25rem;
     flex-shrink: 0;
+    object-fit: contain;
+    transition: opacity 0.18s ease, filter 0.18s ease;
+}
+
+.nav-icon-img {
+    opacity: 0.75;
+}
+
+.nav-item:hover .nav-icon-img {
+    opacity: 1;
+}
+
+.nav-item.active .nav-icon-img {
+    opacity: 1;
+    filter: brightness(0) saturate(100%) invert(46%) sepia(85%) saturate(478%) hue-rotate(113deg) brightness(93%) contrast(96%);
+}
+
+:root[data-theme="dark"] .nav-icon-img {
+    filter: invert(1) brightness(1.8);
+    opacity: 0.8;
+}
+
+:root[data-theme="dark"] .nav-item:hover .nav-icon-img {
+    opacity: 1;
+}
+
+:root[data-theme="dark"] .nav-item.active .nav-icon-img {
+    filter: brightness(0) saturate(100%) invert(75%) sepia(35%) saturate(738%) hue-rotate(107deg) brightness(94%) contrast(92%);
+    opacity: 1;
 }
 
 .sidebar.collapsed .nav-item {
