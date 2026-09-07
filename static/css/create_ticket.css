@@ -350,6 +350,24 @@
     display: none !important;
 }
 
+.attachment-group {
+    margin-top: 1.5rem;
+}
+
+.attachment-label-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.attachment-label-title .input-icon {
+    transform: rotate(-45deg);
+}
+
 .attachment-label-hint {
     font-size: 0.8rem;
     font-weight: 500;
@@ -357,18 +375,24 @@
     margin-left: 4px;
 }
 
+.form-group label.upload-dropzone,
 .upload-dropzone {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
     position: relative;
     border: 2px dashed var(--border-color);
     border-radius: var(--radius-md);
     background: var(--surface-2, rgba(241, 245, 249, 0.5));
-    padding: 1.5rem 1rem;
+    padding: 1.75rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
 }
 
 .upload-dropzone:hover,
@@ -390,8 +414,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin: 0 auto;
     gap: 0.5rem;
     pointer-events: none;
+    text-align: center;
 }
 
 .dropzone-icon {
@@ -410,6 +438,8 @@
     font-size: 0.9375rem;
     color: var(--text-primary);
     font-weight: 500;
+    text-align: center;
+    width: 100%;
 }
 
 .dropzone-cta {
@@ -421,6 +451,8 @@
 .dropzone-sub {
     font-size: 0.8125rem;
     color: var(--text-secondary);
+    text-align: center;
+    width: 100%;
 }
 
 .attachment-error-msg {
