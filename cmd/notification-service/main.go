@@ -35,7 +35,11 @@ func main() {
 	// Auto-migrate notification models with retry
 	var err error
 	for i := 0; i < 5; i++ {
-		err = config.DB.AutoMigrate(&models.Notification{})
+		err = config.DB.AutoMigrate(
+			&models.Notification{},
+			&models.SLAPolicy{},
+			&models.Ticket{},
+		)
 		if err == nil {
 			break
 		}

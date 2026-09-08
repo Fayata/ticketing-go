@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="static/css/forms.css">
     <link rel="stylesheet" href="static/css/user_form.css">
     <link rel="stylesheet" href="static/css/alerts-dept.css">
+    <link rel="stylesheet" href="static/css/sla_policy.css">
 </head>
 
 <body>
@@ -65,6 +66,14 @@
                         <polyline points="7 3 7 8 15 8" />
                     </svg>
                     <span class="dept-nav-label">Manajemen Departemen</span>
+                </a>
+
+                <a href="admin/sla-policies" class="dept-nav-item {{if eq .nav_active "admin_sla_policies"}}active{{end}}">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2" />
+                        <polyline points="12 6 12 12 16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span class="dept-nav-label">Kebijakan SLA</span>
                 </a>
 
                 <a href="admin/knowledge-base/" class="dept-nav-item {{if eq .nav_active "admin_kb"}}active{{end}}">
@@ -147,6 +156,10 @@
                 {{template "admin/company_form_content" .}}
                 {{else if eq .template_name "admin/company_edit"}}
                 {{template "admin/company_edit_content" .}}
+                {{else if eq .template_name "admin/sla_policies_list"}}
+                {{template "admin/sla_policies_list_content" .}}
+                {{else if eq .template_name "admin/sla_policy_form"}}
+                {{template "admin/sla_policy_form_content" .}}
                 {{else if eq .template_name "admin/users_list"}}
                 {{template "admin/users_list_content" .}}
                 {{else if eq .template_name "admin/user_form"}}

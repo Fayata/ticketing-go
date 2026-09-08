@@ -1,0 +1,217 @@
+{{define "admin/sla_policy_form"}}
+{{template "admin_base" .}}
+{{end}}
+
+{{define "admin/sla_policy_form_content"}}
+<div class="form-container">
+    <div class="form-header">
+        <h2>{{if .is_edit}}Edit Kebijakan SLA{{else}}Tambah Kebijakan SLA Baru{{end}}</h2>
+        <p>Tentukan aturan First Response Time dan Target Resolusi tiket per tingkat prioritas.</p>
+    </div>
+
+    <form method="POST" action="{{if .is_edit}}admin/sla-policies/edit/{{.policy.ID}}{{else}}admin/sla-policies/create{{end}}" id="slaPolicyForm">
+        <!-- Policy Name -->
+        <div class="form-group full-width">
+            <label>Nama Kebijakan SLA <span style="color:#ef4444;">*</span></label>
+            <input type="text" name="name" class="form-input" placeholder="Contoh: SLA Standar PT Utama, SLA Urgent Billing" required value="{{if .policy}}{{.policy.Name}}{{end}}" autofocus>
+            <small style="color: #6b7280; font-size: 0.875rem; margin-top: 0.25rem; display: block;">
+                Nama deskriptif untuk mengidentifikasi kebijakan ini di sistem.
+            </small>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group full-width">
+            <label>Deskripsi Kebijakan</label>
+            <textarea name="description" class="form-input" rows="2" placeholder="Catatan internal atau ketentuan operasional SLA (opsional)">{{if .policy}}{{.policy.Description}}{{end}}</textarea>
+        </div>
+
+        <!-- Scope: Company & Department -->
+        <div class="form-row">
+            <div class="form-group">
+                <label>Perusahaan / PT</label>
+                <select name="company_id" id="company_id" class="form-input">
+                    <option value="">-- Semua Perusahaan (Global / Default) --</option>
+                    {{range .companies}}
+                    <option value="{{.ID}}" {{if $.policy}}{{if $.policy.CompanyID}}{{if eq *$.policy.CompanyID .ID}}selected{{end}}{{end}}{{end}}>
+                        {{.Name}} ({{.Code}})
+                    </option>
+                    {{end}}
+                </select>
+                <small style="color: #6b7280; font-size: 0.85rem; margin-top: 0.25rem; display: block;">
+                    Pilih PT target, atau kosongkan untuk kebijakan berlaku umum.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label>Departemen (Khusus / Override)</label>
+                <select name="department_id" id="department_id" class="form-input">
+                    <option value="">-- Semua Departemen di PT ini --</option>
+                    {{range .departments}}
+                    <option value="{{.ID}}" data-company="{{if .CompanyID}}{{.CompanyID}}{{else}}0{{end}}" {{if $.policy}}{{if $.policy.DepartmentID}}{{if eq *$.policy.DepartmentID .ID}}selected{{end}}{{end}}{{end}}>
+                        {{.Name}}{{if .Company}} ({{.Company.Code}}){{end}}
+                    </option>
+                    {{end}}
+                </select>
+                <small style="color: #6b7280; font-size: 0.85rem; margin-top: 0.25rem; display: block;">
+                    Pilih departemen jika ingin membuat SLA override khusus unit tersebut.
+                </small>
+            </div>
+        </div>
+
+        <!-- System Default Checkbox -->
+        <div class="form-group full-width">
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                <input type="checkbox" name="is_default" id="is_default" value="true" {{if .policy}}{{if .policy.IsDefault}}checked{{end}}{{end}}>
+                <span style="font-weight:600; font-size:0.9rem;">Jadikan sebagai Kebijakan Default Sistem</span>
+            </label>
+            <small style="color: #6b7280; font-size: 0.85rem; margin-left: 1.5rem; display: block;">
+                Jika dicentang, kebijakan ini akan berlaku sebagai fallback utama sistem untuk semua tiket tanpa aturan khusus.
+            </small>
+        </div>
+
+        <!-- Active Status Checkbox -->
+        <div class="form-group full-width">
+            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                <input type="checkbox" name="is_active" id="is_active" value="true" {{if .policy}}{{if .policy.IsActive}}checked{{end}}{{else}}checked{{end}}>
+                <span style="font-weight:600; font-size:0.9rem;">Status Kebijakan Aktif</span>
+            </label>
+        </div>
+
+        <!-- Priority Matrix Section -->
+        <div class="form-group full-width">
+            <label style="font-weight:700; font-size:1rem; margin-bottom:0.75rem; display:block;">
+                Matriks Target Waktu SLA per Prioritas
+            </label>
+
+            <div style="overflow-x: auto;">
+                <table class="sla-form-matrix-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">Prioritas</th>
+                            <th style="width: 40%;">Target First Response Time</th>
+                            <th style="width: 40%;">Target Default Resolution Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- HIGH PRIORITY -->
+                        <tr>
+                            <td>
+                                <div class="sla-priority-label high">
+                                    <strong>HIGH (Tinggi)</strong>
+                                    <small>Masalah kritis / gangguan total</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="sla-dual-input-wrap">
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resp_high_hours" id="resp_high_hours" min="0" max="168" value="{{.resp_high_hours}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Jam</span>
+                                    </div>
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resp_high_minutes" id="resp_high_minutes" min="0" max="59" value="{{.resp_high_minutes}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Menit</span>
+                                    </div>
+                                </div>
+                                <div class="sla-calc-preview" id="preview_resp_high"></div>
+                            </td>
+                            <td>
+                                <div class="sla-dual-input-wrap">
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resol_high_days" id="resol_high_days" min="0" max="365" value="{{.resol_high_days}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Hari</span>
+                                    </div>
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resol_high_hours" id="resol_high_hours" min="0" max="23" value="{{.resol_high_hours}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Jam</span>
+                                    </div>
+                                </div>
+                                <div class="sla-calc-preview" id="preview_resol_high"></div>
+                            </td>
+                        </tr>
+
+                        <!-- MEDIUM PRIORITY -->
+                        <tr>
+                            <td>
+                                <div class="sla-priority-label med">
+                                    <strong>MEDIUM (Sedang)</strong>
+                                    <small>Gangguan operasional umum</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="sla-dual-input-wrap">
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resp_med_hours" id="resp_med_hours" min="0" max="168" value="{{.resp_med_hours}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Jam</span>
+                                    </div>
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resp_med_minutes" id="resp_med_minutes" min="0" max="59" value="{{.resp_med_minutes}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Menit</span>
+                                    </div>
+                                </div>
+                                <div class="sla-calc-preview" id="preview_resp_med"></div>
+                            </td>
+                            <td>
+                                <div class="sla-dual-input-wrap">
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resol_med_days" id="resol_med_days" min="0" max="365" value="{{.resol_med_days}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Hari</span>
+                                    </div>
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resol_med_hours" id="resol_med_hours" min="0" max="23" value="{{.resol_med_hours}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Jam</span>
+                                    </div>
+                                </div>
+                                <div class="sla-calc-preview" id="preview_resol_med"></div>
+                            </td>
+                        </tr>
+
+                        <!-- LOW PRIORITY -->
+                        <tr>
+                            <td>
+                                <div class="sla-priority-label low">
+                                    <strong>LOW (Rendah)</strong>
+                                    <small>Pertanyaan & permintaan minor</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="sla-dual-input-wrap">
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resp_low_hours" id="resp_low_hours" min="0" max="168" value="{{.resp_low_hours}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Jam</span>
+                                    </div>
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resp_low_minutes" id="resp_low_minutes" min="0" max="59" value="{{.resp_low_minutes}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Menit</span>
+                                    </div>
+                                </div>
+                                <div class="sla-calc-preview" id="preview_resp_low"></div>
+                            </td>
+                            <td>
+                                <div class="sla-dual-input-wrap">
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resol_low_days" id="resol_low_days" min="0" max="365" value="{{.resol_low_days}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Hari</span>
+                                    </div>
+                                    <div class="sla-input-unit">
+                                        <input type="number" name="resol_low_hours" id="resol_low_hours" min="0" max="23" value="{{.resol_low_hours}}" required class="form-input sla-num-input">
+                                        <span class="sla-unit-text">Jam</span>
+                                    </div>
+                                </div>
+                                <div class="sla-calc-preview" id="preview_resol_low"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="admin/sla-policies" class="btn-cancel">Batal</a>
+            <button type="submit" class="btn-submit" id="btnSubmitSLA">
+                {{if .is_edit}}Simpan Perubahan{{else}}Buat Kebijakan SLA{{end}}
+            </button>
+        </div>
+    </form>
+</div>
+<script src="static/js/sla_policy_form.js"></script>
+{{end}}

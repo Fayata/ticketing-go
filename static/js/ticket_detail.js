@@ -314,4 +314,180 @@
       openLightbox(link.dataset.preview, link.dataset.filename);
     }
   });
+
+  // ==========================================================================
+  // FEATURE 14: QUICK RESOLUTION ESTIMATION LOGIC
+  // ==========================================================================
+  const estimateSelect = document.getElementById('estimatePresetSelect');
+  const customDateGroup = document.getElementById('customDateGroup');
+  const customDateInput = document.getElementById('customDateInput');
+  const estimateForm = document.getElementById('estimateForm');
+
+  function updateCustomEstimateVisibility() {
+    if (!estimateSelect || !customDateGroup) return;
+    if (estimateSelect.value === 'custom') {
+      customDateGroup.classList.remove('hidden');
+      if (customDateInput) {
+        customDateInput.required = true;
+        // Restrict to future datetimes only
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        customDateInput.min = now.toISOString().slice(0, 16);
+      }
+    } else {
+      customDateGroup.classList.add('hidden');
+      if (customDateInput) {
+        customDateInput.required = false;
+        customDateInput.value = '';
+      }
+    }
+  }
+
+  if (estimateSelect) {
+    estimateSelect.addEventListener('change', updateCustomEstimateVisibility);
+  }
+
+  if (estimateForm) {
+    estimateForm.addEventListener('submit', function(e) {
+      if (estimateSelect && estimateSelect.value === 'custom' && customDateInput) {
+        const val = customDateInput.value;
+        if (!val) {
+          e.preventDefault();
+          alert('Silakan tentukan tanggal dan waktu estimasi kustom.');
+          customDateInput.focus();
+          return;
+        }
+        const selectedDate = new Date(val);
+        if (selectedDate <= new Date()) {
+          e.preventDefault();
+          alert('Waktu target estimasi harus berada di masa depan.');
+          customDateInput.focus();
+          return;
+        }
+      }
+    });
+  }
+
+  // ==========================================================================
+  // FEATURE 15: PRIORITY ADJUSTMENT MODAL & AUDIT VALIDATION
+  // ==========================================================================
+  const openPriorityBtn = document.getElementById('openPriorityModalBtn');
+  const priorityModal = document.getElementById('priorityModal');
+  const priorityModalClose = document.getElementById('priorityModalClose');
+  const priorityModalCancel = document.getElementById('priorityModalCancel');
+  const priorityReason = document.getElementById('priorityReason');
+  const reasonCounter = document.getElementById('reasonCharCounter');
+  const priorityForm = document.getElementById('priorityForm');
+  const priorityFormError = document.getElementById('priorityFormError');
+
+  function openPriorityModal() {
+    if (!priorityModal) return;
+    priorityModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    if (priorityReason) {
+      priorityReason.value = '';
+      updateReasonCounter();
+    }
+    if (priorityFormError) {
+      priorityFormError.textContent = '';
+      priorityFormError.classList.add('hidden');
+    }
+  }
+
+  function closePriorityModal() {
+    if (!priorityModal) return;
+    priorityModal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function updateReasonCounter() {
+    if (!priorityReason || !reasonCounter) return;
+    const len = priorityReason.value.trim().length;
+    reasonCounter.textContent = len + ' / 5 karakter minimum';
+    if (len >= 5) {
+      reasonCounter.classList.add('valid');
+    } else {
+      reasonCounter.classList.remove('valid');
+    }
+  }
+
+  if (openPriorityBtn) {
+    openPriorityBtn.addEventListener('click', openPriorityModal);
+  }
+  if (priorityModalClose) {
+    priorityModalClose.addEventListener('click', closePriorityModal);
+  }
+  if (priorityModalCancel) {
+    priorityModalCancel.addEventListener('click', closePriorityModal);
+  }
+  if (priorityModal) {
+    priorityModal.addEventListener('click', function(e) {
+      if (e.target === priorityModal) {
+        closePriorityModal();
+      }
+    });
+  }
+  if (priorityReason) {
+    priorityReason.addEventListener('input', updateReasonCounter);
+  }
+  if (priorityForm) {
+    priorityForm.addEventListener('submit', function(e) {
+      if (!priorityReason) return;
+      const text = priorityReason.value.trim();
+      if (text.length < 5) {
+        e.preventDefault();
+        if (priorityFormError) {
+          priorityFormError.textContent = 'Alasan perubahan prioritas harus diisi minimal 5 karakter.';
+          priorityFormError.classList.remove('hidden');
+        } else {
+          alert('Alasan perubahan prioritas harus diisi minimal 5 karakter.');
+        }
+        priorityReason.focus();
+      }
+    });
+  }
+
+  // Handle escape key to close priority modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && priorityModal && !priorityModal.classList.contains('hidden')) {
+      closePriorityModal();
+    }
+  });
+
+  // ==========================================================================
+  // CLEAN ACTION BUTTON HANDLERS (ZERO INLINE ONCLICK)
+  // ==========================================================================
+  const btnCloseTicket = document.getElementById('btnCloseTicket');
+  if (btnCloseTicket) {
+    btnCloseTicket.addEventListener('click', function(e) {
+      e.preventDefault();
+      const url = this.getAttribute('data-close-url') || this.href;
+      if (typeof window.showCustomConfirm === 'function') {
+        window.showCustomConfirm(
+          'Yakin tutup tiket ini? Tiket akan ditandai selesai dan tidak bisa dibalas lagi.',
+          'Tutup Tiket',
+          function() { window.location.href = url; }
+        );
+      } else if (confirm('Yakin tutup tiket ini? Tiket akan ditandai selesai dan tidak bisa dibalas lagi.')) {
+        window.location.href = url;
+      }
+    });
+  }
+
+  const btnReleaseTicket = document.getElementById('btnReleaseTicket');
+  if (btnReleaseTicket) {
+    btnReleaseTicket.addEventListener('click', function(e) {
+      e.preventDefault();
+      const url = this.getAttribute('data-release-url');
+      if (typeof window.showCustomConfirm === 'function') {
+        window.showCustomConfirm(
+          'Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.',
+          'Lepas ke Pool',
+          function() { window.location.href = url; }
+        );
+      } else if (confirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.')) {
+        window.location.href = url;
+      }
+    });
+  }
 })();

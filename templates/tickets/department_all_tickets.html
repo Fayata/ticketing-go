@@ -3,13 +3,40 @@
 {{end}}
 
 {{define "tickets/department_all_tickets_content"}}
+<link rel="stylesheet" href="/static/css/department_all_tickets.css?v=2">
+
 <div class="dept-card">
-    <div style="margin-bottom:1.5rem;">
+    <div class="dat-header">
         <h3 class="dept-all-title">Daftar Semua Tiket</h3>
         <p class="dept-all-subtitle">Pantau seluruh tiket dari berbagai departemen.</p>
     </div>
 
+    {{/* ── TABS ── */}}
+    <div class="dat-tabs">
+        <a href="departement/all-tickets?tab=all"
+           class="dat-tab {{if or (eq .active_tab "") (eq .active_tab "all")}}dat-tab--active{{end}}">
+            Semua Tiket
+        </a>
+        <a href="departement/all-tickets?tab=sla_breached"
+           class="dat-tab dat-tab--danger {{if eq .active_tab "sla_breached"}}dat-tab--active{{end}}">
+            ⚠️ Perlu Tindakan Cepat
+            {{if gt .sla_breached_count 0}}
+            <span class="dat-badge dat-badge--danger">{{.sla_breached_count}}</span>
+            {{end}}
+        </a>
+        <a href="departement/all-tickets?tab=mine"
+           class="dat-tab {{if eq .active_tab "mine"}}dat-tab--active{{end}}">
+            Tiket Saya
+            {{if gt .mine_count 0}}
+            <span class="dat-badge">{{.mine_count}}</span>
+            {{end}}
+        </a>
+    </div>
+
+    {{/* ── FILTER FORM (only shown on "all" tab) ── */}}
+    {{if or (eq .active_tab "") (eq .active_tab "all")}}
     <form method="GET" action="departement/all-tickets" class="dept-all-filters">
+        <input type="hidden" name="tab" value="all">
 
         <div class="dept-all-field">
             <label>Departemen</label>
@@ -36,6 +63,15 @@
             <a href="departement/all-tickets" class="dept-all-btn-reset">Reset</a>
         </div>
     </form>
+    {{end}}
+
+    {{/* ── SLA BREACHED INFO BANNER ── */}}
+    {{if eq .active_tab "sla_breached"}}
+    <div class="dat-info-banner dat-info-banner--danger">
+        <strong>⚠️ SLA Breached</strong> — Tiket-tiket berikut belum mendapat respon pertama dan telah melewati batas waktu SLA.
+        Urutkan dari yang paling lama terlewat. Segera ambil tindakan.
+    </div>
+    {{end}}
 
     <div style="overflow-x:auto;">
         <table class="dept-all-table">
@@ -45,6 +81,8 @@
                     <th>Departemen</th>
                     <th>Judul Tiket</th>
                     <th>Pengirim</th>
+                    <th>Prioritas</th>
+                    <th>SLA</th>
                     <th>Status</th>
                     <th>Staff</th>
                     <th>Tanggal</th>
@@ -54,25 +92,35 @@
             </thead>
             <tbody>
                 {{range .tickets}}
-                <tr>
+                {{$sla := .GetSLABadgeInfo}}
+                <tr {{if $sla.IsBreached}}class="dat-row--breached"{{end}}>
                     <td class="dept-all-cell-id">{{.GetTicketNumber}}</td>
                     <td>
                         <span class="dept-all-dept-badge">
                             {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}
                         </span>
                     </td>
-                    <td class="dept-all-cell-title">
-                        {{.Title}}
-                    </td>
+                    <td class="dept-all-cell-title">{{.Title}}</td>
                     <td class="dept-all-cell-text">{{.CreatedBy.Username}}</td>
+                    <td>
+                        <span class="priority-badge priority-{{.Priority}}">{{.GetPriorityDisplay}}</span>
+                    </td>
+                    <td class="dat-cell-sla">
+                        {{if ne $sla.Class "sla-badge-gray"}}
+                        <span class="sla-badge {{$sla.Class}}" title="{{$sla.Detail}}">{{$sla.Label}}</span>
+                        <span class="dat-sla-detail">{{$sla.Detail}}</span>
+                        {{else}}
+                        <span class="dat-sla-none">-</span>
+                        {{end}}
+                    </td>
                     <td>
                         <span class="badge status-{{.Status}}">{{.GetStatusDisplay}}</span>
                     </td>
                     <td class="dept-all-cell-text">
                         {{if .AssignedTo}}
-                        <span style="color:#059669; font-weight:600;">{{.AssignedTo.Username}}</span>
+                        <span class="dat-staff-name">{{.AssignedTo.Username}}</span>
                         {{else}}
-                        <span style="color:#9ca3af; font-style:italic;">-</span>
+                        <span class="dat-staff-empty">-</span>
                         {{end}}
                     </td>
                     <td class="dept-all-cell-meta">
@@ -81,13 +129,13 @@
                     <td class="dept-all-cell-rating">
                         {{if eq .Status "CLOSED"}}
                         {{$rating := index $.ratings_map .ID}}
-                        {{if $rating}}
+                        {{if $rating.Rating}}
                         <div class="dept-all-rating-stars">
                             {{range $i := seq 1 5}}
                             {{if le $i $rating.Rating}}
-                            <span style="color:#f59e0b; font-size:0.9rem;">★</span>
+                            <span class="dat-star dat-star--filled">★</span>
                             {{else}}
-                            <span style="color:#d1d5db; font-size:0.9rem;">☆</span>
+                            <span class="dat-star">☆</span>
                             {{end}}
                             {{end}}
                             <span class="dept-all-rating-text">{{$rating.Rating}}/5</span>
@@ -105,8 +153,14 @@
                 </tr>
                 {{else}}
                 <tr>
-                    <td colspan="9" class="dept-all-empty">
+                    <td colspan="11" class="dept-all-empty">
+                        {{if eq $.active_tab "sla_breached"}}
+                        ✅ Tidak ada tiket yang melewati batas SLA saat ini.
+                        {{else if eq $.active_tab "mine"}}
+                        Anda belum menangani tiket aktif apapun saat ini.
+                        {{else}}
                         Tidak ada tiket yang ditemukan dengan filter ini.
+                        {{end}}
                     </td>
                 </tr>
                 {{end}}

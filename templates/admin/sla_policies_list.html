@@ -1,0 +1,110 @@
+{{define "admin/sla_policies_list"}}
+{{template "admin_base" .}}
+{{end}}
+
+{{define "admin/sla_policies_list_content"}}
+<div class="card">
+    <div class="card-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:1rem;">
+            <div>
+                <h2>Kebijakan SLA (Service Level Agreement)</h2>
+                <p style="margin-top:0.25rem; font-size:0.85rem; color:#6b7280;">
+                    Kelola batas waktu respon pertama dan target penyelesaian tiket per tingkat prioritas.
+                </p>
+            </div>
+            <a href="admin/sla-policies/create" class="btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Tambah Kebijakan SLA
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div style="overflow-x: auto;">
+            <table class="sla-matrix-table" style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead style="background-color: #f9fafb; text-align: left;">
+                    <tr>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Kebijakan & ID</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Cakupan (Scope)</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">First Response Target</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Resolution Target</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Status</th>
+                        <th style="padding: 1rem; border-bottom: 2px solid #e5e7eb;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .policies}}
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <strong style="color:#111827; font-size:0.95rem;">{{.Name}}</strong>
+                                {{if .Description}}
+                                <span style="font-size:0.8rem; color:#6b7280;">{{.Description}}</span>
+                                {{end}}
+                                <span style="font-size:0.75rem; color:#9ca3af; font-family:monospace;">ID: #{{.ID}}</span>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            {{if .IsDefault}}
+                            <span class="sla-badge-scope global">Default Sistem (Global)</span>
+                            {{else if .Department}}
+                            <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                                <span class="sla-badge-scope dept">Dept: {{.Department.Name}}</span>
+                                <span style="font-size:0.75rem; color:#6b7280;">PT: {{if .Company}}{{.Company.Name}}{{else if .Department.Company}}{{.Department.Company.Name}}{{else}}-{{end}}</span>
+                            </div>
+                            {{else if .Company}}
+                            <span class="sla-badge-scope company">PT: {{.Company.Name}} (Semua Dept)</span>
+                            {{else}}
+                            <span class="sla-badge-scope global">Global Fallback</span>
+                            {{end}}
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <div class="sla-target-pill-group">
+                                <span class="sla-priority-pill high" title="High Priority">H: {{.ResponseTimeHighMinutes}}m</span>
+                                <span class="sla-priority-pill med" title="Medium Priority">M: {{.ResponseTimeMedMinutes}}m</span>
+                                <span class="sla-priority-pill low" title="Low Priority">L: {{.ResponseTimeLowMinutes}}m</span>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <div class="sla-target-pill-group">
+                                <span class="sla-priority-pill high" title="High Priority">H: {{.ResolutionTimeHighHours}}j</span>
+                                <span class="sla-priority-pill med" title="Medium Priority">M: {{.ResolutionTimeMedHours}}j</span>
+                                <span class="sla-priority-pill low" title="Low Priority">L: {{.ResolutionTimeLowHours}}j</span>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            {{if .IsActive}}
+                            <span class="status-badge in-progress" style="background:#ecfdf3; color:#15803d; border-color:#bbf7d0;">Aktif</span>
+                            {{else}}
+                            <span class="status-badge closed" style="background:#fee2e2; color:#b91c1c; border-color:#fecaca;">Non-Aktif</span>
+                            {{end}}
+                        </td>
+                        <td style="padding: 1rem; vertical-align: top;">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <a href="admin/sla-policies/edit/{{.ID}}" style="font-size:0.85rem; color:#2563eb; text-decoration:underline; font-weight:500;">
+                                    Edit
+                                </a>
+                                <a href="admin/sla-policies/toggle/{{.ID}}"
+                                   onclick="return confirm('Apakah Anda yakin ingin mengubah status kebijakan SLA ini?');"
+                                   style="font-size:0.85rem; {{if .IsActive}}color:#dc2626;{{else}}color:#059669;{{end}} text-decoration:underline; font-weight:500;">
+                                    {{if .IsActive}}Nonaktifkan{{else}}Aktifkan{{end}}
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="6" style="padding: 3rem; text-align: center; color: #9ca3af;">
+                            Belum ada kebijakan SLA yang dikonfigurasi. <a href="admin/sla-policies/create" style="color: #059669; text-decoration: underline;">Buat kebijakan SLA pertama</a>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{{end}}

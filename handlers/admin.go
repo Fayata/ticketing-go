@@ -1306,3 +1306,384 @@ func (h *AdminHandler) ToggleCompanyStatus(w http.ResponseWriter, r *http.Reques
 	}
 	http.Redirect(w, r, config.Path("/admin/companies")+"?success="+url.QueryEscape(msg), http.StatusSeeOther)
 }
+
+// --- SLA Policy Admin Handlers ---
+
+func parseUintPtr(s string) *uint {
+	s = strings.TrimSpace(s)
+	if s == "" || s == "0" {
+		return nil
+	}
+	val, err := strconv.ParseUint(s, 10, 32)
+	if err != nil || val == 0 {
+		return nil
+	}
+	u := uint(val)
+	return &u
+}
+
+func parseIntValue(s string) int {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0
+	}
+	val, err := strconv.Atoi(s)
+	if err != nil || val < 0 {
+		return 0
+	}
+	return val
+}
+
+// ListSLAPolicies menampilkan daftar kebijakan SLA per PT dan Departemen.
+func (h *AdminHandler) ListSLAPolicies(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var policies []models.SLAPolicy
+	if err := config.DB.Preload("Company").Preload("Department").
+		Order("is_default DESC, company_id ASC, department_id ASC, id ASC").
+		Find(&policies).Error; err != nil {
+		log.Printf("[Admin] Failed to load SLA policies: %v", err)
+	}
+
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         "Kebijakan SLA - Admin Panel",
+		"page_title":    "Kebijakan SLA",
+		"page_subtitle": "Kelola target waktu respon pertama dan resolusi per prioritas, PT, dan departemen",
+		"nav_active":    "admin_sla_policies",
+		"template_name": "admin/sla_policies_list",
+		"policies":      policies,
+		"error":         r.URL.Query().Get("error"),
+		"success":       r.URL.Query().Get("success"),
+	})
+
+	RenderTemplate(w, "admin/sla_policies_list", data)
+}
+
+// CreateSLAPolicyForm menampilkan form pembuatan kebijakan SLA (GET) atau menyimpannya (POST).
+func (h *AdminHandler) CreateSLAPolicyForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		var companies []models.Company
+		config.DB.Where("is_active = ?", true).Preload("Departments").Order("name ASC").Find(&companies)
+
+		var departments []models.Department
+		config.DB.Preload("Company").Order("name ASC").Find(&departments)
+
+		data := AddBaseData(r, map[string]interface{}{
+			"title":             "Tambah Kebijakan SLA Baru",
+			"page_title":        "Tambah Kebijakan SLA",
+			"page_subtitle":     "Konfigurasi aturan target First Response dan Resolusi",
+			"nav_active":        "admin_sla_policies",
+			"template_name":     "admin/sla_policy_form",
+			"is_edit":           false,
+			"companies":         companies,
+			"departments":       departments,
+			"resp_high_hours":   1,
+			"resp_high_minutes": 0,
+			"resp_med_hours":    4,
+			"resp_med_minutes":  0,
+			"resp_low_hours":    8,
+			"resp_low_minutes":  0,
+			"resol_high_days":   0,
+			"resol_high_hours":  4,
+			"resol_med_days":    1,
+			"resol_med_hours":   0,
+			"resol_low_days":    3,
+			"resol_low_hours":   0,
+			"error":             r.URL.Query().Get("error"),
+			"success":           r.URL.Query().Get("success"),
+		})
+		RenderTemplate(w, "admin/sla_policy_form", data)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		_ = r.ParseForm()
+		createURL := config.Path("/admin/sla-policies/create") + "?error="
+
+		name := strings.TrimSpace(r.FormValue("name"))
+		if name == "" {
+			http.Redirect(w, r, createURL+url.QueryEscape("Nama kebijakan SLA wajib diisi"), http.StatusSeeOther)
+			return
+		}
+
+		description := strings.TrimSpace(r.FormValue("description"))
+		companyID := parseUintPtr(r.FormValue("company_id"))
+		departmentID := parseUintPtr(r.FormValue("department_id"))
+
+		isDefault := false
+		if val := strings.TrimSpace(r.FormValue("is_default")); val == "true" || val == "1" || val == "on" {
+			isDefault = true
+			companyID = nil
+			departmentID = nil
+		}
+
+		isActive := true
+		if val := strings.TrimSpace(r.FormValue("is_active")); val == "false" || val == "0" {
+			isActive = false
+		}
+
+		// Calculate dual-unit response durations
+		respHigh := parseIntValue(r.FormValue("resp_high_hours"))*60 + parseIntValue(r.FormValue("resp_high_minutes"))
+		respMed := parseIntValue(r.FormValue("resp_med_hours"))*60 + parseIntValue(r.FormValue("resp_med_minutes"))
+		respLow := parseIntValue(r.FormValue("resp_low_hours"))*60 + parseIntValue(r.FormValue("resp_low_minutes"))
+
+		// Calculate dual-unit resolution durations
+		resolHigh := parseIntValue(r.FormValue("resol_high_days"))*24 + parseIntValue(r.FormValue("resol_high_hours"))
+		resolMed := parseIntValue(r.FormValue("resol_med_days"))*24 + parseIntValue(r.FormValue("resol_med_hours"))
+		resolLow := parseIntValue(r.FormValue("resol_low_days"))*24 + parseIntValue(r.FormValue("resol_low_hours"))
+
+		if respHigh <= 0 || respMed <= 0 || respLow <= 0 {
+			http.Redirect(w, r, createURL+url.QueryEscape("Target waktu respon pertama minimal 1 menit untuk setiap prioritas"), http.StatusSeeOther)
+			return
+		}
+
+		if resolHigh <= 0 || resolMed <= 0 || resolLow <= 0 {
+			http.Redirect(w, r, createURL+url.QueryEscape("Target waktu resolusi minimal 1 jam untuk setiap prioritas"), http.StatusSeeOther)
+			return
+		}
+
+		// Validate department belongs to company if specified
+		if departmentID != nil {
+			var dept models.Department
+			if err := config.DB.First(&dept, *departmentID).Error; err != nil {
+				http.Redirect(w, r, createURL+url.QueryEscape("Departemen tidak ditemukan"), http.StatusSeeOther)
+				return
+			}
+			if companyID != nil && (dept.CompanyID == nil || *dept.CompanyID != *companyID) {
+				http.Redirect(w, r, createURL+url.QueryEscape("Departemen tidak terdaftar pada perusahaan yang dipilih"), http.StatusSeeOther)
+				return
+			}
+			if companyID == nil && dept.CompanyID != nil {
+				companyID = dept.CompanyID
+			}
+		}
+
+		// Scope conflict check
+		var dupCount int64
+		dupQ := config.DB.Model(&models.SLAPolicy{}).Where("is_active = ?", true)
+		if isDefault {
+			dupQ = dupQ.Where("is_default = true")
+		} else if departmentID != nil {
+			dupQ = dupQ.Where("department_id = ?", *departmentID)
+		} else if companyID != nil {
+			dupQ = dupQ.Where("company_id = ? AND (department_id IS NULL OR department_id = 0)", *companyID)
+		}
+		if err := dupQ.Count(&dupCount).Error; err == nil && dupCount > 0 && isActive {
+			http.Redirect(w, r, createURL+url.QueryEscape("Kebijakan SLA aktif untuk cakupan ini sudah ada. Nonaktifkan kebijakan lama terlebih dahulu."), http.StatusSeeOther)
+			return
+		}
+
+		policy := models.SLAPolicy{
+			Name:                    name,
+			Description:             description,
+			CompanyID:               companyID,
+			DepartmentID:            departmentID,
+			IsActive:                isActive,
+			IsDefault:               isDefault,
+			ResponseTimeHighMinutes: respHigh,
+			ResponseTimeMedMinutes:  respMed,
+			ResponseTimeLowMinutes:  respLow,
+			ResolutionTimeHighHours: resolHigh,
+			ResolutionTimeMedHours:  resolMed,
+			ResolutionTimeLowHours:  resolLow,
+		}
+
+		if err := config.DB.Create(&policy).Error; err != nil {
+			log.Printf("[Admin] Failed to create SLA policy: %v", err)
+			http.Redirect(w, r, createURL+url.QueryEscape("Gagal menyimpan kebijakan SLA"), http.StatusSeeOther)
+			return
+		}
+
+		http.Redirect(w, r, config.Path("/admin/sla-policies")+"?success="+url.QueryEscape("Kebijakan SLA berhasil dibuat"), http.StatusSeeOther)
+		return
+	}
+
+	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+}
+
+// EditSLAPolicyForm menampilkan form edit kebijakan SLA (GET) atau memperbaruinya (POST).
+func (h *AdminHandler) EditSLAPolicyForm(w http.ResponseWriter, r *http.Request) {
+	id := parseIDFromPath(r.URL.Path)
+	if id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/sla-policies")+"?error="+url.QueryEscape("ID kebijakan SLA tidak valid"), http.StatusSeeOther)
+		return
+	}
+
+	var policy models.SLAPolicy
+	if err := config.DB.Preload("Company").Preload("Department").First(&policy, id).Error; err != nil {
+		http.Redirect(w, r, config.Path("/admin/sla-policies")+"?error="+url.QueryEscape("Kebijakan SLA tidak ditemukan"), http.StatusSeeOther)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		var companies []models.Company
+		config.DB.Where("is_active = ?", true).Preload("Departments").Order("name ASC").Find(&companies)
+
+		var departments []models.Department
+		config.DB.Preload("Company").Order("name ASC").Find(&departments)
+
+		data := AddBaseData(r, map[string]interface{}{
+			"title":             "Edit Kebijakan SLA - " + policy.Name,
+			"page_title":        "Edit Kebijakan SLA",
+			"page_subtitle":     "Perbarui target waktu respon dan resolusi",
+			"nav_active":        "admin_sla_policies",
+			"template_name":     "admin/sla_policy_form",
+			"is_edit":           true,
+			"policy":            policy,
+			"companies":         companies,
+			"departments":       departments,
+			"resp_high_hours":   policy.ResponseTimeHighMinutes / 60,
+			"resp_high_minutes": policy.ResponseTimeHighMinutes % 60,
+			"resp_med_hours":    policy.ResponseTimeMedMinutes / 60,
+			"resp_med_minutes":  policy.ResponseTimeMedMinutes % 60,
+			"resp_low_hours":    policy.ResponseTimeLowMinutes / 60,
+			"resp_low_minutes":  policy.ResponseTimeLowMinutes % 60,
+			"resol_high_days":   policy.ResolutionTimeHighHours / 24,
+			"resol_high_hours":  policy.ResolutionTimeHighHours % 24,
+			"resol_med_days":    policy.ResolutionTimeMedHours / 24,
+			"resol_med_hours":   policy.ResolutionTimeMedHours % 24,
+			"resol_low_days":    policy.ResolutionTimeLowHours / 24,
+			"resol_low_hours":   policy.ResolutionTimeLowHours % 24,
+			"error":             r.URL.Query().Get("error"),
+			"success":           r.URL.Query().Get("success"),
+		})
+		RenderTemplate(w, "admin/sla_policy_form", data)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		_ = r.ParseForm()
+		editURL := fmt.Sprintf("%s?error=", config.Path(fmt.Sprintf("/admin/sla-policies/edit/%d", id)))
+
+		name := strings.TrimSpace(r.FormValue("name"))
+		if name == "" {
+			http.Redirect(w, r, editURL+url.QueryEscape("Nama kebijakan SLA wajib diisi"), http.StatusSeeOther)
+			return
+		}
+
+		description := strings.TrimSpace(r.FormValue("description"))
+		companyID := parseUintPtr(r.FormValue("company_id"))
+		departmentID := parseUintPtr(r.FormValue("department_id"))
+
+		isDefault := false
+		if val := strings.TrimSpace(r.FormValue("is_default")); val == "true" || val == "1" || val == "on" {
+			isDefault = true
+			companyID = nil
+			departmentID = nil
+		}
+
+		isActive := true
+		if val := strings.TrimSpace(r.FormValue("is_active")); val == "false" || val == "0" {
+			isActive = false
+		}
+
+		respHigh := parseIntValue(r.FormValue("resp_high_hours"))*60 + parseIntValue(r.FormValue("resp_high_minutes"))
+		respMed := parseIntValue(r.FormValue("resp_med_hours"))*60 + parseIntValue(r.FormValue("resp_med_minutes"))
+		respLow := parseIntValue(r.FormValue("resp_low_hours"))*60 + parseIntValue(r.FormValue("resp_low_minutes"))
+
+		resolHigh := parseIntValue(r.FormValue("resol_high_days"))*24 + parseIntValue(r.FormValue("resol_high_hours"))
+		resolMed := parseIntValue(r.FormValue("resol_med_days"))*24 + parseIntValue(r.FormValue("resol_med_hours"))
+		resolLow := parseIntValue(r.FormValue("resol_low_days"))*24 + parseIntValue(r.FormValue("resol_low_hours"))
+
+		if respHigh <= 0 || respMed <= 0 || respLow <= 0 {
+			http.Redirect(w, r, editURL+url.QueryEscape("Target waktu respon pertama minimal 1 menit untuk setiap prioritas"), http.StatusSeeOther)
+			return
+		}
+
+		if resolHigh <= 0 || resolMed <= 0 || resolLow <= 0 {
+			http.Redirect(w, r, editURL+url.QueryEscape("Target waktu resolusi minimal 1 jam untuk setiap prioritas"), http.StatusSeeOther)
+			return
+		}
+
+		if departmentID != nil {
+			var dept models.Department
+			if err := config.DB.First(&dept, *departmentID).Error; err != nil {
+				http.Redirect(w, r, editURL+url.QueryEscape("Departemen tidak ditemukan"), http.StatusSeeOther)
+				return
+			}
+			if companyID != nil && (dept.CompanyID == nil || *dept.CompanyID != *companyID) {
+				http.Redirect(w, r, editURL+url.QueryEscape("Departemen tidak terdaftar pada perusahaan yang dipilih"), http.StatusSeeOther)
+				return
+			}
+			if companyID == nil && dept.CompanyID != nil {
+				companyID = dept.CompanyID
+			}
+		}
+
+		// Scope conflict check (excluding current record ID)
+		var dupCount int64
+		dupQ := config.DB.Model(&models.SLAPolicy{}).Where("is_active = ? AND id != ?", true, id)
+		if isDefault {
+			dupQ = dupQ.Where("is_default = true")
+		} else if departmentID != nil {
+			dupQ = dupQ.Where("department_id = ?", *departmentID)
+		} else if companyID != nil {
+			dupQ = dupQ.Where("company_id = ? AND (department_id IS NULL OR department_id = 0)", *companyID)
+		}
+		if err := dupQ.Count(&dupCount).Error; err == nil && dupCount > 0 && isActive {
+			http.Redirect(w, r, editURL+url.QueryEscape("Kebijakan SLA aktif lain untuk cakupan ini sudah ada."), http.StatusSeeOther)
+			return
+		}
+
+		policy.Name = name
+		policy.Description = description
+		policy.CompanyID = companyID
+		policy.DepartmentID = departmentID
+		policy.IsActive = isActive
+		policy.IsDefault = isDefault
+		policy.ResponseTimeHighMinutes = respHigh
+		policy.ResponseTimeMedMinutes = respMed
+		policy.ResponseTimeLowMinutes = respLow
+		policy.ResolutionTimeHighHours = resolHigh
+		policy.ResolutionTimeMedHours = resolMed
+		policy.ResolutionTimeLowHours = resolLow
+
+		if err := config.DB.Save(&policy).Error; err != nil {
+			log.Printf("[Admin] Failed to update SLA policy: %v", err)
+			http.Redirect(w, r, editURL+url.QueryEscape("Gagal memperbarui kebijakan SLA"), http.StatusSeeOther)
+			return
+		}
+
+		http.Redirect(w, r, config.Path("/admin/sla-policies")+"?success="+url.QueryEscape("Kebijakan SLA berhasil diperbarui"), http.StatusSeeOther)
+		return
+	}
+
+	http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+}
+
+// ToggleSLAPolicyStatus mengaktifkan atau menonaktifkan status kebijakan SLA.
+func (h *AdminHandler) ToggleSLAPolicyStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id := parseIDFromPath(r.URL.Path)
+	if id <= 0 {
+		http.Redirect(w, r, config.Path("/admin/sla-policies")+"?error="+url.QueryEscape("ID kebijakan SLA tidak valid"), http.StatusSeeOther)
+		return
+	}
+
+	var policy models.SLAPolicy
+	if err := config.DB.First(&policy, id).Error; err != nil {
+		http.Redirect(w, r, config.Path("/admin/sla-policies")+"?error="+url.QueryEscape("Kebijakan SLA tidak ditemukan"), http.StatusSeeOther)
+		return
+	}
+
+	policy.IsActive = !policy.IsActive
+	if err := config.DB.Save(&policy).Error; err != nil {
+		log.Printf("[Admin] Failed to toggle SLA policy status: %v", err)
+		http.Redirect(w, r, config.Path("/admin/sla-policies")+"?error="+url.QueryEscape("Gagal mengubah status kebijakan SLA"), http.StatusSeeOther)
+		return
+	}
+
+	msg := "Kebijakan SLA berhasil dinonaktifkan"
+	if policy.IsActive {
+		msg = "Kebijakan SLA berhasil diaktifkan"
+	}
+	http.Redirect(w, r, config.Path("/admin/sla-policies")+"?success="+url.QueryEscape(msg), http.StatusSeeOther)
+}
+

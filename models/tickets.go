@@ -37,12 +37,24 @@ type Ticket struct {
 	AssignedToID *uint `json:"assigned_to_id"`
 	AssignedTo   *User `gorm:"foreignKey:AssignedToID" json:"assigned_to"`
 
+	// SLA Tracking Fields
+	SLAPolicyID           *uint      `gorm:"index" json:"sla_policy_id"`
+	FirstResponseDeadline *time.Time `gorm:"index" json:"first_response_deadline"`
+	FirstResponseAt       *time.Time `json:"first_response_at"`
+	FirstResponseMet      *bool      `json:"first_response_met"` // nil = pending, true = met, false = breached
+	ResolutionDeadline    *time.Time `json:"resolution_deadline"`
+	EstimatedResolutionAt *time.Time `json:"estimated_resolution_at"`
+	SLAWarningSent        bool       `gorm:"default:false;index" json:"sla_warning_sent"`
+	SLABreachSent         bool       `gorm:"default:false;index" json:"sla_breach_sent"`
+
 	// Relations
-	CreatedBy  User          `gorm:"foreignKey:CreatedByID" json:"created_by"`
-	Company    *Company      `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
-	Department *Department   `gorm:"foreignKey:DepartmentID" json:"department"`
-	Replies     []TicketReply      `gorm:"foreignKey:TicketID" json:"replies"`
-	Attachments []TicketAttachment `gorm:"foreignKey:TicketID;constraint:OnDelete:CASCADE;" json:"attachments"`
+	CreatedBy         User                    `gorm:"foreignKey:CreatedByID" json:"created_by"`
+	Company           *Company                `gorm:"foreignKey:CompanyID" json:"company,omitempty"`
+	Department        *Department             `gorm:"foreignKey:DepartmentID" json:"department"`
+	Replies           []TicketReply           `gorm:"foreignKey:TicketID" json:"replies"`
+	Attachments       []TicketAttachment      `gorm:"foreignKey:TicketID;constraint:OnDelete:CASCADE;" json:"attachments"`
+	SLAPolicy         *SLAPolicy              `gorm:"foreignKey:SLAPolicyID" json:"sla_policy,omitempty"`
+	PriorityHistories []TicketPriorityHistory `gorm:"foreignKey:TicketID" json:"priority_histories,omitempty"`
 }
 
 func (t *Ticket) GetStatusDisplay() string {
@@ -96,7 +108,6 @@ func (t *Ticket) GetTicketNumber() string {
 	return fmt.Sprintf("T%s-%04d", year, t.ID)
 }
 
-// GetInitialAttachments returns only attachments attached during initial ticket creation (ReplyID is nil or 0).
 func (t *Ticket) GetInitialAttachments() []TicketAttachment {
 	if t == nil {
 		return nil
@@ -109,6 +120,148 @@ func (t *Ticket) GetInitialAttachments() []TicketAttachment {
 	}
 	return list
 }
+
+// SLABadgeInfo holds UI presentation data for ticket SLA status.
+type SLABadgeInfo struct {
+	Class      string `json:"class"`       // "sla-badge-green", "sla-badge-yellow", "sla-badge-red", "sla-badge-gray"
+	Label      string `json:"label"`       // "SLA Aman", "Mendekati Batas", "SLA Breached", "Sesuai Estimasi", etc.
+	Detail     string `json:"detail"`      // "Sisa 25m", "Terlambat 1j 10m", etc.
+	IsBreached bool   `json:"is_breached"`
+	IsWarning  bool   `json:"is_warning"`
+}
+
+// GetSLABadgeInfo determines the visual SLA badge status for a ticket.
+func (t *Ticket) GetSLABadgeInfo() SLABadgeInfo {
+	if t == nil {
+		return SLABadgeInfo{Class: "sla-badge-gray", Label: "Tidak Ada Data"}
+	}
+
+	// 1. Closed Ticket
+	if t.Status == StatusClosed {
+		if t.FirstResponseMet != nil && !*t.FirstResponseMet {
+			return SLABadgeInfo{
+				Class:      "sla-badge-red",
+				Label:      "Selesai (SLA Breached)",
+				Detail:     "Terlambat Respon",
+				IsBreached: true,
+			}
+		}
+		return SLABadgeInfo{
+			Class:  "sla-badge-green",
+			Label:  "Selesai (SLA Terpenuhi)",
+			Detail: "Tepat Waktu",
+		}
+	}
+
+	now := time.Now()
+
+	// 2. First Response Milestone already reached
+	if t.FirstResponseAt != nil || t.FirstResponseMet != nil {
+		if t.FirstResponseMet != nil && !*t.FirstResponseMet {
+			return SLABadgeInfo{
+				Class:      "sla-badge-red",
+				Label:      "First Response Terlewat",
+				Detail:     "SLA Breached",
+				IsBreached: true,
+			}
+		}
+
+		// First response was met; check resolution estimation if ticket is still active
+		if t.EstimatedResolutionAt != nil {
+			if now.After(*t.EstimatedResolutionAt) {
+				overdue := now.Sub(*t.EstimatedResolutionAt)
+				return SLABadgeInfo{
+					Class:      "sla-badge-red",
+					Label:      "Melewati Estimasi",
+					Detail:     formatDurationText(overdue) + " lalu",
+					IsBreached: true,
+				}
+			}
+			remaining := t.EstimatedResolutionAt.Sub(now)
+			if remaining <= 1*time.Hour {
+				return SLABadgeInfo{
+					Class:     "sla-badge-yellow",
+					Label:     "Mendekati Estimasi",
+					Detail:    "Sisa " + formatDurationText(remaining),
+					IsWarning: true,
+				}
+			}
+			return SLABadgeInfo{
+				Class:  "sla-badge-green",
+				Label:  "Sesuai Estimasi",
+				Detail: "Sisa " + formatDurationText(remaining),
+			}
+		}
+
+		return SLABadgeInfo{
+			Class:  "sla-badge-green",
+			Label:  "Respon Terpenuhi",
+			Detail: "Menunggu Estimasi",
+		}
+	}
+
+	// 3. First Response Milestone Pending
+	if t.FirstResponseDeadline == nil {
+		return SLABadgeInfo{
+			Class:  "sla-badge-gray",
+			Label:  "Tanpa SLA",
+			Detail: "-",
+		}
+	}
+
+	if now.After(*t.FirstResponseDeadline) {
+		overdue := now.Sub(*t.FirstResponseDeadline)
+		return SLABadgeInfo{
+			Class:      "sla-badge-red",
+			Label:      "SLA Breached",
+			Detail:     "Terlambat " + formatDurationText(overdue),
+			IsBreached: true,
+		}
+	}
+
+	remaining := t.FirstResponseDeadline.Sub(now)
+	if remaining <= 30*time.Minute {
+		return SLABadgeInfo{
+			Class:     "sla-badge-yellow",
+			Label:     "Mendekati Batas",
+			Detail:    "Sisa " + formatDurationText(remaining),
+			IsWarning: true,
+		}
+	}
+
+	return SLABadgeInfo{
+		Class:  "sla-badge-green",
+		Label:  "SLA Aman",
+		Detail: "Sisa " + formatDurationText(remaining),
+	}
+}
+
+func formatDurationText(d time.Duration) string {
+	if d < 0 {
+		d = -d
+	}
+	hours := int(d.Hours())
+	minutes := int(d.Minutes()) % 60
+	if hours > 24 {
+		days := hours / 24
+		remHours := hours % 24
+		if remHours > 0 {
+			return fmt.Sprintf("%dh %dj", days, remHours)
+		}
+		return fmt.Sprintf("%dh", days)
+	}
+	if hours > 0 {
+		if minutes > 0 {
+			return fmt.Sprintf("%dj %dm", hours, minutes)
+		}
+		return fmt.Sprintf("%dj", hours)
+	}
+	if minutes > 0 {
+		return fmt.Sprintf("%dm", minutes)
+	}
+	return "<1m"
+}
+
 
 // TicketAssignmentHistory tracks which staff members have worked on a ticket
 type TicketAssignmentHistory struct {

@@ -66,16 +66,40 @@ func (s *TicketService) CreateTicketWithAttachments(createdByID uint, title, des
 		}
 	}
 
-	ticket := models.Ticket{
-		Title:        title,
-		Description:  description,
-		ReplyToEmail: replyToEmail,
-		Priority:     models.TicketPriority(priority),
-		Status:       models.StatusWaiting,
-		CreatedByID:  createdByID,
-		DepartmentID: departmentID,
-		CompanyID:    companyID,
+	// Normalize priority with fallback to MEDIUM
+	ticketPriority := models.TicketPriority(strings.ToUpper(strings.TrimSpace(priority)))
+	if ticketPriority != models.PriorityHigh && ticketPriority != models.PriorityLow && ticketPriority != models.PriorityMedium {
+		ticketPriority = models.PriorityMedium
 	}
+
+	// 24/7 Calendar continuous calculation: resolve policy and calculate deadlines
+	now := time.Now()
+	policy, respDuration, resDuration := models.ResolveSLAPolicy(config.DB, companyID, departmentID, ticketPriority)
+
+	firstResponseDeadline := now.Add(respDuration)
+	resolutionDeadline := now.Add(resDuration)
+
+	ticket := models.Ticket{
+		Title:                 title,
+		Description:           description,
+		ReplyToEmail:          replyToEmail,
+		Priority:              ticketPriority,
+		Status:                models.StatusWaiting,
+		CreatedByID:           createdByID,
+		DepartmentID:          departmentID,
+		CompanyID:             companyID,
+		CreatedAt:             now,
+		FirstResponseDeadline: &firstResponseDeadline,
+		ResolutionDeadline:    &resolutionDeadline,
+		FirstResponseAt:       nil,
+		FirstResponseMet:      nil,
+		SLAWarningSent:        false,
+		SLABreachSent:         false,
+	}
+	if policy != nil && policy.ID > 0 {
+		ticket.SLAPolicyID = &policy.ID
+	}
+
 	if err := config.DB.Create(&ticket).Error; err != nil {
 		return nil, err
 	}
@@ -117,7 +141,7 @@ func (s *TicketService) CreateTicketWithAttachments(createdByID uint, title, des
 		}
 	}
 
-	config.DB.Preload("Department").Preload("Company").Preload("Attachments").First(&ticket, ticket.ID)
+	config.DB.Preload("Department").Preload("Company").Preload("Attachments").Preload("SLAPolicy").First(&ticket, ticket.ID)
 
 	if ticket.DepartmentID != nil {
 		go func() {
@@ -341,4 +365,9 @@ func (s *TicketService) SubmitRating(ticketID int, token string, rating int, com
 		RatedAt:   time.Now(),
 	}
 	return config.DB.Create(&newRating).Error
+}
+
+// ResolveSLAPolicy delegates to models.ResolveSLAPolicy using config.DB.
+func (s *TicketService) ResolveSLAPolicy(companyID, departmentID *uint, priority ...models.TicketPriority) (*models.SLAPolicy, time.Duration, time.Duration) {
+	return models.ResolveSLAPolicy(config.DB, companyID, departmentID, priority...)
 }

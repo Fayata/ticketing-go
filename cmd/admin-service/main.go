@@ -42,14 +42,16 @@ func main() {
 			&models.User{},
 			&models.Department{},
 			&models.Group{},
+			&models.SLAPolicy{},
 			&models.Ticket{},
-			&models.KBCategory{},
-			&models.KBArticle{},
-			&models.Notification{},
 			&models.TicketReply{},
 			&models.TicketAttachment{},
 			&models.TicketAssignmentHistory{},
 			&models.TicketRating{},
+			&models.TicketPriorityHistory{},
+			&models.Notification{},
+			&models.KBCategory{},
+			&models.KBArticle{},
 		)
 		if err == nil {
 			break
@@ -108,6 +110,10 @@ func main() {
 	adminMux.HandleFunc("/companies/create", AuditLogWrapper("Create Company", adminHandler.CreateCompanyForm))
 	adminMux.HandleFunc("/companies/edit/", AuditLogWrapper("Edit Company", adminHandler.EditCompanyForm))
 	adminMux.HandleFunc("/companies/toggle/", AuditLogWrapper("Toggle Company Status", adminHandler.ToggleCompanyStatus))
+	adminMux.HandleFunc("/sla-policies", AuditLogWrapper("List SLA Policies", adminHandler.ListSLAPolicies))
+	adminMux.HandleFunc("/sla-policies/create", AuditLogWrapper("Create SLA Policy", adminHandler.CreateSLAPolicyForm))
+	adminMux.HandleFunc("/sla-policies/edit/", AuditLogWrapper("Edit SLA Policy", adminHandler.EditSLAPolicyForm))
+	adminMux.HandleFunc("/sla-policies/toggle/", AuditLogWrapper("Toggle SLA Policy Status", adminHandler.ToggleSLAPolicyStatus))
 	
 	adminHandlerFunc := middleware.AuthRequired(middleware.SuperAdminRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -148,10 +154,12 @@ func main() {
 	deptMux := http.NewServeMux()
 	deptMux.HandleFunc("/dashboard", departmentHandler.ShowDashboard)
 	deptMux.HandleFunc("/all-tickets", departmentHandler.ShowAllTickets)
-	deptMux.HandleFunc("/tiket/", departmentHandler.HandleTicketDetail)
+	deptMux.HandleFunc("/tiket/estimate/", departmentHandler.SetTicketEstimate)
+	deptMux.HandleFunc("/tiket/priority/", departmentHandler.SetTicketPriority)
 	deptMux.HandleFunc("/tiket/claim/", departmentHandler.ClaimTicket)
 	deptMux.HandleFunc("/tiket/release/", departmentHandler.ReleaseTicket)
 	deptMux.HandleFunc("/tiket/close/", departmentHandler.CloseTicket)
+	deptMux.HandleFunc("/tiket/", departmentHandler.HandleTicketDetail)
 	deptMux.HandleFunc("/logout-release", departmentHandler.LogoutAndRelease)
 
 	deptHandler := middleware.AuthRequired(middleware.DepartmentRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -211,6 +219,11 @@ func seedDefaultData() {
 	defaultCompany, err := models.SeedDefaultCompanyAndMigrate(config.DB)
 	if err != nil {
 		log.Printf("[Migration] Warning: SeedDefaultCompanyAndMigrate encountered error: %v", err)
+	}
+
+	// Seed default SLA policy and backfill legacy tickets
+	if err := models.SeedDefaultSLAPolicies(config.DB); err != nil {
+		log.Printf("[Migration] Warning: SeedDefaultSLAPolicies encountered error: %v", err)
 	}
 
 	var portalGroup models.Group

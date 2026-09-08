@@ -54,11 +54,13 @@ func main() {
 		&models.User{},
 		&models.Group{},
 		&models.Department{},
+		&models.SLAPolicy{},
 		&models.Ticket{},
 		&models.TicketReply{},
 		&models.TicketAttachment{},
 		&models.TicketAssignmentHistory{},
 		&models.TicketRating{},
+		&models.TicketPriorityHistory{},
 		&models.Notification{},
 		&models.KBCategory{},
 		&models.KBArticle{},
@@ -104,6 +106,10 @@ func main() {
 	mux.HandleFunc("/admin/companies/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateCompanyForm)))
 	mux.HandleFunc("/admin/companies/edit/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.EditCompanyForm)))
 	mux.HandleFunc("/admin/companies/toggle/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleCompanyStatus)))
+	mux.HandleFunc("/admin/sla-policies", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ListSLAPolicies)))
+	mux.HandleFunc("/admin/sla-policies/create", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.CreateSLAPolicyForm)))
+	mux.HandleFunc("/admin/sla-policies/edit/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.EditSLAPolicyForm)))
+	mux.HandleFunc("/admin/sla-policies/toggle/", middleware.AuthRequired(middleware.SuperAdminRequired(adminHandler.ToggleSLAPolicyStatus)))
 	mux.HandleFunc("/admin/knowledge-base", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.ListKBAdmin)))
 	mux.HandleFunc("/admin/knowledge-base/categories/create", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryForm)))
 	mux.HandleFunc("/admin/knowledge-base/categories/create/post", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryPost)))
@@ -115,12 +121,16 @@ func main() {
 	mux.HandleFunc("/admin/knowledge-base/articles/delete/", middleware.AuthRequired(middleware.StaffOrSuperAdminRequired(adminHandler.DeleteKBArticle)))
 	mux.HandleFunc("/department/tiket/claim/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ClaimTicket)))
 	mux.HandleFunc("/department/tiket/release/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ReleaseTicket)))
+	mux.HandleFunc("/department/tiket/estimate/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.SetTicketEstimate)))
+	mux.HandleFunc("/department/tiket/priority/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.SetTicketPriority)))
 	mux.HandleFunc("/department/tiket/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.HandleTicketDetail)))
 	mux.HandleFunc("/department/tiket/close/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.CloseTicket)))
 	mux.HandleFunc("/department/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
 	mux.HandleFunc("/department/all-tickets", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets)))
 	mux.HandleFunc("/departement/tiket/claim/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ClaimTicket)))
 	mux.HandleFunc("/departement/tiket/release/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.ReleaseTicket)))
+	mux.HandleFunc("/departement/tiket/estimate/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.SetTicketEstimate)))
+	mux.HandleFunc("/departement/tiket/priority/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.SetTicketPriority)))
 	mux.HandleFunc("/departement/tiket/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.HandleTicketDetail)))
 	mux.HandleFunc("/departement/tiket/close/", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.CloseTicket)))
 	mux.HandleFunc("/departement/logout-release", middleware.AuthRequired(middleware.DepartmentRequired(departementHandler.LogoutAndRelease)))
@@ -143,6 +153,9 @@ func main() {
 	mux.HandleFunc("/api/kb/article/view", middleware.AuthRequired(middleware.PortalUserRequired(dashboardHandler.RecordKBArticleView)))
 
 	seedDefaultData()
+
+	// Start background SLA notification worker
+	go services.StartSLANotificationWorker(config.DB)
 
 	log.Println("[Security] OWASP mitigations active: SecurityHeaders, RateLimiter, CSRF, InputValidation")
 	log.Printf("[Security] Debug mode: %v | Session secure: %v", cfg.Debug, cfg.SessionSecure)
@@ -187,6 +200,11 @@ func seedDefaultData() {
 	defaultCompany, err := models.SeedDefaultCompanyAndMigrate(config.DB)
 	if err != nil {
 		log.Printf("[Migration] Warning: SeedDefaultCompanyAndMigrate encountered error: %v", err)
+	}
+
+	// Seed default SLA policy and backfill legacy tickets
+	if err := models.SeedDefaultSLAPolicies(config.DB); err != nil {
+		log.Printf("[Migration] Warning: SeedDefaultSLAPolicies encountered error: %v", err)
 	}
 
 	var portalGroup models.Group

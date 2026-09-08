@@ -50,11 +50,13 @@ func main() {
 		err = config.DB.AutoMigrate(
 			&models.Company{},
 			&models.Department{},
+			&models.SLAPolicy{},
 			&models.Ticket{},
 			&models.TicketReply{},
 			&models.TicketAttachment{},
 			&models.TicketAssignmentHistory{},
 			&models.TicketRating{},
+			&models.TicketPriorityHistory{},
 			&models.KBCategory{},
 			&models.KBArticle{},
 		)
@@ -66,6 +68,10 @@ func main() {
 	}
 	if err != nil {
 		log.Fatalf("AutoMigrate failed after 5 attempts: %v", err)
+	}
+
+	if err := models.SeedDefaultSLAPolicies(config.DB); err != nil {
+		log.Printf("[Migration] Warning: SeedDefaultSLAPolicies encountered error: %v", err)
 	}
 
 	mux := http.NewServeMux()

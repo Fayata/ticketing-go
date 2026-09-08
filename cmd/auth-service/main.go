@@ -42,6 +42,10 @@ func main() {
 			&models.Company{},
 			&models.User{},
 			&models.Group{},
+			&models.Department{},
+			&models.SLAPolicy{},
+			&models.Ticket{},
+			&models.TicketPriorityHistory{},
 		)
 		if err == nil {
 			break

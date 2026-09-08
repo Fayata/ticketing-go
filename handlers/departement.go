@@ -15,6 +15,8 @@ import (
 	"ticketing/models"
 	"ticketing/services"
 	"ticketing/utils"
+
+	"gorm.io/gorm"
 )
 
 type DepartmentHandler struct {
@@ -113,42 +115,86 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	RenderTemplate(w, "tickets/department_dashboard", data)
 }
 
-// ShowAllTickets menampilkan daftar semua tiket dengan filter status dan departemen (halaman staff).
+// ShowAllTickets menampilkan daftar semua tiket dengan filter status, tab, dan departemen (halaman staff).
+// Tab yang didukung: "" / "all" (semua), "sla_breached" (SLA terlewat), "mine" (tiket saya).
 func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)
 
 	var staffUser models.User
 	config.DB.Select("id", "department_id", "is_super_admin", "is_staff").First(&staffUser, user.ID)
 
+	activeTab := r.URL.Query().Get("tab") // "", "sla_breached", "mine"
 	statusFilter := r.URL.Query().Get("status")
 	deptFilter := r.URL.Query().Get("department")
-	query := config.DB.Preload("Department").Preload("CreatedBy").Preload("AssignedTo").Model(&models.Ticket{})
+	now := time.Now()
 
-	// Strict Staff Isolation: Staff can only see tickets from their assigned department
-	if !user.IsSuperAdmin {
-		if staffUser.DepartmentID != nil {
-			query = query.Where("department_id = ?", *staffUser.DepartmentID)
-		} else {
-			query = query.Where("1 = 0")
+	// Base query factory with strict department isolation
+	baseQuery := func() *gorm.DB {
+		q := config.DB.Preload("Department").Preload("CreatedBy").Preload("AssignedTo").Model(&models.Ticket{})
+		if !user.IsSuperAdmin {
+			if staffUser.DepartmentID != nil {
+				q = q.Where("tickets.department_id = ?", *staffUser.DepartmentID)
+			} else {
+				q = q.Where("1 = 0")
+			}
+		} else if deptFilter != "" && deptFilter != "ALL" {
+			q = q.Where("tickets.department_id = ?", deptFilter)
 		}
-	} else if deptFilter != "" && deptFilter != "ALL" {
-		query = query.Where("department_id = ?", deptFilter)
+		return q
 	}
 
-	if statusFilter != "" && statusFilter != "ALL" {
-		query = query.Where("status = ?", statusFilter)
+	// ── Tab: SLA Breached ──────────────────────────────────────────────────────
+	var slaBreachedTickets []*models.Ticket
+	var slaBreachedCount int64
+	{
+		q := baseQuery().
+			Where("first_response_at IS NULL").
+			Where("first_response_deadline IS NOT NULL").
+			Where("first_response_deadline < ?", now).
+			Where("status != ?", models.StatusClosed)
+		q.Count(&slaBreachedCount)
+		if activeTab == "sla_breached" {
+			q.Order("first_response_deadline ASC").Find(&slaBreachedTickets)
+		}
 	}
 
+	// ── Tab: Mine (tiket yang sedang saya tangani) ────────────────────────────
+	var mineTickets []*models.Ticket
+	var mineCount int64
+	{
+		q := baseQuery().Where("assigned_to_id = ?", user.ID).Where("status != ?", models.StatusClosed)
+		q.Count(&mineCount)
+		if activeTab == "mine" {
+			q.Order("created_at DESC").Find(&mineTickets)
+		}
+	}
+
+	// ── Tab: All (default) ────────────────────────────────────────────────────
 	var tickets []*models.Ticket
-	query.Order("created_at DESC").Find(&tickets)
+	if activeTab == "" || activeTab == "all" {
+		q := baseQuery()
+		if statusFilter != "" && statusFilter != "ALL" {
+			q = q.Where("status = ?", statusFilter)
+		}
+		q.Order("created_at DESC").Find(&tickets)
+	}
 
-	ticketIDs := make([]uint, 0, len(tickets))
-	for _, t := range tickets {
+	// Pilih slice yang ditampilkan berdasarkan tab aktif
+	displayTickets := tickets
+	switch activeTab {
+	case "sla_breached":
+		displayTickets = slaBreachedTickets
+	case "mine":
+		displayTickets = mineTickets
+	}
+
+	// Ratings map untuk tiket yang sudah closed
+	ticketIDs := make([]uint, 0, len(displayTickets))
+	for _, t := range displayTickets {
 		if t.Status == models.StatusClosed {
 			ticketIDs = append(ticketIDs, t.ID)
 		}
 	}
-	
 	var ratings []models.TicketRating
 	ratingsMap := make(map[uint]models.TicketRating)
 	if len(ticketIDs) > 0 {
@@ -166,17 +212,20 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 	}
 
 	data := h.addDepartmentData(r, map[string]interface{}{
-		"title":         "Semua Tiket - Department",
-		"page_title":    "Semua Tiket",
-		"page_subtitle": "Daftar seluruh tiket yang masuk ke sistem",
-		"nav_active":    "dept_all_tickets",
-		"template_name": "tickets/department_all_tickets",
-		"user":          user,
-		"tickets":       tickets,
-		"departments":   departments,
-		"filter_status": statusFilter,
-		"filter_dept":   deptFilter,
-		"ratings_map":   ratingsMap,
+		"title":              "Semua Tiket - Department",
+		"page_title":         "Semua Tiket",
+		"page_subtitle":      "Daftar seluruh tiket yang masuk ke sistem",
+		"nav_active":         "dept_all_tickets",
+		"template_name":      "tickets/department_all_tickets",
+		"user":               user,
+		"tickets":            displayTickets,
+		"departments":        departments,
+		"filter_status":      statusFilter,
+		"filter_dept":        deptFilter,
+		"ratings_map":        ratingsMap,
+		"active_tab":         activeTab,
+		"sla_breached_count": slaBreachedCount,
+		"mine_count":         mineCount,
 	})
 
 	RenderTemplate(w, "tickets/department_all_tickets", data)
@@ -203,6 +252,9 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 
 	var ticket models.Ticket
 	if err := config.DB.Preload("CreatedBy").Preload("Department").Preload("Replies.User").Preload("Replies.Attachments").Preload("Attachments").Preload("AssignedTo").
+		Preload("PriorityHistories", func(db *gorm.DB) *gorm.DB { return db.Order("created_at DESC") }).
+		Preload("PriorityHistories.ChangedBy").
+		Preload("Company").
 		First(&ticket, ticketID).Error; err != nil {
 		log.Printf("[Staff][TicketDetail] Tiket ID %d tidak ditemukan: %v", ticketID, err)
 		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tiket+tidak+ditemukan", http.StatusSeeOther)
@@ -348,7 +400,15 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	if newStatus != "" {
 		ticket.Status = models.TicketStatus(newStatus)
 	}
-	ticket.UpdatedAt = time.Now()
+
+	// Feature 13: Reply First Response Safety Net
+	now := time.Now()
+	if ticket.FirstResponseAt == nil {
+		ticket.FirstResponseAt = &now
+		ticket.FirstResponseMet = CalculateFirstResponseMet(now, ticket.FirstResponseDeadline)
+	}
+
+	ticket.UpdatedAt = now
 	config.DB.Save(&ticket)
 	
 	config.DB.Preload("CreatedBy").Preload("AssignedTo").First(&ticket, ticket.ID)
@@ -426,7 +486,31 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 		wasUnassigned := ticket.AssignedToID == nil
 		ticket.AssignedToID = &user.ID
 		ticket.Status = models.StatusInProgress
-		ticket.UpdatedAt = time.Now()
+
+		// Feature 12: Claim First Response Tracking
+		now := time.Now()
+		if ticket.FirstResponseAt == nil {
+			ticket.FirstResponseAt = &now
+			ticket.FirstResponseMet = CalculateFirstResponseMet(now, ticket.FirstResponseDeadline)
+		}
+
+		// Optional resolution estimation parameter on claim
+		_ = r.ParseForm()
+		preset := strings.TrimSpace(r.FormValue("estimate_preset"))
+		if preset == "" {
+			preset = strings.TrimSpace(r.FormValue("preset"))
+		}
+		customDate := strings.TrimSpace(r.FormValue("estimated_resolution_at"))
+		if customDate == "" {
+			customDate = strings.TrimSpace(r.FormValue("custom_date"))
+		}
+		if preset != "" || customDate != "" {
+			if estTime, err := ParseEstimatedResolution(preset, customDate, now); err == nil && estTime != nil {
+				ticket.EstimatedResolutionAt = estTime
+			}
+		}
+
+		ticket.UpdatedAt = now
 		config.DB.Save(&ticket)
 
 		history := models.TicketAssignmentHistory{
@@ -582,4 +666,292 @@ func (h *DepartmentHandler) LogoutAndRelease(w http.ResponseWriter, r *http.Requ
 			Update("released_at", &now)
 	}
 	http.Redirect(w, r, config.Path("/logout"), http.StatusSeeOther)
+}
+
+// SetTicketEstimate handles quick resolution estimation updates from staff.
+func (h *DepartmentHandler) SetTicketEstimate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	isAJAX := strings.Contains(r.Header.Get("Accept"), "application/json") || r.Header.Get("X-Requested-With") == "XMLHttpRequest"
+	user := GetUserFromContext(r).(*models.User)
+	ticketID := parseTicketIDFromPath(r.URL.Path)
+	if ticketID <= 0 {
+		if isAJAX {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "ID tiket tidak valid"})
+			return
+		}
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=ID+tiket+tidak+valid", http.StatusSeeOther)
+		return
+	}
+
+	var ticket models.Ticket
+	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err != nil {
+		if isAJAX {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Tiket tidak ditemukan"})
+			return
+		}
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tiket+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+
+	var staffUser models.User
+	config.DB.Select("id", "department_id", "is_super_admin").First(&staffUser, user.ID)
+	if !user.IsSuperAdmin {
+		if staffUser.DepartmentID == nil || ticket.DepartmentID == nil || *staffUser.DepartmentID != *ticket.DepartmentID {
+			if isAJAX {
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Akses ditolak. Tiket berada di luar departemen Anda"})
+				return
+			}
+			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Akses+ditolak.+Tiket+berada+di+luar+departemen+Anda", http.StatusSeeOther)
+			return
+		}
+	}
+
+	if ticket.Status == models.StatusClosed {
+		if isAJAX {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Tiket sudah ditutup"})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+sudah+ditutup", http.StatusSeeOther)
+		return
+	}
+
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		_ = r.ParseForm()
+	}
+
+	preset := strings.TrimSpace(r.FormValue("preset"))
+	if preset == "" {
+		preset = strings.TrimSpace(r.FormValue("estimate_preset"))
+	}
+	customDate := strings.TrimSpace(r.FormValue("custom_date"))
+	if customDate == "" {
+		customDate = strings.TrimSpace(r.FormValue("estimated_resolution_at"))
+	}
+
+	estTime, err := ParseEstimatedResolution(preset, customDate, time.Now())
+	if err != nil {
+		if isAJAX {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+
+	ticket.EstimatedResolutionAt = estTime
+	ticket.UpdatedAt = time.Now()
+	if err := config.DB.Save(&ticket).Error; err != nil {
+		if isAJAX {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Gagal menyimpan estimasi"})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Gagal+menyimpan+estimasi", http.StatusSeeOther)
+		return
+	}
+
+	if isAJAX {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":                 true,
+			"message":                 "Estimasi penyelesaian berhasil disimpan",
+			"estimated_resolution_at": estTime.Format(time.RFC3339),
+		})
+		return
+	}
+
+	http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?success=Estimasi+penyelesaian+berhasil+disimpan", http.StatusSeeOther)
+}
+
+// SetTicketPriority handles staff ticket priority adjustment with mandatory rationale, audit history, timeline reply, and notification.
+func (h *DepartmentHandler) SetTicketPriority(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	isAJAX := strings.Contains(r.Header.Get("Accept"), "application/json") || r.Header.Get("X-Requested-With") == "XMLHttpRequest"
+	user := GetUserFromContext(r).(*models.User)
+	ticketID := parseTicketIDFromPath(r.URL.Path)
+	if ticketID <= 0 {
+		if isAJAX {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "ID tiket tidak valid"})
+			return
+		}
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=ID+tiket+tidak+valid", http.StatusSeeOther)
+		return
+	}
+
+	var ticket models.Ticket
+	if err := config.DB.Preload("CreatedBy").First(&ticket, ticketID).Error; err != nil {
+		if isAJAX {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Tiket tidak ditemukan"})
+			return
+		}
+		http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Tiket+tidak+ditemukan", http.StatusSeeOther)
+		return
+	}
+
+	var staffUser models.User
+	config.DB.Select("id", "department_id", "is_super_admin").First(&staffUser, user.ID)
+	if !user.IsSuperAdmin {
+		if staffUser.DepartmentID == nil || ticket.DepartmentID == nil || *staffUser.DepartmentID != *ticket.DepartmentID {
+			if isAJAX {
+				w.WriteHeader(http.StatusForbidden)
+				json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Akses ditolak. Tiket berada di luar departemen Anda"})
+				return
+			}
+			http.Redirect(w, r, config.Path("/departement/dashboard")+"?error=Akses+ditolak.+Tiket+berada+di+luar+departemen+Anda", http.StatusSeeOther)
+			return
+		}
+	}
+
+	if ticket.Status == models.StatusClosed {
+		if isAJAX {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Tiket sudah ditutup dan tidak dapat diubah prioritasnya"})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Tiket+sudah+ditutup+dan+tidak+dapat+diubah+prioritasnya", http.StatusSeeOther)
+		return
+	}
+
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		_ = r.ParseForm()
+	}
+
+	newPriorityStr := strings.ToUpper(strings.TrimSpace(r.FormValue("priority")))
+	newPriority := models.TicketPriority(newPriorityStr)
+	reason := strings.TrimSpace(r.FormValue("reason"))
+
+	if err := ValidatePriorityAdjustment(ticket.Priority, newPriority, reason); err != nil {
+		if isAJAX {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": err.Error()})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
+		return
+	}
+
+	oldPriority := ticket.Priority
+
+	tx := config.DB.Begin()
+	defer func() {
+		if rec := recover(); rec != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. Audit History
+	history := models.TicketPriorityHistory{
+		TicketID:    ticket.ID,
+		OldPriority: oldPriority,
+		NewPriority: newPriority,
+		ChangedByID: user.ID,
+		Reason:      reason,
+		CreatedAt:   time.Now(),
+	}
+	if err := tx.Create(&history).Error; err != nil {
+		tx.Rollback()
+		if isAJAX {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Gagal mencatat riwayat prioritas"})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Gagal+mencatat+riwayat+prioritas", http.StatusSeeOther)
+		return
+	}
+
+	// 2. Timeline System Reply
+	systemReplyMsg := fmt.Sprintf("[Sistem] Prioritas tiket diubah dari %s ke %s oleh %s. Alasan: %s", oldPriority, newPriority, user.GetFullName(), reason)
+	systemReply := models.TicketReply{
+		TicketID:  ticket.ID,
+		UserID:    user.ID,
+		Message:   systemReplyMsg,
+		CreatedAt: time.Now(),
+	}
+	if err := tx.Create(&systemReply).Error; err != nil {
+		tx.Rollback()
+		if isAJAX {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Gagal membuat balasan sistem"})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Gagal+membuat+balasan+sistem", http.StatusSeeOther)
+		return
+	}
+
+	// 3. Update Priority & Recalculate Deadlines
+	ticket.Priority = newPriority
+	ticket.UpdatedAt = time.Now()
+
+	policy, respDur, resDur := models.ResolveSLAPolicy(tx, ticket.CompanyID, ticket.DepartmentID, newPriority)
+	if policy != nil && policy.ID > 0 {
+		ticket.SLAPolicyID = &policy.ID
+	}
+
+	newRespDeadline, newResDeadline := RecalculateSLADeadlines(ticket.CreatedAt, ticket.FirstResponseAt, respDur, resDur)
+	if newRespDeadline != nil {
+		ticket.FirstResponseDeadline = newRespDeadline
+	}
+	ticket.ResolutionDeadline = newResDeadline
+
+	if err := tx.Save(&ticket).Error; err != nil {
+		tx.Rollback()
+		if isAJAX {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Gagal memperbarui tiket"})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Gagal+memperbarui+tiket", http.StatusSeeOther)
+		return
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		if isAJAX {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": false, "error": "Gagal menyimpan perubahan"})
+			return
+		}
+		http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?error=Gagal+menyimpan+perubahan", http.StatusSeeOther)
+		return
+	}
+
+	// 4. Async Notification to User
+	go func() {
+		notifMsg := fmt.Sprintf("Prioritas tiket %s diubah menjadi %s oleh tim support. Alasan: %s", ticket.GetTicketNumber(), newPriority, reason)
+		models.CreateNotification(
+			config.DB,
+			ticket.CreatedByID,
+			models.NotificationTypeSystem,
+			"Perubahan Prioritas Tiket",
+			notifMsg,
+			&ticket.ID,
+		)
+	}()
+
+	if isAJAX {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":      true,
+			"message":      "Prioritas tiket berhasil diubah",
+			"old_priority": oldPriority,
+			"new_priority": newPriority,
+		})
+		return
+	}
+
+	http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID))+"?success=Prioritas+tiket+berhasil+diubah", http.StatusSeeOther)
 }
