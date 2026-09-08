@@ -71,11 +71,16 @@ func main() {
 	// Pastikan kolom email bisa NULL (untuk akun yang dibuat admin tanpa email)
 	config.DB.Exec("ALTER TABLE users ALTER COLUMN email DROP NOT NULL")
 
+	// Real-time WebSocket Hub
+	wsHub := services.NewWSHub()
+	go wsHub.Run()
+	wsHandler := handlers.NewWSHandler(wsHub)
+
 	dashboardHandler := handlers.NewDashboardHandler(cfg, dashboardService, kbService)
-	ticketHandler := handlers.NewTicketHandler(cfg, emailService, ticketService)
+	ticketHandler := handlers.NewTicketHandler(cfg, emailService, ticketService, wsHub)
 	settingsHandler := handlers.NewSettingsHandler(cfg, settingsService)
 	staffDashboardService := services.NewStaffDashboardService()
-	departementHandler := handlers.NewDepartmentHandler(cfg, emailService, staffDashboardService)
+	departementHandler := handlers.NewDepartmentHandler(cfg, emailService, staffDashboardService, wsHub)
 	notificationHandler := handlers.NewNotificationHandler(cfg, notificationService)
 	setEmailHandler := handlers.NewSetEmailHandler(cfg, emailService, jwtService)
 
@@ -99,6 +104,9 @@ func main() {
 
 	// Halaman set email — wajib setelah login jika akun belum punya email
 	mux.HandleFunc("/set-email", middleware.AuthRequired(setEmailHandler.HandleSetEmail))
+
+	// Real-time WebSocket endpoint for ticket chat (authenticated users)
+	mux.HandleFunc("/ws/ticket/", middleware.AuthRequired(wsHandler.HandleTicketWS))
 
 	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.EmailRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard))))
 	mux.HandleFunc("/admin/dashboard", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ShowAdminDashboard))))

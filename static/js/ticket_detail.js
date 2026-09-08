@@ -490,4 +490,222 @@
       }
     });
   }
+
+  // ==========================================================================
+  // REAL-TIME WEBSOCKET CHAT SYNC
+  // ==========================================================================
+  if (chatThread && chatThread.dataset.ticketId) {
+    const ticketId = chatThread.dataset.ticketId;
+    const currentUserId = parseInt(chatThread.dataset.currentUserId || '0', 10);
+    const isStaffUser = chatThread.dataset.isStaff === 'true';
+
+    let ws = null;
+    let reconnectTimer = null;
+
+    function buildMessageGroup(reply) {
+      const group = document.createElement('div');
+      group.className = 'msg-group';
+      group.setAttribute('data-reply-id', reply.id);
+
+      const isMine = isStaffUser
+        ? (reply.is_staff && reply.user_id === currentUserId)
+        : (reply.user_id === currentUserId);
+
+      if (isMine) {
+        group.classList.add('mine');
+      }
+
+      // Avatar
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar' + (reply.is_staff ? ' agent' : '');
+      const initials = (reply.username || 'US').slice(0, 2).toUpperCase();
+      avatar.textContent = initials;
+      group.appendChild(avatar);
+
+      // Stack
+      const stack = document.createElement('div');
+      stack.className = 'msg-stack';
+
+      // Name
+      const nameEl = document.createElement('div');
+      nameEl.className = 'msg-name';
+      if (isMine) {
+        nameEl.textContent = 'Anda';
+      } else {
+        const displayName = reply.user_display_name || reply.username || 'User';
+        nameEl.textContent = displayName + (reply.is_staff ? ' · Staff' : '');
+      }
+      stack.appendChild(nameEl);
+
+      // Bubble wrap
+      const bubbleWrap = document.createElement('div');
+      bubbleWrap.className = 'bubble-wrap';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+
+      // Safe multi-line text
+      const lines = (reply.message || '').split('\n');
+      lines.forEach((line, idx) => {
+        if (idx > 0) bubble.appendChild(document.createElement('br'));
+        bubble.appendChild(document.createTextNode(line));
+      });
+
+      // Attachments
+      if (reply.attachments && reply.attachments.length > 0) {
+        const gallery = document.createElement('div');
+        gallery.className = 'attachment-gallery';
+
+        reply.attachments.forEach(att => {
+          if (att.is_pdf) {
+            const card = document.createElement('div');
+            card.className = 'attachment-doc-card attachment-pdf-card';
+
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'attachment-doc-icon pdf-icon';
+            iconDiv.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><span class="attachment-doc-badge">PDF</span>';
+            card.appendChild(iconDiv);
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'attachment-doc-info';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'attachment-doc-name';
+            nameSpan.title = att.file_name;
+            nameSpan.textContent = att.file_name;
+            infoDiv.appendChild(nameSpan);
+
+            const sizeSpan = document.createElement('span');
+            sizeSpan.className = 'attachment-doc-size';
+            sizeSpan.textContent = att.formatted_size;
+            infoDiv.appendChild(sizeSpan);
+            card.appendChild(infoDiv);
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'attachment-doc-actions';
+            const openLink = document.createElement('a');
+            openLink.href = att.file_path;
+            openLink.className = 'attachment-doc-btn';
+            openLink.target = '_blank';
+            openLink.rel = 'noopener noreferrer';
+            openLink.title = 'Buka PDF';
+            openLink.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg><span>Buka PDF</span>';
+            actionsDiv.appendChild(openLink);
+            card.appendChild(actionsDiv);
+
+            gallery.appendChild(card);
+          } else {
+            const thumbCard = document.createElement('div');
+            thumbCard.className = 'attachment-thumb-card';
+
+            const aLink = document.createElement('a');
+            aLink.href = att.file_path;
+            aLink.className = 'attachment-link';
+            aLink.target = '_blank';
+            aLink.dataset.preview = att.file_path;
+            aLink.dataset.filename = att.file_name;
+
+            const img = document.createElement('img');
+            img.src = att.file_path;
+            img.alt = att.file_name;
+            img.className = 'attachment-thumb-img';
+            img.loading = 'lazy';
+            aLink.appendChild(img);
+            thumbCard.appendChild(aLink);
+
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'attachment-thumb-meta';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'attachment-thumb-name';
+            nameSpan.title = att.file_name;
+            nameSpan.textContent = att.file_name;
+            metaDiv.appendChild(nameSpan);
+
+            const sizeSpan = document.createElement('span');
+            sizeSpan.className = 'attachment-thumb-size';
+            sizeSpan.textContent = att.formatted_size;
+            metaDiv.appendChild(sizeSpan);
+            thumbCard.appendChild(metaDiv);
+
+            gallery.appendChild(thumbCard);
+          }
+        });
+
+        bubble.appendChild(gallery);
+      }
+
+      bubbleWrap.appendChild(bubble);
+
+      // Time
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'msg-time';
+      timeSpan.textContent = reply.created_at || '';
+      bubbleWrap.appendChild(timeSpan);
+
+      stack.appendChild(bubbleWrap);
+      group.appendChild(stack);
+
+      return group;
+    }
+
+    function initWebSocket() {
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const basePath = (window.AppBasePath || '').replace(/\/$/, '');
+      const wsUrl = protocol + '//' + window.location.host + basePath + '/ws/ticket/' + ticketId;
+
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = function() {
+          console.log('[TicketWS] Terhubung ke ruang obrolan tiket #' + ticketId);
+        };
+
+        ws.onmessage = function(event) {
+          try {
+            const data = JSON.parse(event.data);
+            if (data && data.type === 'new_reply' && data.reply) {
+              const reply = data.reply;
+              // Prevent duplicate rendering if already in DOM
+              if (chatThread.querySelector('[data-reply-id="' + reply.id + '"]')) {
+                return;
+              }
+
+              const msgElement = buildMessageGroup(reply);
+              chatThread.appendChild(msgElement);
+              chatThread.scrollTop = chatThread.scrollHeight;
+            }
+          } catch (e) {
+            console.error('[TicketWS] Gagal memproses pesan:', e);
+          }
+        };
+
+        ws.onclose = function(e) {
+          console.log('[TicketWS] Koneksi terputus. Mencoba menghubungkan kembali dalam 3 detik...', e.code);
+          reconnectTimer = setTimeout(initWebSocket, 3000);
+        };
+
+        ws.onerror = function(err) {
+          console.error('[TicketWS] Kesalahan WebSocket:', err);
+          ws.close();
+        };
+      } catch (err) {
+        console.error('[TicketWS] Gagal inisialisasi WebSocket:', err);
+        reconnectTimer = setTimeout(initWebSocket, 5000);
+      }
+    }
+
+    initWebSocket();
+
+    window.addEventListener('beforeunload', function() {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onclose = null; // Don't trigger reconnect
+        ws.close();
+      }
+    });
+  }
 })();

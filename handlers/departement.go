@@ -20,17 +20,27 @@ import (
 )
 
 type DepartmentHandler struct {
-	cfg                 *config.Config
-	emailService        *utils.EmailService
+	cfg                   *config.Config
+	emailService          *utils.EmailService
 	staffDashboardService *services.StaffDashboardService
+	wsHub                 *services.WSHub
 }
 
-func NewDepartmentHandler(cfg *config.Config, emailService *utils.EmailService, staffDashboardService *services.StaffDashboardService) *DepartmentHandler {
-	return &DepartmentHandler{
-		cfg:                 cfg,
-		emailService:        emailService,
-		staffDashboardService: staffDashboardService,
+func NewDepartmentHandler(cfg *config.Config, emailService *utils.EmailService, staffDashboardService *services.StaffDashboardService, wsHub ...*services.WSHub) *DepartmentHandler {
+	var hub *services.WSHub
+	if len(wsHub) > 0 {
+		hub = wsHub[0]
 	}
+	return &DepartmentHandler{
+		cfg:                   cfg,
+		emailService:          emailService,
+		staffDashboardService: staffDashboardService,
+		wsHub:                 hub,
+	}
+}
+
+func (h *DepartmentHandler) SetWSHub(hub *services.WSHub) {
+	h.wsHub = hub
 }
 
 // addDepartmentData menambah data dasar (user, nav) untuk semua halaman staff/departemen.
@@ -395,6 +405,33 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	}
 	
 	config.DB.Preload("User").Preload("Attachments").First(&reply, reply.ID)
+
+	// Broadcast via WebSocket to connected clients (e.g. user viewing ticket)
+	if h.wsHub != nil {
+		var wsAtts []services.WSAttachmentPayload
+		for _, a := range reply.Attachments {
+			wsAtts = append(wsAtts, services.WSAttachmentPayload{
+				ID:            a.ID,
+				FileName:      a.FileName,
+				FilePath:      a.FilePath,
+				IsImage:       a.IsImage(),
+				IsPDF:         a.IsPDF(),
+				FormattedSize: a.GetFormattedSize(),
+			})
+		}
+		h.wsHub.BroadcastReply(ticket.ID, &services.WSReplyPayload{
+			ID:              reply.ID,
+			TicketID:        ticket.ID,
+			UserID:          user.ID,
+			Username:        user.Username,
+			UserDisplayName: user.GetFullName(),
+			IsStaff:         true,
+			Message:         reply.Message,
+			CreatedAt:       reply.CreatedAt.Format("15:04"),
+			CreatedAtISO:    reply.CreatedAt.Format(time.RFC3339),
+			Attachments:     wsAtts,
+		})
+	}
 
 	oldStatus := ticket.Status
 	if newStatus != "" {

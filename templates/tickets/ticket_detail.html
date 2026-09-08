@@ -44,7 +44,11 @@
         </div>
       </div>
 
-      <div class="thread" id="chatThread">
+      <div class="thread" id="chatThread"
+           data-ticket-id="{{$ticket.ID}}"
+           data-current-user-id="{{$currentUser.ID}}"
+           data-current-username="{{$currentUser.Username}}"
+           data-is-staff="{{if $currentUser.IsStaff}}true{{else}}false{{end}}">
         <!-- Original Description as first message -->
         <div class="msg-group mine">
           <div class="avatar">US</div>
@@ -104,7 +108,7 @@
         </div>
 
         {{range .replies}}
-        <div class="msg-group {{if eq .UserID $currentUser.ID}}mine{{end}}">
+        <div class="msg-group {{if eq .UserID $currentUser.ID}}mine{{end}}" data-reply-id="{{.ID}}">
           <div class="avatar {{if .User.IsStaff}}agent{{end}}">
             {{slice .User.Username 0 2 | upper}}
           </div>

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"ticketing/config"
 	"ticketing/models"
@@ -18,10 +19,19 @@ type TicketHandler struct {
 	cfg           *config.Config
 	emailService  *utils.EmailService
 	ticketService *services.TicketService
+	wsHub         *services.WSHub
 }
 
-func NewTicketHandler(cfg *config.Config, emailService *utils.EmailService, ticketService *services.TicketService) *TicketHandler {
-	return &TicketHandler{cfg: cfg, emailService: emailService, ticketService: ticketService}
+func NewTicketHandler(cfg *config.Config, emailService *utils.EmailService, ticketService *services.TicketService, wsHub ...*services.WSHub) *TicketHandler {
+	var hub *services.WSHub
+	if len(wsHub) > 0 {
+		hub = wsHub[0]
+	}
+	return &TicketHandler{cfg: cfg, emailService: emailService, ticketService: ticketService, wsHub: hub}
+}
+
+func (h *TicketHandler) SetWSHub(hub *services.WSHub) {
+	h.wsHub = hub
 }
 
 // HandleCreateTicket mengarahkan GET ke form buat tiket, POST ke proses simpan.
@@ -293,6 +303,34 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Reply added to ticket #%d by user %s", ticketID, user.Username)
+
+	// Broadcast via WebSocket to connected clients
+	if h.wsHub != nil {
+		var wsAtts []services.WSAttachmentPayload
+		for _, a := range reply.Attachments {
+			wsAtts = append(wsAtts, services.WSAttachmentPayload{
+				ID:            a.ID,
+				FileName:      a.FileName,
+				FilePath:      a.FilePath,
+				IsImage:       a.IsImage(),
+				IsPDF:         a.IsPDF(),
+				FormattedSize: a.GetFormattedSize(),
+			})
+		}
+		h.wsHub.BroadcastReply(uint(ticketID), &services.WSReplyPayload{
+			ID:              reply.ID,
+			TicketID:        uint(ticketID),
+			UserID:          user.ID,
+			Username:        user.Username,
+			UserDisplayName: user.GetFullName(),
+			IsStaff:         user.IsStaff,
+			Message:         reply.Message,
+			CreatedAt:       reply.CreatedAt.Format("15:04"),
+			CreatedAtISO:    reply.CreatedAt.Format(time.RFC3339),
+			Attachments:     wsAtts,
+		})
+	}
+
 	if reply.UserID != ticket.CreatedByID {
 		targetEmail := ticket.ReplyToEmail
 		if targetEmail == "" {
