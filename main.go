@@ -166,6 +166,7 @@ func main() {
 	mux.HandleFunc("/api/notifications/read-all", middleware.AuthRequired(notificationHandler.MarkAllAsRead))
 	mux.HandleFunc("/api/notifications/count", middleware.AuthRequired(notificationHandler.GetUnreadCount))
 	mux.HandleFunc("/api/kb/article/view", middleware.AuthRequired(middleware.EmailRequired(middleware.PortalUserRequired(dashboardHandler.RecordKBArticleView))))
+	mux.HandleFunc("/api/ticket/", middleware.AuthRequired(ticketHandler.GetTicketMessagesAPI))
 
 	seedDefaultData()
 

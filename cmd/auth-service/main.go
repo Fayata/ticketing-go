@@ -15,6 +15,7 @@ import (
 
 	"ticketing/config"
 	"ticketing/controllers"
+	"ticketing/handlers"
 	"ticketing/middleware"
 	"ticketing/models"
 	"ticketing/services"
@@ -65,6 +66,7 @@ func main() {
 	emailService := utils.NewEmailService(cfg)
 	authService := services.NewAuthService(cfg, emailService, jwtService)
 	authController := controllers.NewAuthController(authService)
+	setEmailHandler := handlers.NewSetEmailHandler(cfg, emailService, jwtService)
 
 	// Rate limiters
 	loginLimiter := middleware.NewRateLimiter(5, 1*time.Minute)
@@ -80,6 +82,7 @@ func main() {
 	mux.HandleFunc("/logout", authController.Logout)
 	mux.HandleFunc("/forgot-password", forgotLimiter.Limit(middleware.GuestOnly(authController.ForgotPassword)))
 	mux.HandleFunc("/reset-password", middleware.GuestOnly(authController.ResetPassword))
+	mux.HandleFunc("/set-email", middleware.AuthRequired(setEmailHandler.HandleSetEmail))
 
 	// Health check
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -420,4 +421,104 @@ func (h *TicketHandler) HandleRating(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// GetTicketMessagesAPI returns new messages as JSON for auto-sync / polling fallback.
+func (h *TicketHandler) GetTicketMessagesAPI(w http.ResponseWriter, r *http.Request) {
+	user := GetUserFromContext(r).(*models.User)
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/api/ticket/")
+	path = strings.TrimSuffix(path, "/messages")
+	ticketID, err := strconv.Atoi(path)
+	if err != nil || ticketID <= 0 {
+		ticketID, err = strconv.Atoi(r.URL.Query().Get("id"))
+		if err != nil || ticketID <= 0 {
+			http.Error(w, "Invalid ticket ID", http.StatusBadRequest)
+			return
+		}
+	}
+
+	afterID, _ := strconv.Atoi(r.URL.Query().Get("after"))
+
+	var ticket models.Ticket
+	if err := config.DB.Select("id", "created_by_id", "department_id").First(&ticket, ticketID).Error; err != nil {
+		http.Error(w, "Ticket not found", http.StatusNotFound)
+		return
+	}
+
+	// Authorization: SuperAdmin, Staff, or ticket creator
+	if !user.IsSuperAdmin && !user.IsStaff && ticket.CreatedByID != user.ID {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+
+	query := config.DB.Preload("User").Preload("Attachments").Where("ticket_id = ?", ticketID)
+	if afterID > 0 {
+		query = query.Where("id > ?", afterID)
+	}
+
+	var replies []models.TicketReply
+	if err := query.Order("id ASC").Find(&replies).Error; err != nil {
+		http.Error(w, "Failed to load messages", http.StatusInternalServerError)
+		return
+	}
+
+	type attResp struct {
+		ID            uint   `json:"id"`
+		FileName      string `json:"file_name"`
+		FilePath      string `json:"file_path"`
+		IsImage       bool   `json:"is_image"`
+		IsPDF         bool   `json:"is_pdf"`
+		FormattedSize string `json:"formatted_size"`
+	}
+
+	type replyResp struct {
+		ID              uint      `json:"id"`
+		TicketID        uint      `json:"ticket_id"`
+		UserID          uint      `json:"user_id"`
+		Username        string    `json:"username"`
+		UserDisplayName string    `json:"user_display_name"`
+		IsStaff         bool      `json:"is_staff"`
+		Message         string    `json:"message"`
+		CreatedAt       string    `json:"created_at"`
+		CreatedAtISO    string    `json:"created_at_iso"`
+		Attachments     []attResp `json:"attachments"`
+	}
+
+	var respList []replyResp
+	for _, rp := range replies {
+		var atts []attResp
+		for _, at := range rp.Attachments {
+			atts = append(atts, attResp{
+				ID:            at.ID,
+				FileName:      at.FileName,
+				FilePath:      at.FilePath,
+				IsImage:       at.IsImage(),
+				IsPDF:         at.IsPDF(),
+				FormattedSize: at.GetFormattedSize(),
+			})
+		}
+		respList = append(respList, replyResp{
+			ID:              rp.ID,
+			TicketID:        rp.TicketID,
+			UserID:          rp.UserID,
+			Username:        rp.User.Username,
+			UserDisplayName: rp.User.GetFullName(),
+			IsStaff:         rp.User.IsStaff,
+			Message:         rp.Message,
+			CreatedAt:       rp.CreatedAt.Format("15:04"),
+			CreatedAtISO:    rp.CreatedAt.Format(time.RFC3339),
+			Attachments:     atts,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ticket_id": ticketID,
+		"replies":   respList,
+	})
 }

@@ -647,6 +647,61 @@
       return group;
     }
 
+    // Determine correct base path (/Ticketing or empty)
+    let basePath = '';
+    const baseEl = document.querySelector('base');
+    if (baseEl && baseEl.getAttribute('href')) {
+      basePath = baseEl.getAttribute('href').replace(/\/$/, '');
+    } else if (window.location.pathname.indexOf('/Ticketing') !== -1) {
+      basePath = '/Ticketing';
+    }
+
+    // Track highest reply ID to avoid duplicate rendering
+    let lastReplyId = 0;
+    function scanLastReplyId() {
+      chatThread.querySelectorAll('[data-reply-id]').forEach(el => {
+        const id = parseInt(el.getAttribute('data-reply-id') || '0', 10);
+        if (id > lastReplyId) lastReplyId = id;
+      });
+    }
+    scanLastReplyId();
+
+    // 1. Auto-sync polling every 2.5 seconds (Fail-safe for microservices & reverse proxies)
+    let isPolling = false;
+    function pollNewMessages() {
+      if (isPolling) return;
+      isPolling = true;
+      const apiUrl = basePath + '/api/ticket/' + ticketId + '/messages?after=' + lastReplyId;
+      fetch(apiUrl, { credentials: 'same-origin' })
+        .then(res => {
+          if (!res.ok) throw new Error('Status ' + res.status);
+          return res.json();
+        })
+        .then(data => {
+          isPolling = false;
+          if (data && data.replies && data.replies.length > 0) {
+            let hasNew = false;
+            data.replies.forEach(reply => {
+              if (reply.id > lastReplyId && !chatThread.querySelector('[data-reply-id="' + reply.id + '"]')) {
+                const msgElement = buildMessageGroup(reply);
+                chatThread.appendChild(msgElement);
+                if (reply.id > lastReplyId) lastReplyId = reply.id;
+                hasNew = true;
+              }
+            });
+            if (hasNew) {
+              chatThread.scrollTop = chatThread.scrollHeight;
+            }
+          }
+        })
+        .catch(() => {
+          isPolling = false;
+        });
+    }
+
+    const pollInterval = setInterval(pollNewMessages, 2500);
+
+    // 2. Real-Time WebSocket Connection (Instant Push)
     function initWebSocket() {
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
@@ -654,7 +709,6 @@
       }
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const basePath = (window.AppBasePath || '').replace(/\/$/, '');
       const wsUrl = protocol + '//' + window.location.host + basePath + '/ws/ticket/' + ticketId;
 
       try {
@@ -669,14 +723,12 @@
             const data = JSON.parse(event.data);
             if (data && data.type === 'new_reply' && data.reply) {
               const reply = data.reply;
-              // Prevent duplicate rendering if already in DOM
-              if (chatThread.querySelector('[data-reply-id="' + reply.id + '"]')) {
-                return;
+              if (reply.id > lastReplyId && !chatThread.querySelector('[data-reply-id="' + reply.id + '"]')) {
+                const msgElement = buildMessageGroup(reply);
+                chatThread.appendChild(msgElement);
+                if (reply.id > lastReplyId) lastReplyId = reply.id;
+                chatThread.scrollTop = chatThread.scrollHeight;
               }
-
-              const msgElement = buildMessageGroup(reply);
-              chatThread.appendChild(msgElement);
-              chatThread.scrollTop = chatThread.scrollHeight;
             }
           } catch (e) {
             console.error('[TicketWS] Gagal memproses pesan:', e);
@@ -684,16 +736,13 @@
         };
 
         ws.onclose = function(e) {
-          console.log('[TicketWS] Koneksi terputus. Mencoba menghubungkan kembali dalam 3 detik...', e.code);
-          reconnectTimer = setTimeout(initWebSocket, 3000);
+          reconnectTimer = setTimeout(initWebSocket, 4000);
         };
 
-        ws.onerror = function(err) {
-          console.error('[TicketWS] Kesalahan WebSocket:', err);
-          ws.close();
+        ws.onerror = function() {
+          if (ws) ws.close();
         };
       } catch (err) {
-        console.error('[TicketWS] Gagal inisialisasi WebSocket:', err);
         reconnectTimer = setTimeout(initWebSocket, 5000);
       }
     }
@@ -701,9 +750,10 @@
     initWebSocket();
 
     window.addEventListener('beforeunload', function() {
+      if (pollInterval) clearInterval(pollInterval);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (ws) {
-        ws.onclose = null; // Don't trigger reconnect
+        ws.onclose = null;
         ws.close();
       }
     });

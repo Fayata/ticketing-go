@@ -35,11 +35,16 @@ func main() {
 	ticketService := services.NewTicketService(jwtService)
 	// ticketService := NewEnhancedTicketService(baseTicketService, config.DB)
 
+	// Real-time WebSocket Hub
+	wsHub := services.NewWSHub()
+	go wsHub.Run()
+	wsHandler := handlers.NewWSHandler(wsHub)
+
 	dashboardService := services.NewDashboardService()
 	kbService := services.NewKBService()
 	settingsService := services.NewSettingsService()
 	
-	ticketHandler := handlers.NewTicketHandler(cfg, emailService, ticketService)
+	ticketHandler := handlers.NewTicketHandler(cfg, emailService, ticketService, wsHub)
 	dashboardHandler := handlers.NewDashboardHandler(cfg, dashboardService, kbService)
 	settingsHandler := handlers.NewSettingsHandler(cfg, settingsService)
 
@@ -99,6 +104,9 @@ func main() {
 	mux.Handle("/knowledge-base/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.ShowKnowledgeBase))))
 	mux.Handle("/knowledge-base/article/", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.ShowKBArticle))))
 	mux.Handle("/api/kb/article/view", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.RecordKBArticleView))))
+	mux.Handle("/api/ticket/", middleware.AuthRequired(http.HandlerFunc(ticketHandler.GetTicketMessagesAPI)))
+	mux.Handle("/api/ticket", middleware.AuthRequired(http.HandlerFunc(ticketHandler.GetTicketMessagesAPI)))
+	mux.Handle("/ws/ticket/", middleware.AuthRequired(http.HandlerFunc(wsHandler.HandleTicketWS)))
 
 	// Health check
 	mux.HandleFunc("/health", HealthCheckHandler)

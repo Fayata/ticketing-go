@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -55,6 +58,7 @@ func main() {
 	mux.Handle("/register", authProxy)
 	mux.Handle("/logout", authProxy)
 	mux.Handle("/verify-email", authProxy)
+	mux.Handle("/set-email", authProxy)
 	mux.Handle("/forgot-password", authProxy)
 	mux.Handle("/reset-password", authProxy)
 
@@ -67,6 +71,10 @@ func main() {
 	mux.Handle("/settings", ticketProxy)
 	mux.Handle("/knowledge-base/", ticketProxy)
 	mux.Handle("/knowledge-base", ticketProxy)
+	mux.Handle("/api/ticket/", ticketProxy)
+	mux.Handle("/api/ticket", ticketProxy)
+	mux.Handle("/ws/ticket/", ticketProxy)
+	mux.Handle("/ws/ticket", ticketProxy)
 
 	// Notification routes
 	mux.Handle("/api/notifications/", notificationProxy)
@@ -192,6 +200,21 @@ type responseWriterWrapper struct {
 func (rw *responseWriterWrapper) WriteHeader(code int) {
 	rw.status = code
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+// Hijack enables WebSocket connection hijacking through the reverse proxy.
+func (rw *responseWriterWrapper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hj, ok := rw.ResponseWriter.(http.Hijacker); ok {
+		return hj.Hijack()
+	}
+	return nil, nil, errors.New("http.Hijacker not implemented by underlying response writer")
+}
+
+// Flush enables streaming data to client.
+func (rw *responseWriterWrapper) Flush() {
+	if fl, ok := rw.ResponseWriter.(http.Flusher); ok {
+		fl.Flush()
+	}
 }
 
 func generateCorrelationID() string {
