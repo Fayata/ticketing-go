@@ -16,21 +16,22 @@ func NewStaffDashboardService() *StaffDashboardService {
 
 // StaffDashboardData berisi semua data untuk halaman dashboard staff.
 type StaffDashboardData struct {
-	WaitingCount     int
-	ProgressCount    int
-	ClosedTodayCount int
-	ClosedMonthCount int
-	AvgRating        float64
-	RatedCount       int
-	TrendData        []StaffTrendPoint
-	MonthlyData      []StaffMonthlyPoint
-	DonutData        []StaffDonutPoint
-	MyActiveTickets  []*models.Ticket
-	TicketPool       []*models.Ticket
-	UnratedTickets   []*models.Ticket
-	DepartmentName   string
-	TrendClosedPct   int
-	TrendMonthPct    int
+	WaitingCount       int
+	ProgressCount      int
+	ClosedTodayCount   int
+	ClosedMonthCount   int
+	AvgRating          float64
+	RatedCount         int
+	TrendData          []StaffTrendPoint
+	MonthlyData        []StaffMonthlyPoint
+	DonutData          []StaffDonutPoint
+	MyActiveTickets    []*models.Ticket
+	TicketPool         []*models.Ticket
+	SLABreachedTickets []*models.Ticket // Tiket yg sudah melewati batas SLA di departemen
+	UnratedTickets     []*models.Ticket
+	DepartmentName     string
+	TrendClosedPct     int
+	TrendMonthPct      int
 }
 
 type StaffTrendPoint struct {
@@ -73,7 +74,12 @@ func (s *StaffDashboardService) GetStaffDashboardData(userID uint, deptID uint) 
 	}
 
 	var n64 int64
-	config.DB.Model(&models.Ticket{}).Where("assigned_to_id IS NULL AND status = ? AND deleted_at IS NULL", models.StatusWaiting).Count(&n64)
+
+	// KPI: pool = tiket dept yg belum di-claim
+	config.DB.Model(&models.Ticket{}).
+		Where("assigned_to_id IS NULL AND status = ? AND department_id = ? AND deleted_at IS NULL",
+			models.StatusWaiting, deptID).
+		Count(&n64)
 	data.WaitingCount = int(n64)
 
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", userID, models.StatusInProgress).Count(&n64)
@@ -99,7 +105,10 @@ func (s *StaffDashboardService) GetStaffDashboardData(userID uint, deptID uint) 
 	data.MonthlyData = s.getStaffMonthlyData(userID, now.Year())
 
 	var poolCount, myClosedTotal int64
-	config.DB.Model(&models.Ticket{}).Where("assigned_to_id IS NULL AND status = ? AND deleted_at IS NULL", models.StatusWaiting).Count(&poolCount)
+	config.DB.Model(&models.Ticket{}).
+		Where("assigned_to_id IS NULL AND status = ? AND department_id = ? AND deleted_at IS NULL",
+			models.StatusWaiting, deptID).
+		Count(&poolCount)
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", userID, models.StatusInProgress).Count(&n64)
 	myProgress := int(n64)
 	config.DB.Model(&models.Ticket{}).Where("assigned_to_id = ? AND status = ?", userID, models.StatusClosed).Count(&myClosedTotal)
@@ -109,15 +118,28 @@ func (s *StaffDashboardService) GetStaffDashboardData(userID uint, deptID uint) 
 		{Name: "Selesai Milik Saya", Value: int(myClosedTotal), Color: staffColorGreen},
 	}
 
+	// Tiket aktif milik staff ini
 	config.DB.Preload("Department").Preload("CreatedBy").
 		Where("assigned_to_id = ? AND status != ?", userID, models.StatusClosed).
 		Order("updated_at DESC").
 		Find(&data.MyActiveTickets)
 
+	// Pool: hanya tiket dari departemen staff ini, belum di-claim
 	config.DB.Preload("Department").Preload("CreatedBy").
-		Where("assigned_to_id IS NULL AND status = ? AND deleted_at IS NULL", models.StatusWaiting).
+		Where("assigned_to_id IS NULL AND status = ? AND department_id = ? AND deleted_at IS NULL",
+			models.StatusWaiting, deptID).
 		Order("created_at ASC").
 		Find(&data.TicketPool)
+
+	// SLA Breached: tiket dept ini yg sudah melewati batas first-response & belum ada respon
+	config.DB.Preload("Department").Preload("CreatedBy").
+		Where("department_id = ?", deptID).
+		Where("first_response_at IS NULL").
+		Where("first_response_deadline IS NOT NULL").
+		Where("first_response_deadline < ?", now).
+		Where("status != ?", models.StatusClosed).
+		Order("first_response_deadline ASC").
+		Find(&data.SLABreachedTickets)
 
 	config.DB.Preload("Department").
 		Where("assigned_to_id = ? AND status = ? AND deleted_at IS NULL", userID, models.StatusClosed).

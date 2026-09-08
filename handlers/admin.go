@@ -148,11 +148,6 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if email == "" {
-			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Email+wajib+diisi", http.StatusSeeOther)
-			return
-		}
-
 		if len(password) < 6 {
 			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Password+minimal+6+karakter", http.StatusSeeOther)
 			return
@@ -165,10 +160,14 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Cek apakah email sudah dipakai
-		if err := config.DB.Where("LOWER(email) = LOWER(?)", email).First(&existingUser).Error; err == nil {
-			http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Email+sudah+terdaftar", http.StatusSeeOther)
-			return
+		// Cek duplikat email hanya jika email diisi
+		var emailPtr *string
+		if email != "" {
+			if err := config.DB.Where("LOWER(email) = LOWER(?)", email).First(&existingUser).Error; err == nil {
+				http.Redirect(w, r, config.Path("/admin/users/create")+"?error=Email+sudah+terdaftar", http.StatusSeeOther)
+				return
+			}
+			emailPtr = &email
 		}
 
 		deptIDStr := strings.TrimSpace(r.FormValue("department_id"))
@@ -192,9 +191,10 @@ func (h *AdminHandler) CreateUserForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// Akun dibuat admin: langsung verified (email opsional, user set sendiri nanti)
 		newUser := models.User{
 			Username:     username,
-			Email:        email,
+			Email:        emailPtr,
 			Password:     hashedPassword,
 			IsActive:     true,
 			IsVerified:   true,

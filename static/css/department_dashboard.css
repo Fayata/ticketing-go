@@ -1324,3 +1324,59 @@
 :root[data-theme="dark"] .card table td span[style*=\"color:#6b7280\"] { color: #9ca3af !important; }
 :root[data-theme="dark"] .card table td span[style*=\"color:#111827\"] { color: #e5e7eb !important; }
 .dept-sidebar, .dept-sidebar a, .dept-sidebar span, .dept-sidebar h1, .dept-sidebar svg, .dept-nav-item, :root[data-theme='dark'] .dept-nav-item { color: var(--sidebar-text-color) !important; }
+
+/* ── SLA Breach Card ──────────────────────────────────────────── */
+.staff-card-accent-red {
+    border-top: 3px solid #dc2626;
+    background: #fff5f5;
+}
+:root[data-theme="dark"] .staff-card-accent-red {
+    background: #1a0808;
+    border-top-color: #f87171;
+}
+
+.staff-sla-breach-row {
+    margin-bottom: 1.25rem;
+}
+.staff-sla-breach-row .staff-card {
+    width: 100%;
+}
+
+.staff-ticket-breached {
+    background: #fff5f5;
+    border-left: 3px solid #dc2626;
+}
+:root[data-theme="dark"] .staff-ticket-breached {
+    background: #1a0808;
+    border-left-color: #f87171;
+}
+
+.staff-ticket-overdue {
+    color: #dc2626 !important;
+    font-weight: 700;
+}
+
+.staff-btn-urgent {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: #dc2626;
+    color: #fff;
+    text-decoration: none;
+    margin-top: 0.5rem;
+    transition: background 0.15s;
+}
+.staff-btn-urgent:hover {
+    background: #b91c1c;
+    color: #fff;
+}
+
+.staff-card-badge.staff-badge-red,
+.staff-card-badge[class*="badge-red"] {
+    background: #dc2626;
+}
+

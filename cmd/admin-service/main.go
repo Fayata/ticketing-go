@@ -268,9 +268,10 @@ func seedDefaultData() {
 		return
 	}
 
+	adminEmailCopy := defaultAdminEmail
 	admin := models.User{
 		Username:     defaultAdminUsername,
-		Email:        defaultAdminEmail,
+		Email:        &adminEmailCopy,
 		Password:     hashed,
 		IsActive:     true,
 		IsVerified:   true,

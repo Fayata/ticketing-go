@@ -57,7 +57,7 @@
             <div class="form-group">
                 <label for="email" class="form-label">Email</label>
                 <input type="email" name="email" id="email" class="form-input"
-                    value="{{if .form_email}}{{.form_email}}{{else if .user}}{{.user.Email}}{{end}}" required>
+                    value="{{if .form_email}}{{.form_email}}{{else if .user}}{{.user.GetEmail}}{{end}}" required>
                 {{if .errors.email}}
                 <div class="form-error">{{.errors.email}}</div>
                 {{end}}

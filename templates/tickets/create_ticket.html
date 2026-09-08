@@ -49,7 +49,7 @@
                 Alamat Email untuk Balasan <span class="required-mark">*</span>
             </label>
             <input type="email" name="reply_to_email" id="reply_to_email" class="form-input" required
-                value="{{if .user}}{{.user.Email}}{{end}}">
+                value="{{if .user}}{{.user.GetEmail}}{{end}}">
             <small>Notifikasi dan balasan dari tim support akan dikirim ke email ini</small>
         </div>
 

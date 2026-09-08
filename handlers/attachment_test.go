@@ -19,6 +19,9 @@ import (
 	"ticketing/utils"
 )
 
+// strPtr converts a string literal to *string for test helpers.
+func strPtr(s string) *string { return &s }
+
 var testPNG = []byte{
 	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
 	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
@@ -86,7 +89,7 @@ func TestAttachment_CreateTicketWithAttachments(t *testing.T) {
 	// Create test user
 	user := models.User{
 		Username:   "regularuser",
-		Email:      "regular@example.com",
+		Email: strPtr("regular@example.com"),
 		IsActive:   true,
 		IsVerified: true,
 	}
@@ -252,7 +255,7 @@ func TestAttachment_UserReplyWithAttachments(t *testing.T) {
 
 	user := models.User{
 		Username:   "chatuser",
-		Email:      "chat@example.com",
+		Email: strPtr("chat@example.com"),
 		IsActive:   true,
 		IsVerified: true,
 	}
@@ -262,7 +265,7 @@ func TestAttachment_UserReplyWithAttachments(t *testing.T) {
 		Title:        "Existing Ticket",
 		Description:  "Ticket description",
 		CreatedByID:  user.ID,
-		ReplyToEmail: user.Email,
+		ReplyToEmail: user.GetEmail(),
 		Status:       models.StatusWaiting,
 	}
 	db.Create(&ticket)
@@ -405,7 +408,7 @@ func TestAttachment_UserReplyWithAttachments(t *testing.T) {
 			Title:        "Closed User Ticket",
 			Description:  "Already solved",
 			CreatedByID:  user.ID,
-			ReplyToEmail: user.Email,
+			ReplyToEmail: user.GetEmail(),
 			Status:       models.StatusClosed,
 		}
 		db.Create(&closedUserTicket)
@@ -463,7 +466,7 @@ func TestAttachment_DepartmentReplyWithAttachments(t *testing.T) {
 
 	staffUser := models.User{
 		Username:     "staff1",
-		Email:        "staff1@example.com",
+		Email: strPtr("staff1@example.com"),
 		IsActive:     true,
 		IsVerified:   true,
 		IsStaff:      true,
@@ -676,7 +679,7 @@ func TestAttachment_SanitizePathTraversalFileName(t *testing.T) {
 	emailService := utils.NewEmailService(cfg)
 	handler := NewTicketHandler(cfg, emailService, ticketService)
 
-	user := models.User{Username: "pathuser", Email: "path@example.com", IsActive: true, IsVerified: true}
+	user := models.User{Username: "pathuser", Email: strPtr("path@example.com"), IsActive: true, IsVerified: true}
 	db.Create(&user)
 	comp := models.Company{Name: "PT Security", Code: "PTS", IsActive: true}
 	db.Create(&comp)
@@ -750,7 +753,7 @@ func TestAttachment_CreateTicketWithPDF_And_NamingFormat(t *testing.T) {
 	emailService := utils.NewEmailService(cfg)
 	handler := NewTicketHandler(cfg, emailService, ticketService)
 
-	user := models.User{Username: "pdfcreator", Email: "pdfuser@example.com", IsActive: true, IsVerified: true}
+	user := models.User{Username: "pdfcreator", Email: strPtr("pdfuser@example.com"), IsActive: true, IsVerified: true}
 	db.Create(&user)
 	comp := models.Company{Name: "PT PDF", Code: "PTP", IsActive: true}
 	db.Create(&comp)
@@ -847,7 +850,7 @@ func TestAttachment_StaffReplyWithPDFOnly(t *testing.T) {
 
 	staffUser := models.User{
 		Username:     "staff_pdf",
-		Email:        "staff_pdf@example.com",
+		Email: strPtr("staff_pdf@example.com"),
 		IsActive:     true,
 		IsVerified:   true,
 		IsStaff:      true,
@@ -926,14 +929,14 @@ func TestAttachment_UserReplyWithPDFOnly(t *testing.T) {
 	emailService := utils.NewEmailService(cfg)
 	handler := NewTicketHandler(cfg, emailService, ticketService)
 
-	user := models.User{Username: "user_pdf", Email: "user_pdf@example.com", IsActive: true, IsVerified: true}
+	user := models.User{Username: "user_pdf", Email: strPtr("user_pdf@example.com"), IsActive: true, IsVerified: true}
 	db.Create(&user)
 
 	ticket := models.Ticket{
 		Title:        "Signed Contract",
 		Description:  "Sending signed document",
 		CreatedByID:  user.ID,
-		ReplyToEmail: user.Email,
+		ReplyToEmail: user.GetEmail(),
 		Status:       models.StatusWaiting,
 	}
 	db.Create(&ticket)
@@ -996,7 +999,7 @@ func TestAttachment_CreateTicketWith5MixedFiles(t *testing.T) {
 	emailService := utils.NewEmailService(cfg)
 	handler := NewTicketHandler(cfg, emailService, ticketService)
 
-	user := models.User{Username: "mixedcreator", Email: "mixed@example.com", IsActive: true, IsVerified: true}
+	user := models.User{Username: "mixedcreator", Email: strPtr("mixed@example.com"), IsActive: true, IsVerified: true}
 	db.Create(&user)
 	comp := models.Company{Name: "PT Mixed", Code: "PTM", IsActive: true}
 	db.Create(&comp)
@@ -1118,7 +1121,7 @@ func TestAttachment_StaffReplyWith5MixedFiles(t *testing.T) {
 
 	staffUser := models.User{
 		Username:     "staff_mixed",
-		Email:        "staff_mixed@example.com",
+		Email: strPtr("staff_mixed@example.com"),
 		IsActive:     true,
 		IsVerified:   true,
 		IsStaff:      true,
@@ -1215,7 +1218,7 @@ func TestAttachment_RejectCorruptedPDFUpload(t *testing.T) {
 	emailService := utils.NewEmailService(cfg)
 	handler := NewTicketHandler(cfg, emailService, ticketService)
 
-	user := models.User{Username: "badpdfuser", Email: "badpdf@example.com", IsActive: true, IsVerified: true}
+	user := models.User{Username: "badpdfuser", Email: strPtr("badpdf@example.com"), IsActive: true, IsVerified: true}
 	db.Create(&user)
 	comp := models.Company{Name: "PT Bad", Code: "PTB", IsActive: true}
 	db.Create(&comp)
@@ -1276,14 +1279,14 @@ func TestAttachment_CreateTicket_RollbackCleansNotifications(t *testing.T) {
 	emailService := utils.NewEmailService(cfg)
 	handler := NewTicketHandler(cfg, emailService, ticketService)
 
-	user := models.User{Username: "rollbackuser", Email: "rollback@example.com", IsActive: true, IsVerified: true}
+	user := models.User{Username: "rollbackuser", Email: strPtr("rollback@example.com"), IsActive: true, IsVerified: true}
 	db.Create(&user)
 	comp := models.Company{Name: "PT Rollback", Code: "PTR", IsActive: true}
 	db.Create(&comp)
 	dept := models.Department{Name: "Support", CompanyID: &comp.ID}
 	db.Create(&dept)
 
-	staff := models.User{Username: "supportstaff", Email: "staff@example.com", IsActive: true, IsVerified: true, IsStaff: true, DepartmentID: &dept.ID}
+	staff := models.User{Username: "supportstaff", Email: strPtr("staff@example.com"), IsActive: true, IsVerified: true, IsStaff: true, DepartmentID: &dept.ID}
 	db.Create(&staff)
 
 	fields := map[string]string{

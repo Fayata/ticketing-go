@@ -1,0 +1,39 @@
+﻿{{define "tickets/set_email"}}
+{{template "base" .}}
+{{end}}
+
+{{define "tickets/set_email_content"}}
+<link rel="stylesheet" href="static/css/set_email.css">
+
+<div class="se-wrapper">
+  <div class="se-card">
+    <div class="se-icon">✉️</div>
+    <h2 class="se-title">Lengkapi Akun Anda</h2>
+    <p class="se-desc">Akun Anda belum memiliki email. Masukkan email untuk mengaktifkan notifikasi dan pemulihan akun.</p>
+
+    {{if .error}}
+    <div class="se-alert se-alert-error">{{.error}}</div>
+    {{end}}
+    {{if .success}}
+    <div class="se-alert se-alert-success">
+      {{.success}}
+      <p class="se-verify-hint">Setelah klik link verifikasi di email, Anda bisa menggunakan portal secara penuh.</p>
+    </div>
+    {{end}}
+
+    {{if not .success}}
+    <form method="POST" action="set-email" class="se-form">
+      <div class="se-field">
+        <label for="se_email">Alamat Email</label>
+        <input type="email" name="email" id="se_email" placeholder="contoh@email.com" required autofocus>
+      </div>
+      <button type="submit" class="se-btn">Simpan & Kirim Verifikasi</button>
+    </form>
+    {{end}}
+
+    <div class="se-footer">
+      <a href="logout" class="se-logout-link">Logout</a>
+    </div>
+  </div>
+</div>
+{{end}}

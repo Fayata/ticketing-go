@@ -133,7 +133,7 @@
 		<div class="staff-card staff-card-accent-amber">
 			<div class="staff-card-head">
 				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/></svg></span>
-				<span class="staff-card-title">Pool Tiket (Masuk)</span>
+				<span class="staff-card-title">Pool Tiket (Departemen Saya)</span>
 				<span class="staff-card-badge">{{len $d.TicketPool}}</span>
 			</div>
 			<div class="staff-card-body">
@@ -159,7 +159,7 @@
 					{{if not $d.TicketPool}}
 					<div class="staff-empty-state">
 						<svg class="staff-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7"/></svg>
-						<p>Tidak ada tiket baru di pool.</p>
+						<p>Tidak ada tiket baru di pool departemen ini.</p>
 					</div>
 					{{end}}
 				</div>
@@ -167,7 +167,45 @@
 		</div>
 	</div>
 
-	<!-- Bottom: Tiket Terbaru di Pool + Belum Di-rate -->
+	{{/* ── SLA Breached Card ─────────────────────────────────────── */}}
+	{{if $d.SLABreachedTickets}}
+	<div class="staff-sla-breach-row">
+		<div class="staff-card staff-card-accent-red">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+				<span class="staff-card-title">⚠️ Tiket Melewati Batas SLA — Segera Tangani!</span>
+				<span class="staff-card-badge staff-badge-red">{{len $d.SLABreachedTickets}}</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-ticket-list">
+					{{range $d.SLABreachedTickets}}
+					{{$sla := .GetSLABadgeInfo}}
+					<div class="staff-ticket-item staff-ticket-breached" onclick="window.location.href='departement/tiket/{{.ID}}';">
+						<div class="staff-ticket-bar staff-priority-{{.Priority}}"></div>
+						<div class="staff-ticket-inner">
+							<div class="staff-ticket-meta">
+								<span class="staff-ticket-id">{{.GetTicketNumber}}</span>
+								<span class="staff-badge staff-badge-{{.Priority}}">{{.GetPriorityDisplay}}</span>
+								<span class="sla-badge sla-badge-red">{{$sla.Detail}}</span>
+							</div>
+							<div class="staff-ticket-title">{{.Title}}</div>
+							<div class="staff-ticket-meta-footer">
+								<span>{{.CreatedBy.Username}}</span>
+								<span class="staff-ticket-time staff-ticket-overdue">Terlambat: {{$sla.Detail}}</span>
+							</div>
+							{{if not .AssignedToID}}
+							<a href="departement/tiket/claim/{{.ID}}" class="staff-btn staff-btn-urgent" onclick="event.stopPropagation();">🚨 Ambil Sekarang</a>
+							{{else}}
+							<a href="departement/tiket/{{.ID}}" class="staff-btn staff-btn-urgent" onclick="event.stopPropagation();">Lihat Tiket</a>
+							{{end}}
+						</div>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
+	</div>
+	{{end}}
 	<div class="staff-bottom-row">
 		<div class="staff-card">
 			<div class="staff-card-head staff-card-head-action">

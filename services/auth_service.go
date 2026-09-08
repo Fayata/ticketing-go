@@ -74,9 +74,10 @@ func (s *AuthService) RegisterUser(username, email, password string) error {
 	hashedPassword, _ := utils.HashPassword(password)
 
 	// 2. Create User
+	emailPtr := &email
 	user := models.User{
 		Username:   username,
-		Email:      email,
+		Email:      emailPtr,
 		Password:   hashedPassword,
 		IsActive:   true,
 		IsVerified: false, // [Security] User must verify email before login
@@ -131,7 +132,9 @@ func (s *AuthService) VerifyEmail(token string) error {
 func (s *AuthService) Authenticate(username, password string) (*models.User, error) {
 	var user models.User
 	// Preload Groups agar bisa dicek hak aksesnya di middleware
-	if err := config.DB.Preload("Groups").Where("username = ? OR email = ?", username, username).First(&user).Error; err != nil {
+	if err := config.DB.Preload("Groups").
+		Where("username = ? OR (email IS NOT NULL AND email = ?)", username, username).
+		First(&user).Error; err != nil {
 		log.Printf("[Security][Auth] Failed login attempt: user=%q not found", username)
 		return nil, errors.New("username atau password salah")
 	}
@@ -141,7 +144,9 @@ func (s *AuthService) Authenticate(username, password string) (*models.User, err
 		return nil, errors.New("username atau password salah")
 	}
 
-	if !user.IsVerified {
+	// Akun tanpa email (dibuat admin): langsung izinkan login, nanti diarahkan set email
+	// Akun dengan email tapi belum diverifikasi: blok
+	if user.Email != nil && *user.Email != "" && !user.IsVerified {
 		return nil, errors.New("silakan verifikasi email anda terlebih dahulu")
 	}
 
@@ -204,3 +209,4 @@ func (s *AuthService) ResetPassword(token, newPassword string) error {
 
 	return nil
 }
+

@@ -45,7 +45,9 @@ func (s *SettingsService) UpdateProfile(userID uint, username, email, firstName,
 		return nil, nil
 	}
 	user.Username = username
-	user.Email = email
+	if email != "" {
+		user.Email = &email
+	}
 	user.FirstName = firstName
 	user.LastName = lastName
 	if err := config.DB.Save(&user).Error; err != nil {

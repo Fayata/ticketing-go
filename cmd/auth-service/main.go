@@ -139,9 +139,10 @@ func seedAdmin() {
 		return
 	}
 
+	adminEmailPtr := adminEmail
 	admin := models.User{
 		Username:     adminUsername,
-		Email:        adminEmail,
+		Email:        &adminEmailPtr,
 		Password:     hashed,
 		IsActive:     true,
 		IsVerified:   true,

@@ -438,7 +438,7 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 	go func() {
 		target := ticket.ReplyToEmail
 		if target == "" {
-			target = ticket.CreatedBy.Email
+			target = ticket.CreatedBy.GetEmail()
 		}
 		h.emailService.SendTicketReply(target, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), message, user.GetFullName())
 	}()
@@ -628,7 +628,7 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 
 			targetEmail := ticket.ReplyToEmail
 			if targetEmail == "" {
-				targetEmail = ticket.CreatedBy.Email
+				targetEmail = ticket.CreatedBy.GetEmail()
 			}
 
 			err = h.emailService.SendRatingRequest(

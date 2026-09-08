@@ -9,10 +9,12 @@ import (
 type User struct {
 	ID        uint   `gorm:"primarykey" json:"id"`
 	Username  string `gorm:"uniqueIndex;not null" json:"username"`
-	Email     string `gorm:"uniqueIndex;not null" json:"email"`
-	Password  string `gorm:"not null" json:"-"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	// Email is nullable: admin-created accounts start without email.
+	// NULL = not yet set. Non-null but IsVerified=false = pending verification.
+	Email    *string        `gorm:"uniqueIndex" json:"email"`
+	Password string         `gorm:"not null" json:"-"`
+	FirstName string        `json:"first_name"`
+	LastName  string        `json:"last_name"`
 
 	IsStaff      bool `gorm:"default:false" json:"is_staff"`
 	IsSuperAdmin bool `gorm:"default:false" json:"is_super_admin"`
@@ -31,6 +33,22 @@ type User struct {
 	Tickets []Ticket      `gorm:"foreignKey:CreatedByID" json:"-"`
 	Replies []TicketReply `gorm:"foreignKey:UserID" json:"-"`
 	Groups  []Group       `gorm:"many2many:user_groups;" json:"-"`
+}
+
+// GetEmail returns the user's email or "" if not set yet.
+func (u *User) GetEmail() string {
+	if u == nil || u.Email == nil {
+		return ""
+	}
+	return *u.Email
+}
+
+// NeedsEmailSetup returns true when the user must set/verify their email before proceeding.
+func (u *User) NeedsEmailSetup() bool {
+	if u == nil {
+		return false
+	}
+	return u.Email == nil || *u.Email == ""
 }
 type Group struct {
 	ID        uint      `gorm:"primarykey" json:"id"`

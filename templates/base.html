@@ -115,7 +115,7 @@
                     </div>
                     <div class="user-details">
                         <div class="user-name">{{if .user}}{{getFullName .user}}{{end}}</div>
-                        <div class="user-email">{{if .user}}{{.user.Email}}{{end}}</div>
+                        <div class="user-email">{{if .user}}{{.user.GetEmail}}{{end}}</div>
                     </div>
                 </div>
                 <div class="user-actions">

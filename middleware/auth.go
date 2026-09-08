@@ -188,3 +188,30 @@ func StaffOrSuperAdminRequired(next http.HandlerFunc) http.HandlerFunc {
 		next.ServeHTTP(w, r)
 	}
 }
+
+// EmailRequired memaksa user yang belum set email untuk pergi ke /set-email.
+// Whitelist path: /set-email, /verify-email, /logout, /static/.
+func EmailRequired(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, ok := r.Context().Value(UserKey).(*models.User)
+		if !ok || user == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if user.NeedsEmailSetup() {
+			// Izinkan akses ke path khusus agar tidak loop redirect
+			p := r.URL.Path
+			if p == config.Path("/set-email") ||
+				p == config.Path("/verify-email") ||
+				p == config.Path("/logout") ||
+				len(p) >= len("/static/") && p[:len("/static/")] == "/static/" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			http.Redirect(w, r, config.Path("/set-email"), http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	}
+}
+

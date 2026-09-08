@@ -296,7 +296,7 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 	if reply.UserID != ticket.CreatedByID {
 		targetEmail := ticket.ReplyToEmail
 		if targetEmail == "" {
-			targetEmail = ticket.CreatedBy.Email
+			targetEmail = ticket.CreatedBy.GetEmail()
 		}
 		go func() {
 			_ = h.emailService.SendTicketReply(targetEmail, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName())
