@@ -32,7 +32,7 @@
                 <select name="company_id" id="company_id" class="form-input">
                     <option value="">-- Semua Perusahaan (Global / Default) --</option>
                     {{range .companies}}
-                    <option value="{{.ID}}" {{if $.policy}}{{if $.policy.CompanyID}}{{if eq *$.policy.CompanyID .ID}}selected{{end}}{{end}}{{end}}>
+                    <option value="{{.ID}}" {{if $.policy}}{{if $.policy.CompanyID}}{{if eq $.policy.CompanyID .ID}}selected{{end}}{{end}}{{end}}>
                         {{.Name}} ({{.Code}})
                     </option>
                     {{end}}
@@ -47,7 +47,7 @@
                 <select name="department_id" id="department_id" class="form-input">
                     <option value="">-- Semua Departemen di PT ini --</option>
                     {{range .departments}}
-                    <option value="{{.ID}}" data-company="{{if .CompanyID}}{{.CompanyID}}{{else}}0{{end}}" {{if $.policy}}{{if $.policy.DepartmentID}}{{if eq *$.policy.DepartmentID .ID}}selected{{end}}{{end}}{{end}}>
+                    <option value="{{.ID}}" data-company="{{if .CompanyID}}{{.CompanyID}}{{else}}0{{end}}" {{if $.policy}}{{if $.policy.DepartmentID}}{{if eq $.policy.DepartmentID .ID}}selected{{end}}{{end}}{{end}}>
                         {{.Name}}{{if .Company}} ({{.Company.Code}}){{end}}
                     </option>
                     {{end}}
