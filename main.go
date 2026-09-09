@@ -11,6 +11,7 @@ import (
 	"ticketing/config"
 	"ticketing/controllers"
 	"ticketing/handlers"
+	"ticketing/internal/logging"
 	"ticketing/middleware"
 	"ticketing/models"
 	"ticketing/services"
@@ -18,6 +19,8 @@ import (
 )
 
 func main() {
+	logging.Init("ticketing-app")
+
 	cfg := config.LoadConfig()
 	if err := config.InitDatabase(cfg); err != nil {
 		log.Fatal(err)
@@ -183,8 +186,8 @@ func main() {
 	csrfProtected := middleware.CSRFMiddleware(mux)
 	securedMux := middleware.SecurityHeaders(csrfProtected, cfg.Debug)
 	rateLimited := globalLimiter.LimitHandler(securedMux)
-	loggedMux := middleware.LoggingMiddleware(rateLimited)
-	log.Println("[Security] Full middleware stack applied: Logging → RateLimit → SecurityHeaders → CSRF")
+	loggedMux := logging.PanicRecoveryMiddleware(middleware.LoggingMiddleware(rateLimited))
+	log.Println("[Security] Full middleware stack applied: PanicRecovery → Logging → RateLimit → SecurityHeaders → CSRF")
 	var handler http.Handler = loggedMux
 	if config.AppBasePath != "" && config.AppBasePath != "/" {
 		prefix := strings.TrimRight(config.AppBasePath, "/")

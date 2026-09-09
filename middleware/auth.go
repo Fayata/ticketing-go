@@ -2,11 +2,10 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net/http"
-	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 	"ticketing/models"
 )
 
@@ -133,16 +132,9 @@ func SetUserLocals(next http.Handler) http.Handler {
 	})
 }
 
-// LoggingMiddleware mencatat request POST/PUT/DELETE/PATCH ke log (GET tidak dicatat).
+// LoggingMiddleware delegates to our structured logging.HTTPMiddleware.
 func LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		m := r.Method
-		if m == http.MethodPost || m == http.MethodPut || m == http.MethodDelete || m == http.MethodPatch {
-			log.Printf("[%s] %s %s", m, r.RequestURI, time.Since(start))
-		}
-	})
+	return logging.HTTPMiddleware(next)
 }
 
 // DepartmentRequired membatasi akses ke halaman staff; user biasa di-redirect ke dashboard.

@@ -186,27 +186,30 @@
                     <div class="rating-comment-box">"{{.rating.Comment}}"</div>
                 {{end}}
             </div>
-            {{else if .rating_token}}
+            {{else}}
             <div class="rating-container">
-                <h2>Berikan Rating Pengalaman Anda</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Berikan Rating Pengalaman Anda
+                </h2>
+                <p class="rating-subtitle">Bagikan penilaian Anda terhadap penyelesaian tiket ini.</p>
                 <form method="POST" action="rating/{{$ticket.ID}}" class="rating-form">
-                    <input type="hidden" name="token" value="{{.rating_token}}">
+                    {{if .rating_token}}<input type="hidden" name="token" value="{{.rating_token}}">{{end}}
                     <div class="rating-star-inputs">
                         <input type="radio" id="star5" name="rating" value="5" class="star-input" required>
-                        <label for="star5" class="star-label">★</label>
+                        <label for="star5" class="star-label" title="5 Bintang (Sangat Puas)">★</label>
                         <input type="radio" id="star4" name="rating" value="4" class="star-input">
-                        <label for="star4" class="star-label">★</label>
+                        <label for="star4" class="star-label" title="4 Bintang (Puas)">★</label>
                         <input type="radio" id="star3" name="rating" value="3" class="star-input">
-                        <label for="star3" class="star-label">★</label>
+                        <label for="star3" class="star-label" title="3 Bintang (Cukup)">★</label>
                         <input type="radio" id="star2" name="rating" value="2" class="star-input">
-                        <label for="star2" class="star-label">★</label>
+                        <label for="star2" class="star-label" title="2 Bintang (Kurang)">★</label>
                         <input type="radio" id="star1" name="rating" value="1" class="star-input">
-                        <label for="star1" class="star-label">★</label>
+                        <label for="star1" class="star-label" title="1 Bintang (Sangat Kurang)">★</label>
                     </div>
-                    <textarea name="comment" rows="3" placeholder="Komentar (Opsional)..." class="rating-textarea"></textarea>
+                    <textarea name="comment" rows="3" placeholder="Tulis komentar atau masukan Anda (opsional)..." class="rating-textarea"></textarea>
                     <button type="submit" class="rating-submit-btn">Kirim Rating</button>
                 </form>
-                <script src="static/js/rating-stars.js"></script>
             </div>
             {{end}}
         {{end}}
@@ -327,6 +330,7 @@
 </div>
 
 <script src="static/js/ticket_detail.js"></script>
+<script src="static/js/rating-stars.js"></script>
 {{end}}
 
 {{define "tickets/ticket_detail"}}

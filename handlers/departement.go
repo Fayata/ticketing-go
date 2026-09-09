@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 	"ticketing/models"
 	"ticketing/services"
 	"ticketing/utils"
@@ -529,7 +530,24 @@ func (h *DepartmentHandler) ClaimTicket(w http.ResponseWriter, r *http.Request) 
 		if ticket.FirstResponseAt == nil {
 			ticket.FirstResponseAt = &now
 			ticket.FirstResponseMet = CalculateFirstResponseMet(now, ticket.FirstResponseDeadline)
+			isMet := false
+			if ticket.FirstResponseMet != nil {
+				isMet = *ticket.FirstResponseMet
+			}
+			logging.SLAResponses.Info("First response stamped on claim",
+				"ticket_id", ticket.ID,
+				"staff_id", user.ID,
+				"first_response_at", now,
+				"sla_met", isMet,
+			)
 		}
+
+		logging.TicketLifecycle.Info("Ticket claimed by staff",
+			"ticket_id", ticket.ID,
+			"staff_id", user.ID,
+			"username", user.Username,
+			"was_unassigned", wasUnassigned,
+		)
 
 		// Optional resolution estimation parameter on claim
 		_ = r.ParseForm()
@@ -610,6 +628,12 @@ func (h *DepartmentHandler) ReleaseTicket(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	logging.TicketLifecycle.Info("Ticket released back to pool",
+		"ticket_id", ticket.ID,
+		"staff_id", user.ID,
+		"correlation_id", logging.GetCorrelationID(r.Context()),
+	)
+
 	http.Redirect(w, r, config.Path("/departement/dashboard")+"?success=Tiket+berhasil+dikembalikan+ke+pool", http.StatusSeeOther)
 }
 
@@ -641,6 +665,14 @@ func (h *DepartmentHandler) CloseTicket(w http.ResponseWriter, r *http.Request) 
 		config.DB.Save(&ticket)
 		
 		config.DB.Preload("CreatedBy").Preload("AssignedTo").First(&ticket, ticket.ID)
+
+		logging.TicketLifecycle.Info("Ticket closed by staff",
+			"ticket_id", ticket.ID,
+			"ticket_number", ticket.GetTicketNumber(),
+			"staff_id", user.ID,
+			"old_status", string(oldStatus),
+			"correlation_id", logging.GetCorrelationID(r.Context()),
+		)
 
 		go func() {
 			if oldStatus != models.StatusClosed {

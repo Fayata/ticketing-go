@@ -3,8 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"log"
@@ -17,9 +15,13 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"ticketing/internal/logging"
 )
 
 func main() {
+	logging.Init("gateway")
+
 	port := os.Getenv("GATEWAY_PORT")
 	if port == "" {
 		port = "8080"
@@ -116,27 +118,30 @@ func main() {
 	defer stop()
 
 	go func() {
-		log.Printf("Gateway starting on port %s", port)
+		logging.SystemLifecycle.Info("Gateway starting", "port", port)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logging.SystemLifecycle.Error("Gateway listen error", "error", err.Error())
 			log.Fatalf("Gateway listen error: %v", err)
 		}
 	}()
 
 	<-ctx.Done()
-	log.Println("Shutting down Gateway...")
+	logging.SystemLifecycle.Info("Shutting down Gateway...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
+		logging.SystemLifecycle.Error("Gateway shutdown error", "error", err.Error())
 		log.Fatalf("Gateway shutdown error: %v", err)
 	}
-	log.Println("Gateway gracefully stopped")
+	logging.SystemLifecycle.Info("Gateway gracefully stopped")
 }
 
 func newProxy(target string) http.Handler {
 	targetURL, err := url.Parse(target)
 	if err != nil {
+		logging.SystemGateway.Error("Invalid target URL", "target", target, "error", err.Error())
 		log.Fatalf("Invalid target URL %s: %v", target, err)
 	}
 	proxy := httputil.NewSingleHostReverseProxy(targetURL)
@@ -154,14 +159,17 @@ func newProxy(target string) http.Handler {
 }
 
 func applyGlobalMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return logging.PanicRecoveryMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Correlation ID
 		reqID := r.Header.Get("X-Correlation-ID")
 		if reqID == "" {
-			reqID = generateCorrelationID() // Fallback random ID
+			reqID = logging.GenerateCorrelationID()
 			r.Header.Set("X-Correlation-ID", reqID)
 		}
 		w.Header().Set("X-Correlation-ID", reqID)
+
+		ctx := logging.WithCorrelationID(r.Context(), reqID)
+		r = r.WithContext(ctx)
 
 		// Limit Body Size (32MB for up to 5x 5MB attachments + form fields)
 		r.Body = http.MaxBytesReader(w, r.Body, 32*1024*1024)
@@ -188,8 +196,19 @@ func applyGlobalMiddleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(ww, r)
 
-		log.Printf("%s %s %d %s", r.Method, r.RequestURI, ww.status, time.Since(start))
-	})
+		elapsed := time.Since(start)
+		elapsedMs := float64(elapsed.Microseconds()) / 1000.0
+
+		logging.HTTPAccess.Info("HTTP Request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", ww.status,
+			"duration_ms", elapsedMs,
+			"client_ip", logging.GetClientIP(r),
+			"user_agent", r.UserAgent(),
+			"correlation_id", reqID,
+		)
+	}))
 }
 
 type responseWriterWrapper struct {
@@ -215,10 +234,4 @@ func (rw *responseWriterWrapper) Flush() {
 	if fl, ok := rw.ResponseWriter.(http.Flusher); ok {
 		fl.Flush()
 	}
-}
-
-func generateCorrelationID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return hex.EncodeToString(b)
 }

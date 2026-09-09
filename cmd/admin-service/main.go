@@ -14,6 +14,7 @@ import (
 
 	"ticketing/config"
 	"ticketing/handlers"
+	"ticketing/internal/logging"
 	"ticketing/middleware"
 	"ticketing/models"
 	"ticketing/services"
@@ -22,6 +23,8 @@ import (
 
 // main is the entry point for the Admin and KB Service.
 func main() {
+	logging.Init("admin-service")
+
 	// Initialize Config
 	cfg := config.LoadConfig()
 	port := os.Getenv("ADMIN_SERVICE_PORT")
@@ -184,7 +187,7 @@ func main() {
 	mux.HandleFunc("/health", HealthCheckHandler)
 
 	// Apply global logging middleware
-	handler := middleware.LoggingMiddleware(mux)
+	handler := logging.PanicRecoveryMiddleware(middleware.LoggingMiddleware(mux))
 
 	// Server setup
 	srv := &http.Server{

@@ -43,6 +43,11 @@ type Config struct {
 	BaseURL      string
 	BasePath     string
 	GoogleAPIKey string
+
+	// Logging
+	LogDir               string
+	DBLogAllQueries      bool
+	SlowQueryThresholdMs int
 }
 
 var AppBasePath = "/Ticketing"
@@ -102,6 +107,9 @@ func LoadConfig() *Config {
 		BaseURL:       getEnv("BASE_URL", "https://localhost:3000"),
 		BasePath:      basePath,
 		GoogleAPIKey:  getEnv("GEMINI_API_KEY", ""),
+		LogDir:        getEnv("LOG_DIR", "./logs"),
+		DBLogAllQueries: getEnv("DB_LOG_ALL_QUERIES", "true") == "true",
+		SlowQueryThresholdMs: getEnvInt("SLOW_QUERY_THRESHOLD_MS", 150),
 	}
 
 	// [Security] Set safe testing defaults when running under go test

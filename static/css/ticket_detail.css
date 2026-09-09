@@ -1180,60 +1180,164 @@ html[data-theme="dark"],
 }
 
 /* ==========================================================================
-   RATING STYLES (EXTRACTED FROM INLINE)
+   RATING STYLES
    ========================================================================== */
-.rating-display-stars {
-    font-size: 2rem;
+.rating-container {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-lg, 14px);
+    padding: 24px;
+    margin: 24px auto 16px;
+    max-width: 540px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .rating-container {
+    background: var(--surface, #1e293b);
+    border-color: var(--border, #334155);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.rating-container h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.rating-container h2 svg {
     color: #f59e0b;
-    margin-bottom: 10px;
 }
+
+.rating-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-secondary, #64748b);
+    margin: 0 0 16px 0;
+    line-height: 1.4;
+}
+
+.rating-display-stars {
+    font-size: 2.2rem;
+    color: #f59e0b;
+    margin-bottom: 8px;
+    letter-spacing: 4px;
+    line-height: 1;
+}
+
 .star-empty {
-    color: #d1d5db;
+    color: var(--border-strong, #cbd5e1);
 }
+
+[data-theme="dark"] .star-empty {
+    color: #475569;
+}
+
 .rating-score-text {
     font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary, #0f172a);
     margin-bottom: 10px;
 }
+
 .rating-comment-box {
-    background: rgba(255, 255, 255, 0.5);
-    padding: 12px;
-    border-radius: 8px;
+    background: var(--bg-hover, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    padding: 12px 16px;
+    border-radius: var(--radius-md, 8px);
     font-style: italic;
+    color: var(--text-secondary, #475569);
+    font-size: 0.925rem;
+    line-height: 1.5;
+    margin-top: 10px;
+    word-break: break-word;
 }
+
+[data-theme="dark"] .rating-comment-box {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary, #94a3b8);
+}
+
 .rating-star-inputs {
     display: flex;
     justify-content: center;
     gap: 0.5rem;
     flex-direction: row-reverse;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
 }
+
 .star-input {
     display: none;
 }
+
 .star-label {
     font-size: 2.5rem;
-    color: #d1d5db;
+    color: var(--border-strong, #cbd5e1);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.15s ease, transform 0.15s ease;
+    user-select: none;
+    line-height: 1;
 }
+
+[data-theme="dark"] .star-label {
+    color: #475569;
+}
+
+.star-label:hover,
+.star-label:hover ~ .star-label {
+    color: #f59e0b;
+    transform: scale(1.1);
+}
+
+.star-input:checked ~ .star-label {
+    color: #f59e0b;
+}
+
 .rating-textarea {
     width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    margin-bottom: 10px;
+    min-height: 85px;
+    padding: 12px 14px;
+    border: 1px solid var(--border, #cbd5e1);
+    border-radius: var(--radius-md, 8px);
+    margin-bottom: 12px;
     box-sizing: border-box;
     font-family: inherit;
-    background: var(--input-bg);
-    color: var(--text-primary);
+    font-size: 0.9rem;
+    background: var(--input-bg, #ffffff);
+    color: var(--text-primary, #0f172a);
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
+
+.rating-textarea:focus {
+    outline: none;
+    border-color: var(--primary, #0284c7);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
 .rating-submit-btn {
     width: 100%;
-    padding: 12px;
-    background: var(--danger);
-    color: white;
+    padding: 12px 20px;
+    background: var(--primary, #0284c7);
+    color: #ffffff;
     border: none;
-    border-radius: 8px;
-    font-weight: 700;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.rating-submit-btn:hover {
+    background: var(--primary-hover, #0369a1);
+}
+
+.rating-submit-btn:active {
+    transform: scale(0.99);
 }

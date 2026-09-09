@@ -46,6 +46,7 @@ services:
     volumes:
       - ./templates:/app/templates
       - ./static:/app/static
+      - ./logs:/app/logs
     networks:
       - ticketing-network
 
@@ -66,6 +67,7 @@ services:
     volumes:
       - ./templates:/app/templates
       - ./static:/app/static
+      - ./logs:/app/logs
     networks:
       - ticketing-network
 
@@ -86,6 +88,7 @@ services:
     volumes:
       - ./templates:/app/templates
       - ./static:/app/static
+      - ./logs:/app/logs
     networks:
       - ticketing-network
 
@@ -106,6 +109,7 @@ services:
     volumes:
       - ./templates:/app/templates
       - ./static:/app/static
+      - ./logs:/app/logs
     networks:
       - ticketing-network
 
@@ -126,6 +130,7 @@ services:
     volumes:
       - ./templates:/app/templates
       - ./static:/app/static
+      - ./logs:/app/logs
     networks:
       - ticketing-network
 

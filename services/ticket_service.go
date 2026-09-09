@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 	"ticketing/models"
 	"ticketing/utils"
 )
@@ -101,8 +102,30 @@ func (s *TicketService) CreateTicketWithAttachments(createdByID uint, title, des
 	}
 
 	if err := config.DB.Create(&ticket).Error; err != nil {
+		logging.TicketLifecycle.Error("Failed to create ticket in database",
+			"error", err.Error(),
+			"title", title,
+			"created_by_id", createdByID,
+		)
 		return nil, err
 	}
+
+	logging.TicketLifecycle.Info("Ticket created",
+		"ticket_id", ticket.ID,
+		"ticket_number", ticket.GetTicketNumber(),
+		"title", ticket.Title,
+		"created_by_id", createdByID,
+		"priority", string(ticketPriority),
+	)
+
+	logging.SLACalculations.Info("SLA policy calculated for new ticket",
+		"ticket_id", ticket.ID,
+		"ticket_number", ticket.GetTicketNumber(),
+		"priority", string(ticketPriority),
+		"first_response_deadline", firstResponseDeadline,
+		"resolution_deadline", resolutionDeadline,
+		"response_target_hours", respDuration.Hours(),
+	)
 
 	for i := range attachments {
 		attachments[i].TicketID = ticket.ID
@@ -136,8 +159,21 @@ func (s *TicketService) CreateTicketWithAttachments(createdByID uint, title, des
 			attachments[i].FilePath = filepath.ToSlash(newPath)
 		}
 		if err := config.DB.Create(&attachments[i]).Error; err != nil {
-			log.Printf("[TicketService] Gagal menyimpan lampiran tiket: %v", err)
+			logging.TicketAttachments.Error("Failed to save ticket attachment",
+				"ticket_id", ticket.ID,
+				"file_name", attachments[i].FileName,
+				"error", err.Error(),
+			)
 			utils.CleanupAttachments(attachments[i : i+1])
+		} else {
+			logging.TicketAttachments.Info("Ticket attachment saved",
+				"ticket_id", ticket.ID,
+				"attachment_id", attachments[i].ID,
+				"file_name", attachments[i].FileName,
+				"file_path", attachments[i].FilePath,
+				"file_size", attachments[i].FileSize,
+				"is_pdf", attachments[i].IsPDF(),
+			)
 		}
 	}
 
@@ -259,8 +295,21 @@ func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, mess
 	}
 	reply = &models.TicketReply{TicketID: tkt.ID, UserID: userID, Message: message}
 	if err := config.DB.Create(reply).Error; err != nil {
+		logging.TicketChat.Error("Failed to save ticket reply",
+			"ticket_id", tkt.ID,
+			"user_id", userID,
+			"error", err.Error(),
+		)
 		return nil, nil, err
 	}
+
+	logging.TicketChat.Info("Ticket reply added",
+		"ticket_id", tkt.ID,
+		"reply_id", reply.ID,
+		"user_id", userID,
+		"message_len", len(message),
+		"attachments_count", len(attachments),
+	)
 
 	for i := range attachments {
 		attachments[i].TicketID = tkt.ID
@@ -294,8 +343,22 @@ func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, mess
 			attachments[i].FilePath = filepath.ToSlash(newPath)
 		}
 		if err := config.DB.Create(&attachments[i]).Error; err != nil {
-			log.Printf("[TicketService] Gagal menyimpan lampiran balasan: %v", err)
+			logging.TicketAttachments.Error("Failed to save reply attachment",
+				"ticket_id", tkt.ID,
+				"reply_id", reply.ID,
+				"file_name", attachments[i].FileName,
+				"error", err.Error(),
+			)
 			utils.CleanupAttachments(attachments[i : i+1])
+		} else {
+			logging.TicketAttachments.Info("Reply attachment saved",
+				"ticket_id", tkt.ID,
+				"reply_id", reply.ID,
+				"attachment_id", attachments[i].ID,
+				"file_name", attachments[i].FileName,
+				"file_size", attachments[i].FileSize,
+				"is_pdf", attachments[i].IsPDF(),
+			)
 		}
 	}
 
@@ -364,7 +427,39 @@ func (s *TicketService) SubmitRating(ticketID int, token string, rating int, com
 		RatedByID: claims.UserID,
 		RatedAt:   time.Now(),
 	}
-	return config.DB.Create(&newRating).Error
+	err = config.DB.Create(&newRating).Error
+	if err != nil {
+		logging.TicketRatings.Error("Failed to save ticket rating via token", "ticket_id", ticketID, "error", err.Error())
+	} else {
+		logging.TicketRatings.Info("Ticket rating saved via token", "ticket_id", ticketID, "rating", rating, "user_id", claims.UserID)
+	}
+	return err
+}
+
+// SubmitRatingForUser saves rating directly for an authenticated user.
+func (s *TicketService) SubmitRatingForUser(ticketID int, userID uint, rating int, comment string) error {
+	var ticket models.Ticket
+	if err := config.DB.Where("id = ? AND created_by_id = ? AND status = ?", ticketID, userID, models.StatusClosed).First(&ticket).Error; err != nil {
+		return err
+	}
+	var existing models.TicketRating
+	if config.DB.Where("ticket_id = ?", ticketID).First(&existing).Error == nil {
+		return errors.New("already rated")
+	}
+	newRating := models.TicketRating{
+		TicketID:  uint(ticketID),
+		Rating:    rating,
+		Comment:   comment,
+		RatedByID: userID,
+		RatedAt:   time.Now(),
+	}
+	err := config.DB.Create(&newRating).Error
+	if err != nil {
+		logging.TicketRatings.Error("Failed to save ticket rating for user", "ticket_id", ticketID, "user_id", userID, "error", err.Error())
+	} else {
+		logging.TicketRatings.Info("Ticket rating saved for user", "ticket_id", ticketID, "user_id", userID, "rating", rating)
+	}
+	return err
 }
 
 // ResolveSLAPolicy delegates to models.ResolveSLAPolicy using config.DB.

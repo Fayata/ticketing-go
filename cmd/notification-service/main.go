@@ -11,12 +11,15 @@ import (
 
 	"ticketing/config"
 	"ticketing/handlers"
+	"ticketing/internal/logging"
 	"ticketing/middleware"
 	"ticketing/models"
 	"ticketing/services"
 )
 
 func main() {
+	logging.Init("notification-service")
+
 	port := os.Getenv("NOTIFICATION_SERVICE_PORT")
 	if port == "" {
 		port = "8083"
@@ -62,7 +65,7 @@ func main() {
 	mux.HandleFunc("/health", HealthCheckHandler)
 
 	// Apply logging middleware
-	loggedMux := middleware.LoggingMiddleware(mux)
+	loggedMux := logging.PanicRecoveryMiddleware(middleware.LoggingMiddleware(mux))
 
 	srv := &http.Server{
 		Addr:    ":" + port,

@@ -3,13 +3,13 @@ package utils
 import (
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 	"ticketing/middleware"
 	"ticketing/models"
 )
@@ -98,7 +98,13 @@ func InitTemplates() {
 			return toInt(a) + toInt(b)
 		},
 		"eq": func(a, b interface{}) bool {
-			return a == b
+			if a == b {
+				return true
+			}
+			if a == nil || b == nil {
+				return false
+			}
+			return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
 		},
 		"len": func(arr interface{}) int {
 			if arr == nil {
@@ -201,7 +207,7 @@ func InitTemplates() {
 	tmpl = template.Must(tmpl.ParseGlob(filepath.Join("templates", "admin", "*.html")))
 
 	templates = tmpl
-	log.Println("Templates loaded successfully with helper functions")
+	logging.HTTPTemplate.Info("Templates loaded successfully with helper functions")
 }
 
 // TruncateString memotong string sampai maxLen karakter; sisanya diganti "...".
@@ -218,18 +224,31 @@ func TruncateString(s string, maxLen int) string {
 // RenderTemplate merender template HTML dengan data ke response.
 func RenderTemplate(w http.ResponseWriter, tmplName string, data interface{}) {
 	if templates == nil {
+		logging.HTTPTemplate.Error("Templates not initialized", "template", tmplName)
 		http.Error(w, "Templates not initialized", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
+	start := time.Now()
 	err := templates.ExecuteTemplate(w, tmplName, data)
+	duration := time.Since(start)
+
 	if err != nil {
-		log.Printf("Template error (%s): %v", tmplName, err)
+		logging.HTTPTemplate.Error("Template render error",
+			"template", tmplName,
+			"duration_ms", duration.Milliseconds(),
+			"error", err.Error(),
+		)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
+	logging.HTTPTemplate.Debug("Template rendered successfully",
+		"template", tmplName,
+		"duration_ms", duration.Milliseconds(),
+	)
 }
 
 // GetUserFromContext mengembalikan user dari context (diisi middleware auth).

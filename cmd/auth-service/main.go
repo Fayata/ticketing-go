@@ -17,12 +17,15 @@ import (
 	"ticketing/controllers"
 	"ticketing/handlers"
 	"ticketing/middleware"
+	"ticketing/internal/logging"
 	"ticketing/models"
 	"ticketing/services"
 	"ticketing/utils"
 )
 
 func main() {
+	logging.Init("auth-service")
+
 	port := os.Getenv("AUTH_SERVICE_PORT")
 	if port == "" {
 		port = "8081"

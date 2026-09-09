@@ -390,23 +390,32 @@ func (h *TicketHandler) SubmitRating(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid ticket ID", http.StatusBadRequest)
 		return
 	}
-	token := r.FormValue("token")
-	if token == "" {
-		http.Error(w, "Rating token required", http.StatusBadRequest)
-		return
-	}
 	rating, err := strconv.Atoi(r.FormValue("rating"))
 	if err != nil || rating < 1 || rating > 5 {
 		http.Error(w, "Invalid rating. Please select 1-5 stars", http.StatusBadRequest)
 		return
 	}
-	comment := r.FormValue("comment")
-	if err := h.ticketService.SubmitRating(ticketID, token, rating, comment); err != nil {
-		if err.Error() == "already rated" {
+	comment := strings.TrimSpace(r.FormValue("comment"))
+
+	user := GetUserFromContext(r)
+	var submitErr error
+	if u, ok := user.(*models.User); ok && u != nil {
+		submitErr = h.ticketService.SubmitRatingForUser(ticketID, u.ID, rating, comment)
+	} else {
+		token := r.FormValue("token")
+		if token == "" {
+			http.Error(w, "Rating token required", http.StatusBadRequest)
+			return
+		}
+		submitErr = h.ticketService.SubmitRating(ticketID, token, rating, comment)
+	}
+
+	if submitErr != nil {
+		if submitErr.Error() == "already rated" {
 			http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error=Rating+sudah+diberikan+dan+tidak+bisa+diubah", http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Failed to save rating", http.StatusInternalServerError)
+		http.Error(w, "Failed to save rating: "+submitErr.Error(), http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?success=Rating+berhasil+disimpan", http.StatusSeeOther)
