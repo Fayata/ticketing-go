@@ -5,7 +5,7 @@
         <div class="stat-content">
             <div class="stat-info">
                 <p>Menunggu Balasan</p>
-                <h3>{{.waiting_tickets}}</h3>
+                <h3 id="userKpiWaiting">{{.waiting_tickets}}</h3>
             </div>
             <div class="stat-icon orange">
                 <img src="static/icons/wait.gif" alt="Menunggu Balasan" class="stat-icon-img" width="34" height="34">
@@ -17,7 +17,7 @@
         <div class="stat-content">
             <div class="stat-info">
                 <p>Dalam Progress</p>
-                <h3>{{.in_progress_tickets}}</h3>
+                <h3 id="userKpiProgress">{{.in_progress_tickets}}</h3>
             </div>
             <div class="stat-icon blue">
                 <img src="static/icons/discussion.gif" alt="Dalam Progress" class="stat-icon-img" width="34" height="34">
@@ -29,7 +29,7 @@
         <div class="stat-content">
             <div class="stat-info">
                 <p>Tiket Selesai</p>
-                <h3>{{.closed_tickets}}</h3>
+                <h3 id="userKpiClosed">{{.closed_tickets}}</h3>
             </div>
             <div class="stat-icon green">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,7 +44,7 @@
         <div class="stat-content">
             <div class="stat-info">
                 <p>Total Tiket</p>
-                <h3>{{.total_tickets}}</h3>
+                <h3 id="userKpiTotal">{{.total_tickets}}</h3>
             </div>
             <div class="stat-icon purple">
                 <img src="static/icons/ticket.png?v=2" alt="Total Tiket" class="stat-icon-img" width="30" height="30">
@@ -65,7 +65,7 @@
             </a>
         </div>
         <div class="card-body">
-            <div class="ticket-list">
+            <div class="ticket-list" id="userTicketList">
                 {{if .recent_tickets}}
                     {{range .recent_tickets}}
                     <div class="ticket-item" onclick="window.location.href='tiket/{{.ID}}'">

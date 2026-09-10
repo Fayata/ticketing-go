@@ -53,6 +53,9 @@ func main() {
 		log.Fatalf("AutoMigrate failed after 5 attempts: %v", err)
 	}
 
+	// Start background SLA notification worker
+	go services.StartSLANotificationWorker(config.DB)
+
 	mux := http.NewServeMux()
 
 	// Register routes

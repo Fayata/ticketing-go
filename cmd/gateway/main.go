@@ -75,6 +75,8 @@ func main() {
 	mux.Handle("/knowledge-base", ticketProxy)
 	mux.Handle("/api/ticket/", ticketProxy)
 	mux.Handle("/api/ticket", ticketProxy)
+	mux.Handle("/api/dashboard/", ticketProxy)
+	mux.Handle("/api/dashboard", ticketProxy)
 	mux.Handle("/ws/ticket/", ticketProxy)
 	mux.Handle("/ws/ticket", ticketProxy)
 

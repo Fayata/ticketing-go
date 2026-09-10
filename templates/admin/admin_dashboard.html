@@ -29,7 +29,7 @@
 				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
 				{{if $d.TrendWaitingPct}}<span class="admin-kpi-trend {{if ge $d.TrendWaitingPct 0}}up{{else}}down{{end}}">{{if ge $d.TrendWaitingPct 0}}↑{{else}}↓{{end}} {{$d.TrendWaitingPct}}%</span>{{end}}
 			</div>
-			<div class="admin-kpi-value">{{$d.WaitingCount}}</div>
+			<div class="admin-kpi-value" id="adminKpiWaiting">{{$d.WaitingCount}}</div>
 			<div class="admin-kpi-label">Tiket Menunggu</div>
 			<div class="admin-kpi-sub">Belum di-assign</div>
 		</div>
@@ -38,7 +38,7 @@
 				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
 				{{if $d.TrendProgressPct}}<span class="admin-kpi-trend {{if ge $d.TrendProgressPct 0}}up{{else}}down{{end}}">{{if ge $d.TrendProgressPct 0}}↑{{else}}↓{{end}} {{$d.TrendProgressPct}}%</span>{{end}}
 			</div>
-			<div class="admin-kpi-value">{{$d.InProgressCount}}</div>
+			<div class="admin-kpi-value" id="adminKpiProgress">{{$d.InProgressCount}}</div>
 			<div class="admin-kpi-label">Sedang Dikerjakan</div>
 			<div class="admin-kpi-sub">Tiket In Progress</div>
 		</div>
@@ -47,7 +47,7 @@
 				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
 				{{if $d.TrendClosedTodayPct}}<span class="admin-kpi-trend up">↑ {{$d.TrendClosedTodayPct}}%</span>{{end}}
 			</div>
-			<div class="admin-kpi-value">{{$d.ClosedTodayCount}}</div>
+			<div class="admin-kpi-value" id="adminKpiClosedToday">{{$d.ClosedTodayCount}}</div>
 			<div class="admin-kpi-label">Selesai Hari Ini</div>
 			<div class="admin-kpi-sub">Closed hari ini</div>
 		</div>
@@ -56,31 +56,31 @@
 				<div class="admin-kpi-icon-wrap"><svg class="admin-kpi-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
 				{{if $d.TrendAvgRatingPct}}<span class="admin-kpi-trend up">↑ {{$d.TrendAvgRatingPct}}%</span>{{end}}
 			</div>
-			<div class="admin-kpi-value">{{printf "%.1f" $d.AvgRating}} ★</div>
+			<div class="admin-kpi-value" id="adminKpiAvgRating">{{printf "%.1f" $d.AvgRating}} ★</div>
 			<div class="admin-kpi-label">Rata-rata Rating</div>
-			<div class="admin-kpi-sub">{{$d.RatedCount}} tiket dinilai</div>
+			<div class="admin-kpi-sub" id="adminKpiRatedCount">{{$d.RatedCount}} tiket dinilai</div>
 		</div>
 	</div>
 
 	<!-- KPI row 2 -->
 	<div class="admin-kpi-grid">
 		<div class="admin-kpi-card admin-kpi-sky">
-			<div class="admin-kpi-value">{{$d.TotalTicketsMonth}}</div>
+			<div class="admin-kpi-value" id="adminKpiTotalMonth">{{$d.TotalTicketsMonth}}</div>
 			<div class="admin-kpi-label">Total Tiket Bulan Ini</div>
 			<div class="admin-kpi-sub">Bulan berjalan</div>
 		</div>
 		<div class="admin-kpi-card admin-kpi-green">
-			<div class="admin-kpi-value">{{$d.TotalUsersActive}}</div>
+			<div class="admin-kpi-value" id="adminKpiTotalUsers">{{$d.TotalUsersActive}}</div>
 			<div class="admin-kpi-label">Total User Aktif</div>
 			<div class="admin-kpi-sub">Terdaftar & aktif</div>
 		</div>
 		<div class="admin-kpi-card admin-kpi-rose">
-			<div class="admin-kpi-value">{{$d.StaffActiveCount}}</div>
+			<div class="admin-kpi-value" id="adminKpiStaffActive">{{$d.StaffActiveCount}}</div>
 			<div class="admin-kpi-label">Staff Aktif</div>
 			<div class="admin-kpi-sub">Tersebar per departemen</div>
 		</div>
 		<div class="admin-kpi-card admin-kpi-slate">
-			<div class="admin-kpi-value">{{$d.UnratedCount}}</div>
+			<div class="admin-kpi-value" id="adminKpiUnrated">{{$d.UnratedCount}}</div>
 			<div class="admin-kpi-label">Belum Di-rate</div>
 			<div class="admin-kpi-sub">Closed tanpa rating</div>
 		</div>
@@ -166,7 +166,7 @@
 							<th>ID</th><th>Judul</th><th>Prioritas</th><th>Status</th><th>Departemen</th><th>Tanggal</th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody id="adminRecentList">
 						{{range $d.RecentTickets}}
 						<tr>
 							<td class="admin-td-id">{{.GetTicketNumber}}</td>
@@ -191,7 +191,7 @@
 					<span class="admin-card-title">Menunggu Terlama</span>
 				</div>
 				<div class="admin-card-body">
-					<div class="admin-waiting-list">
+					<div class="admin-waiting-list" id="adminWaitingList">
 						{{range $d.WaitingLongest}}
 						<div class="admin-waiting-item">
 							<div class="admin-waiting-bar" style="--accent: #ef4444;"></div>
@@ -248,6 +248,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="static/js/admin_dashboard_live.js"></script>
 <script>
 (function(){
 	var trendData = {{.trend_data_json}};

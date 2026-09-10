@@ -112,7 +112,9 @@ func main() {
 	mux.HandleFunc("/ws/ticket/", middleware.AuthRequired(wsHandler.HandleTicketWS))
 
 	mux.HandleFunc("/departement/dashboard", middleware.AuthRequired(middleware.EmailRequired(middleware.DepartmentRequired(departementHandler.ShowDashboard))))
+	mux.HandleFunc("/departement/api/live", middleware.AuthRequired(middleware.EmailRequired(middleware.DepartmentRequired(departementHandler.GetLiveDashboardAPI))))
 	mux.HandleFunc("/admin/dashboard", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ShowAdminDashboard))))
+	mux.HandleFunc("/admin/api/live", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.GetLiveDashboardAPI))))
 	mux.HandleFunc("/admin/search", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.SearchAdmin))))
 	mux.HandleFunc("/admin/users", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ListUsers))))
 	mux.HandleFunc("/admin/users/create", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.CreateUserForm))))
@@ -155,6 +157,7 @@ func main() {
 	mux.HandleFunc("/departement/all-tickets", middleware.AuthRequired(middleware.EmailRequired(middleware.DepartmentRequired(departementHandler.ShowAllTickets))))
 
 	mux.HandleFunc("/dashboard", middleware.AuthRequired(middleware.EmailRequired(middleware.PortalUserRequired(dashboardHandler.ShowDashboard))))
+	mux.HandleFunc("/api/dashboard/live", middleware.AuthRequired(middleware.EmailRequired(middleware.PortalUserRequired(dashboardHandler.GetLiveDashboardAPI))))
 	mux.HandleFunc("/tiket", middleware.AuthRequired(middleware.EmailRequired(middleware.PortalUserRequired(ticketHandler.ShowMyTickets))))
 	mux.HandleFunc("/tiket/", middleware.AuthRequired(middleware.EmailRequired(middleware.PortalUserRequired(ticketHandler.HandleTicketDetail))))
 	mux.HandleFunc("/kirim-tiket", middleware.AuthRequired(middleware.EmailRequired(middleware.PortalUserRequired(ticketHandler.HandleCreateTicket))))

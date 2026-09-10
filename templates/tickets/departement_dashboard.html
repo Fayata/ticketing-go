@@ -24,31 +24,31 @@
 	<!-- KPI Row (5 cards) — selalu tampil, pakai .kpi agar angka pasti terisi -->
 	<div class="staff-kpi-grid">
 		<div class="staff-kpi-card staff-kpi-amber">
-			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.WaitingCount}}{{else}}0{{end}}</div>
+			<div class="staff-kpi-value" id="staffKpiWaiting">{{if $kpi}}{{$kpi.WaitingCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Menunggu (Pool)</div>
 			<div class="staff-kpi-sub">Belum di-claim</div>
 		</div>
 		<div class="staff-kpi-card staff-kpi-blue">
-			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.ProgressCount}}{{else}}0{{end}}</div>
+			<div class="staff-kpi-value" id="staffKpiProgress">{{if $kpi}}{{$kpi.ProgressCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Sedang Dikerjakan</div>
 			<div class="staff-kpi-sub">Tiket aktif saya</div>
 		</div>
 		<div class="staff-kpi-card staff-kpi-green staff-kpi-highlight">
-			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.ClosedTodayCount}}{{else}}0{{end}}</div>
+			<div class="staff-kpi-value" id="staffKpiClosedToday">{{if $kpi}}{{$kpi.ClosedTodayCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Selesai Hari Ini</div>
 			<div class="staff-kpi-sub">Tiket saya, closed</div>
 			{{if $kpi}}{{if $kpi.TrendClosedPct}}<span class="staff-kpi-trend">↑ {{$kpi.TrendClosedPct}}%</span>{{end}}{{end}}
 		</div>
 		<div class="staff-kpi-card staff-kpi-sky">
-			<div class="staff-kpi-value">{{if $kpi}}{{$kpi.ClosedMonthCount}}{{else}}0{{end}}</div>
+			<div class="staff-kpi-value" id="staffKpiClosedMonth">{{if $kpi}}{{$kpi.ClosedMonthCount}}{{else}}0{{end}}</div>
 			<div class="staff-kpi-label">Selesai Bulan Ini</div>
 			<div class="staff-kpi-sub">Bulan ini</div>
 			{{if $kpi}}{{if $kpi.TrendMonthPct}}<span class="staff-kpi-trend">↑ {{$kpi.TrendMonthPct}}%</span>{{end}}{{end}}
 		</div>
 		<div class="staff-kpi-card staff-kpi-purple">
-			<div class="staff-kpi-value">{{if $kpi}}{{printf "%.1f" $kpi.AvgRating}}{{else}}0.0{{end}} ★</div>
+			<div class="staff-kpi-value" id="staffKpiAvgRating">{{if $kpi}}{{printf "%.1f" $kpi.AvgRating}}{{else}}0.0{{end}} ★</div>
 			<div class="staff-kpi-label">Rating Saya</div>
-			<div class="staff-kpi-sub">Dari {{if $kpi}}{{$kpi.RatedCount}}{{else}}0{{end}} penilaian</div>
+			<div class="staff-kpi-sub">Dari <span id="staffKpiRatedCount">{{if $kpi}}{{$kpi.RatedCount}}{{else}}0{{end}}</span> penilaian</div>
 		</div>
 	</div>
 
@@ -94,92 +94,19 @@
 		</div>
 	</div>
 
-	<!-- Work Area: Tiket Saya + Pool -->
+	<!-- Work Area: Tiket Terlewat Response Time + Pool -->
 	<div class="staff-work-row">
-		<div class="staff-card staff-card-accent-blue">
-			<div class="staff-card-head">
-				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
-				<span class="staff-card-title">Tiket Saya (Sedang Dikerjakan)</span>
-				<span class="staff-card-badge">{{len $d.MyActiveTickets}}</span>
-			</div>
-			<div class="staff-card-body">
-				<div class="staff-ticket-list">
-					{{range $d.MyActiveTickets}}
-					<div class="staff-ticket-item" onclick="window.location.href='departement/tiket/{{.ID}}';">
-						<div class="staff-ticket-bar staff-priority-{{.Priority}}"></div>
-						<div class="staff-ticket-inner">
-							<div class="staff-ticket-meta">
-								<span class="staff-ticket-id">{{.GetTicketNumber}}</span>
-								<span class="staff-badge staff-badge-{{.Priority}}">{{.GetPriorityDisplay}}</span>
-							</div>
-							<div class="staff-ticket-title">{{.Title}}</div>
-							<div class="staff-ticket-dept">{{if .Department}}{{.Department.Name}}{{else}}—{{end}}</div>
-							<div class="staff-ticket-actions">
-								<span class="staff-ticket-date">{{timeSince .UpdatedAt}}</span>
-								<a href="departement/tiket/release/{{.ID}}" class="staff-btn staff-btn-release" onclick="event.stopPropagation(); event.preventDefault(); showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='departement/tiket/release/{{.ID}}'; }); return false;">Lepas ke Pool</a>
-							</div>
-						</div>
-					</div>
-					{{end}}
-					{{if not $d.MyActiveTickets}}
-					<div class="staff-empty-state">
-						<p>Anda tidak sedang mengerjakan tiket.</p>
-						<p class="staff-empty-hint">Ambil tiket dari pool di sebelah.</p>
-					</div>
-					{{end}}
-				</div>
-			</div>
-		</div>
-		<div class="staff-card staff-card-accent-amber">
-			<div class="staff-card-head">
-				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/></svg></span>
-				<span class="staff-card-title">Pool Tiket (Departemen Saya)</span>
-				<span class="staff-card-badge">{{len $d.TicketPool}}</span>
-			</div>
-			<div class="staff-card-body">
-				<div class="staff-ticket-list">
-					{{range $d.TicketPool}}
-					<div class="staff-ticket-item staff-pool-item" onclick="window.location.href='departement/tiket/{{.ID}}';">
-						<div class="staff-ticket-bar staff-priority-{{.Priority}}"></div>
-						<div class="staff-ticket-inner">
-							<div class="staff-ticket-meta">
-								<span class="staff-ticket-id">{{.GetTicketNumber}}</span>
-								<span class="staff-badge staff-badge-{{.Priority}}">{{.GetPriorityDisplay}}</span>
-								<span class="staff-ticket-dept-inline">{{if .Department}}{{.Department.Name}}{{else}}—{{end}}</span>
-							</div>
-							<div class="staff-ticket-title">{{.Title}}</div>
-							<div class="staff-ticket-meta-footer">
-								<span>{{.CreatedBy.Username}}</span>
-								<span class="staff-ticket-time">{{timeSince .CreatedAt}}</span>
-							</div>
-							<a href="departement/tiket/claim/{{.ID}}" class="staff-btn staff-btn-claim" onclick="event.stopPropagation();">Ambil Tiket</a>
-						</div>
-					</div>
-					{{end}}
-					{{if not $d.TicketPool}}
-					<div class="staff-empty-state">
-						<svg class="staff-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7"/></svg>
-						<p>Tidak ada tiket baru di pool departemen ini.</p>
-					</div>
-					{{end}}
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Bottom: Tiket Terlewat Response Time + Belum Di-rate -->
-	<div class="staff-bottom-row">
 		<div class="staff-card staff-card-accent-red">
 			<div class="staff-card-head staff-card-head-action">
 				<div style="display:flex;align-items:center;gap:0.5rem;">
 					<span class="staff-card-icon" style="color:#dc2626;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
 					<span class="staff-card-title">Tiket Terlewat Response Time</span>
-					{{if $d.SLABreachedTickets}}<span class="staff-card-badge staff-badge-red">{{len $d.SLABreachedTickets}}</span>{{end}}
+					<span class="staff-card-badge staff-badge-red" id="staffBreachedBadge" {{if not $d.SLABreachedTickets}}style="display:none;"{{end}}>{{len $d.SLABreachedTickets}}</span>
 				</div>
 				<a href="departement/all-tickets?tab=sla_breached" class="staff-card-link">Lihat Semua <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
 			</div>
 			<div class="staff-card-body">
-				<div class="staff-mini-list">
+				<div class="staff-mini-list" id="staffBreachedList">
 					{{range $i, $t := $d.SLABreachedTickets}}
 					{{if lt $i 5}}
 					{{$sla := $t.GetSLABadgeInfo}}
@@ -204,6 +131,83 @@
 				</div>
 			</div>
 		</div>
+		<div class="staff-card staff-card-accent-amber">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/></svg></span>
+				<span class="staff-card-title">Pool Tiket (Departemen Saya)</span>
+				<span class="staff-card-badge" id="staffPoolBadge">{{len $d.TicketPool}}</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-ticket-list" id="staffPoolList">
+					{{range $d.TicketPool}}
+					<div class="staff-ticket-item staff-pool-item" onclick="window.location.href='departement/tiket/{{.ID}}';">
+						<div class="staff-ticket-bar staff-priority-{{.Priority}}"></div>
+						<div class="staff-ticket-inner">
+							<div class="staff-ticket-meta">
+								<span class="staff-ticket-id">{{.GetTicketNumber}}</span>
+								<span class="staff-badge staff-badge-{{.Priority}}">{{.GetPriorityDisplay}}</span>
+								{{$sla := .GetSLABadgeInfo}}
+								{{if ne $sla.Class "sla-badge-gray"}}
+								<span class="sla-badge {{$sla.Class}}" title="{{$sla.Detail}}">{{$sla.Label}}</span>
+								{{end}}
+								<span class="staff-ticket-dept-inline">{{if .Department}}{{.Department.Name}}{{else}}—{{end}}</span>
+							</div>
+							<div class="staff-ticket-title">{{.Title}}</div>
+							<div class="staff-ticket-meta-footer">
+								<span>{{.CreatedBy.Username}}</span>
+								<span class="staff-ticket-time">{{timeSince .CreatedAt}}</span>
+							</div>
+							<a href="departement/tiket/claim/{{.ID}}" class="staff-btn staff-btn-claim" onclick="event.stopPropagation();">Ambil Tiket</a>
+						</div>
+					</div>
+					{{end}}
+					{{if not $d.TicketPool}}
+					<div class="staff-empty-state">
+						<svg class="staff-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7"/></svg>
+						<p>Tidak ada tiket baru di pool departemen ini.</p>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Bottom: Tiket Saya + Belum Di-rate -->
+	<div class="staff-bottom-row">
+		<div class="staff-card staff-card-accent-blue">
+			<div class="staff-card-head">
+				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
+				<span class="staff-card-title">Tiket Saya (Sedang Dikerjakan)</span>
+				<span class="staff-card-badge" id="staffMyActiveBadge">{{len $d.MyActiveTickets}}</span>
+			</div>
+			<div class="staff-card-body">
+				<div class="staff-ticket-list" id="staffMyActiveList">
+					{{range $d.MyActiveTickets}}
+					<div class="staff-ticket-item" onclick="window.location.href='departement/tiket/{{.ID}}';">
+						<div class="staff-ticket-bar staff-priority-{{.Priority}}"></div>
+						<div class="staff-ticket-inner">
+							<div class="staff-ticket-meta">
+								<span class="staff-ticket-id">{{.GetTicketNumber}}</span>
+								<span class="staff-badge staff-badge-{{.Priority}}">{{.GetPriorityDisplay}}</span>
+							</div>
+							<div class="staff-ticket-title">{{.Title}}</div>
+							<div class="staff-ticket-dept">{{if .Department}}{{.Department.Name}}{{else}}—{{end}}</div>
+							<div class="staff-ticket-actions">
+								<span class="staff-ticket-date">{{timeSince .UpdatedAt}}</span>
+								<a href="departement/tiket/release/{{.ID}}" class="staff-btn staff-btn-release" onclick="event.stopPropagation(); event.preventDefault(); showCustomConfirm('Kembalikan tiket ini ke pool? Tiket akan bisa diambil lagi oleh staff lain.', 'Lepas ke Pool', function(){ window.location.href='departement/tiket/release/{{.ID}}'; }); return false;">Lepas ke Pool</a>
+							</div>
+						</div>
+					</div>
+					{{end}}
+					{{if not $d.MyActiveTickets}}
+					<div class="staff-empty-state">
+						<p>Anda tidak sedang mengerjakan tiket.</p>
+						<p class="staff-empty-hint">Ambil tiket dari pool di atas.</p>
+					</div>
+					{{end}}
+				</div>
+			</div>
+		</div>
 		<div class="staff-card">
 			<div class="staff-card-head">
 				<span class="staff-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
@@ -211,7 +215,7 @@
 			</div>
 			<div class="staff-card-body">
 				{{if $d.UnratedTickets}}
-				<div class="staff-unrated-list">
+				<div class="staff-unrated-list" id="staffUnratedList">
 					{{range $d.UnratedTickets}}
 					<div class="staff-unrated-item" onclick="window.location.href='departement/tiket/{{.ID}}';">
 						<div class="staff-unrated-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
@@ -247,5 +251,6 @@
 <script type="application/json" id="staffDonutData">{{.donut_data_json}}</script>
 <script src="static/js/chart.umd.min.js"></script>
 <script src="static/js/staff-dashboard-charts.js"></script>
+<script src="static/js/staff_dashboard_live.js"></script>
 {{end}}
 {{end}}

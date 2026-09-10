@@ -109,6 +109,7 @@ func main() {
 	mux.Handle("/api/kb/article/view", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.RecordKBArticleView))))
 	mux.Handle("/api/ticket/", middleware.AuthRequired(http.HandlerFunc(ticketHandler.GetTicketMessagesAPI)))
 	mux.Handle("/api/ticket", middleware.AuthRequired(http.HandlerFunc(ticketHandler.GetTicketMessagesAPI)))
+	mux.Handle("/api/dashboard/live", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.GetLiveDashboardAPI))))
 	mux.Handle("/ws/ticket/", middleware.AuthRequired(http.HandlerFunc(wsHandler.HandleTicketWS)))
 
 	// Health check

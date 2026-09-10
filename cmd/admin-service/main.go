@@ -102,6 +102,7 @@ func main() {
 	// Admin Routes (SuperAdmin)
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("/dashboard", AuditLogWrapper("Show Admin Dashboard", adminHandler.ShowAdminDashboard))
+	adminMux.HandleFunc("/api/live", adminHandler.GetLiveDashboardAPI)
 	adminMux.HandleFunc("/search", adminHandler.SearchAdmin)
 	adminMux.HandleFunc("/users", adminHandler.ListUsers)
 	adminMux.HandleFunc("/users/create", ValidateUserCreation(adminHandler.CreateUserForm))
@@ -156,6 +157,7 @@ func main() {
 	// Department Routes
 	deptMux := http.NewServeMux()
 	deptMux.HandleFunc("/dashboard", departmentHandler.ShowDashboard)
+	deptMux.HandleFunc("/api/live", departmentHandler.GetLiveDashboardAPI)
 	deptMux.HandleFunc("/all-tickets", departmentHandler.ShowAllTickets)
 	deptMux.HandleFunc("/tiket/estimate/", departmentHandler.SetTicketEstimate)
 	deptMux.HandleFunc("/tiket/priority/", departmentHandler.SetTicketPriority)

@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"ticketing/internal/logging"
 	"ticketing/models"
 )
 
@@ -24,6 +25,7 @@ const slaCheckInterval = 5 * time.Minute
 //
 //	go services.StartSLANotificationWorker(config.DB)
 func StartSLANotificationWorker(db *gorm.DB) {
+	logging.SystemLifecycle.Info("SLA Notification Worker started", "interval", slaCheckInterval.String())
 	log.Println("[SLA Worker] Started – checking every", slaCheckInterval)
 	ticker := time.NewTicker(slaCheckInterval)
 	defer ticker.Stop()
@@ -65,8 +67,17 @@ func runSLACheck(db *gorm.DB) {
 		case now.After(deadline):
 			// SLA already breached
 			if !t.SLABreachSent {
+				logging.SLABreaches.Warn("SLA first response deadline breached",
+					"ticket_id", t.ID,
+					"ticket_number", t.GetTicketNumber(),
+					"department_id", *t.DepartmentID,
+					"deadline", deadline,
+				)
 				if err := sendSLANotification(db, t, true); err != nil {
-					log.Printf("[SLA Worker] Failed to send breach notification for ticket %d: %v", t.ID, err)
+					logging.SLABreaches.Error("Failed to send breach notification",
+						"ticket_id", t.ID,
+						"error", err.Error(),
+					)
 					continue
 				}
 				// Mark breach sent so we don't spam
@@ -77,8 +88,17 @@ func runSLACheck(db *gorm.DB) {
 		case timeLeft <= slaWarningWindow:
 			// Approaching deadline – warning
 			if !t.SLAWarningSent {
+				logging.SLAEscalations.Warn("SLA first response deadline approaching",
+					"ticket_id", t.ID,
+					"ticket_number", t.GetTicketNumber(),
+					"department_id", *t.DepartmentID,
+					"time_left", formatDuration(timeLeft),
+				)
 				if err := sendSLANotification(db, t, false); err != nil {
-					log.Printf("[SLA Worker] Failed to send warning notification for ticket %d: %v", t.ID, err)
+					logging.SLAEscalations.Error("Failed to send warning notification",
+						"ticket_id", t.ID,
+						"error", err.Error(),
+					)
 					continue
 				}
 				db.Model(t).Update("sla_warning_sent", true)

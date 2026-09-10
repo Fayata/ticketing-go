@@ -79,6 +79,107 @@ func (h *AdminHandler) ShowAdminDashboard(w http.ResponseWriter, r *http.Request
 	RenderTemplate(w, "admin/admin_dashboard", data)
 }
 
+// GetLiveDashboardAPI returns JSON of admin dashboard metrics and waiting tickets for real-time sync.
+func (h *AdminHandler) GetLiveDashboardAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if h.adminDashService == nil {
+		http.Error(w, "Dashboard service not configured", http.StatusInternalServerError)
+		return
+	}
+
+	dash, err := h.adminDashService.GetAdminDashboardData()
+	if err != nil {
+		http.Error(w, "Failed to load dashboard data", http.StatusInternalServerError)
+		return
+	}
+
+	type waitingItemJSON struct {
+		ID              uint   `json:"id"`
+		TicketNumber    string `json:"ticket_number"`
+		Title           string `json:"title"`
+		Department      string `json:"department"`
+		Priority        string `json:"priority"`
+		WaitingDuration string `json:"waiting_duration"`
+		SLABadgeClass   string `json:"sla_badge_class"`
+		SLABadgeLabel   string `json:"sla_badge_label"`
+	}
+
+	waitingList := make([]waitingItemJSON, 0, len(dash.WaitingLongest))
+	for _, item := range dash.WaitingLongest {
+		if item.Ticket == nil {
+			continue
+		}
+		deptName := "—"
+		if item.Ticket.Department != nil {
+			deptName = item.Ticket.Department.Name
+		}
+		sla := item.Ticket.GetSLABadgeInfo()
+		waitingList = append(waitingList, waitingItemJSON{
+			ID:              item.Ticket.ID,
+			TicketNumber:    item.Ticket.GetTicketNumber(),
+			Title:           item.Ticket.Title,
+			Department:      deptName,
+			Priority:        string(item.Ticket.Priority),
+			WaitingDuration: fmt.Sprintf("%d hari", item.Days),
+			SLABadgeClass:   sla.Class,
+			SLABadgeLabel:   sla.Label,
+		})
+	}
+
+	type recentTicketJSON struct {
+		ID           uint   `json:"id"`
+		TicketNumber string `json:"ticket_number"`
+		Title        string `json:"title"`
+		Status       string `json:"status"`
+		Priority     string `json:"priority"`
+		Department   string `json:"department"`
+		CreatedAt    string `json:"created_at"`
+	}
+
+	recentList := make([]recentTicketJSON, 0, len(dash.RecentTickets))
+	for _, t := range dash.RecentTickets {
+		deptName := "—"
+		if t.Department != nil {
+			deptName = t.Department.Name
+		}
+		recentList = append(recentList, recentTicketJSON{
+			ID:           t.ID,
+			TicketNumber: t.GetTicketNumber(),
+			Title:        t.Title,
+			Status:       string(t.Status),
+			Priority:     string(t.Priority),
+			Department:   deptName,
+			CreatedAt:    t.CreatedAt.Format("02 Jan 15:04"),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"kpi": map[string]interface{}{
+			"WaitingCount":        dash.WaitingCount,
+			"InProgressCount":     dash.InProgressCount,
+			"ClosedTodayCount":    dash.ClosedTodayCount,
+			"AvgRating":           dash.AvgRating,
+			"RatedCount":          dash.RatedCount,
+			"TotalTicketsMonth":   dash.TotalTicketsMonth,
+			"TotalUsersActive":    dash.TotalUsersActive,
+			"StaffActiveCount":    dash.StaffActiveCount,
+			"UnratedCount":        dash.UnratedCount,
+			"TrendWaitingPct":     dash.TrendWaitingPct,
+			"TrendProgressPct":    dash.TrendProgressPct,
+			"TrendClosedTodayPct": dash.TrendClosedTodayPct,
+			"TrendAvgRatingPct":   dash.TrendAvgRatingPct,
+		},
+		"waiting_tickets": waitingList,
+		"recent_tickets":  recentList,
+		"server_time":     time.Now().Format(time.RFC3339),
+	})
+}
+
 // ListUsers menampilkan daftar user dengan filter role (user/staff) untuk admin.
 func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	user := GetUserFromContext(r).(*models.User)

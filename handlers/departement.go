@@ -126,6 +126,162 @@ func (h *DepartmentHandler) ShowDashboard(w http.ResponseWriter, r *http.Request
 	RenderTemplate(w, "tickets/department_dashboard", data)
 }
 
+// GetLiveDashboardAPI returns JSON of staff dashboard data for real-time auto-refresh without page reload.
+func (h *DepartmentHandler) GetLiveDashboardAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, ok := GetUserFromContext(r).(*models.User)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var dbUser models.User
+	if err := config.DB.Select("id", "department_id").First(&dbUser, user.ID).Error; err != nil || dbUser.DepartmentID == nil || *dbUser.DepartmentID == 0 {
+		http.Error(w, "User departemen tidak valid", http.StatusBadRequest)
+		return
+	}
+	deptID := *dbUser.DepartmentID
+
+	if h.staffDashboardService == nil {
+		http.Error(w, "Dashboard service not configured", http.StatusInternalServerError)
+		return
+	}
+
+	dash, err := h.staffDashboardService.GetStaffDashboardData(user.ID, deptID)
+	if err != nil {
+		http.Error(w, "Gagal memuat data", http.StatusInternalServerError)
+		return
+	}
+
+	type poolTicketJSON struct {
+		ID              uint   `json:"id"`
+		TicketNumber    string `json:"ticket_number"`
+		Title           string `json:"title"`
+		Priority        string `json:"priority"`
+		PriorityDisplay string `json:"priority_display"`
+		DepartmentName  string `json:"department_name"`
+		CreatorName     string `json:"creator_name"`
+		CreatedAtAgo    string `json:"created_at_ago"`
+		SLABadgeClass   string `json:"sla_badge_class"`
+		SLABadgeLabel   string `json:"sla_badge_label"`
+		SLABadgeDetail  string `json:"sla_badge_detail"`
+	}
+
+	poolList := make([]poolTicketJSON, 0, len(dash.TicketPool))
+	for _, t := range dash.TicketPool {
+		deptName := "—"
+		if t.Department != nil {
+			deptName = t.Department.Name
+		}
+		creator := t.CreatedBy.Username
+		sla := t.GetSLABadgeInfo()
+		poolList = append(poolList, poolTicketJSON{
+			ID:              t.ID,
+			TicketNumber:    t.GetTicketNumber(),
+			Title:           t.Title,
+			Priority:        string(t.Priority),
+			PriorityDisplay: t.GetPriorityDisplay(),
+			DepartmentName:  deptName,
+			CreatorName:     creator,
+			CreatedAtAgo:    timeSinceShort(t.CreatedAt),
+			SLABadgeClass:   sla.Class,
+			SLABadgeLabel:   sla.Label,
+			SLABadgeDetail:  sla.Detail,
+		})
+	}
+
+	type breachedTicketJSON struct {
+		ID              uint   `json:"id"`
+		TicketNumber    string `json:"ticket_number"`
+		Title           string `json:"title"`
+		Priority        string `json:"priority"`
+		PriorityDisplay string `json:"priority_display"`
+		OverdueDetail   string `json:"overdue_detail"`
+	}
+
+	breachedList := make([]breachedTicketJSON, 0, len(dash.SLABreachedTickets))
+	for _, t := range dash.SLABreachedTickets {
+		sla := t.GetSLABadgeInfo()
+		breachedList = append(breachedList, breachedTicketJSON{
+			ID:              t.ID,
+			TicketNumber:    t.GetTicketNumber(),
+			Title:           t.Title,
+			Priority:        string(t.Priority),
+			PriorityDisplay: t.GetPriorityDisplay(),
+			OverdueDetail:   sla.Detail,
+		})
+	}
+
+	type myTicketJSON struct {
+		ID             uint   `json:"id"`
+		TicketNumber   string `json:"ticket_number"`
+		Title          string `json:"title"`
+		Status         string `json:"status"`
+		StatusDisplay  string `json:"status_display"`
+		Priority       string `json:"priority"`
+		DepartmentName string `json:"department_name"`
+		UpdatedAtAgo   string `json:"updated_at_ago"`
+	}
+
+	myList := make([]myTicketJSON, 0, len(dash.MyActiveTickets))
+	for _, t := range dash.MyActiveTickets {
+		deptName := "—"
+		if t.Department != nil {
+			deptName = t.Department.Name
+		}
+		myList = append(myList, myTicketJSON{
+			ID:             t.ID,
+			TicketNumber:   t.GetTicketNumber(),
+			Title:          t.Title,
+			Status:         string(t.Status),
+			StatusDisplay:  t.GetStatusDisplay(),
+			Priority:       string(t.Priority),
+			DepartmentName: deptName,
+			UpdatedAtAgo:   timeSinceShort(t.UpdatedAt),
+		})
+	}
+
+	type unratedTicketJSON struct {
+		ID           uint   `json:"id"`
+		TicketNumber string `json:"ticket_number"`
+		Title        string `json:"title"`
+		UpdatedAt    string `json:"updated_at"`
+	}
+
+	unratedList := make([]unratedTicketJSON, 0, len(dash.UnratedTickets))
+	for _, t := range dash.UnratedTickets {
+		unratedList = append(unratedList, unratedTicketJSON{
+			ID:           t.ID,
+			TicketNumber: t.GetTicketNumber(),
+			Title:        t.Title,
+			UpdatedAt:    t.UpdatedAt.Format("02 Jan 2006"),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"kpi": map[string]interface{}{
+			"WaitingCount":     dash.WaitingCount,
+			"ProgressCount":    dash.ProgressCount,
+			"ClosedTodayCount": dash.ClosedTodayCount,
+			"ClosedMonthCount": dash.ClosedMonthCount,
+			"AvgRating":        dash.AvgRating,
+			"RatedCount":       dash.RatedCount,
+			"TrendClosedPct":   dash.TrendClosedPct,
+			"TrendMonthPct":    dash.TrendMonthPct,
+		},
+		"pool":        poolList,
+		"breached":    breachedList,
+		"my_active":   myList,
+		"unrated":     unratedList,
+		"server_time": time.Now().Format(time.RFC3339),
+	})
+}
+
 // ShowAllTickets menampilkan daftar semua tiket dengan filter status, tab, dan departemen (halaman staff).
 // Tab yang didukung: "" / "all" (semua), "sla_breached" (SLA terlewat), "mine" (tiket saya).
 func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Request) {

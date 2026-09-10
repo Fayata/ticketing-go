@@ -261,6 +261,22 @@
           <button type="button" class="btn-xs-action" id="openPriorityModalBtn" title="Ubah Prioritas Tiket">Ubah</button>
           {{end}}
         </div>
+        <div class="info-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="k">SLA Respon</span>
+          {{$sla := $ticket.GetSLABadgeInfo}}
+          <span class="v">
+            {{if $ticket.FirstResponseAt}}
+              <span class="sla-badge {{if and $ticket.FirstResponseMet (not *$ticket.FirstResponseMet)}}sla-badge-red{{else}}sla-badge-green{{end}}">
+                {{if and $ticket.FirstResponseMet (not *$ticket.FirstResponseMet)}}Terlewat{{else}}Terpenuhi{{end}}
+              </span>
+            {{else if $ticket.FirstResponseDeadline}}
+              <span class="sla-badge {{$sla.Class}}" title="{{$sla.Detail}}">{{$sla.Label}}</span>
+            {{else}}
+              <span class="sla-badge sla-badge-gray">Tanpa SLA</span>
+            {{end}}
+          </span>
+        </div>
       </div>
 
       <!-- Feature 14: Estimasi Resolusi Section -->
