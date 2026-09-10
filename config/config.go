@@ -25,11 +25,12 @@ type Config struct {
 	DBSSLMode  string
 
 	// Email
-	EmailHost     string
-	EmailPort     int
-	EmailUsername string
-	EmailPassword string
-	EmailFrom     string
+	EmailHost               string
+	EmailPort               int
+	EmailUsername           string
+	EmailPassword           string
+	EmailFrom               string
+	EmailInsecureSkipVerify bool
 
 	// Session
 	SessionSecret string
@@ -97,7 +98,8 @@ func LoadConfig() *Config {
 		EmailPort:     getEnvInt("EMAIL_PORT", 465),
 		EmailUsername: getEnv("EMAIL_USER", ""),
 		EmailPassword: getEnv("EMAIL_PASSWORD", ""),
-		EmailFrom:     getEnv("EMAIL_FROM", ""),
+		EmailFrom:               getEnv("EMAIL_FROM", ""),
+		EmailInsecureSkipVerify: getEnv("EMAIL_INSECURE_SKIP_VERIFY", "false") == "true" || getEnv("EMAIL_SKIP_VERIFY", "false") == "true",
 		SessionSecret: getEnv("SESSION_SECRET", ""),
 		SessionExpiry: 24 * time.Hour,
 		SessionSecure: getEnv("SESSION_SECURE", "true") == "true",

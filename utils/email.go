@@ -40,11 +40,16 @@ func (e *EmailService) sendRawMail(to string, rawMessage []byte) error {
 	var client *smtp.Client
 	var err error
 
-	// [Security] TLS config — proper certificate verification
+	skipVerify := false
+	if e.cfg != nil {
+		skipVerify = e.cfg.EmailInsecureSkipVerify
+	}
+
+	// [Security] TLS config — proper certificate verification with optional skip verify for shared hosting
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false, // [Security] Verify TLS certificates
+		InsecureSkipVerify: skipVerify,
 		ServerName:         host,
-		MinVersion:         tls.VersionTLS12, // [Security] Enforce minimum TLS 1.2
+		MinVersion:         tls.VersionTLS12,
 	}
 
 	// LOGIKA UTAMA: Pilih metode koneksi berdasarkan Port
