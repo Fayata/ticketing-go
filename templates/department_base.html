@@ -36,6 +36,9 @@
                 <a href="departement/all-tickets" class="dept-nav-item {{if eq .nav_active "dept_all_tickets"}}active{{end}}">
                     <img src="static/icons/ticket.png?v=2" alt="Tiket" class="nav-icon-img" width="20" height="20">
                     <span class="dept-nav-label">Semua Tiket</span>
+                    {{if .unread_replies_count}}
+                    <span class="nav-badge">{{.unread_replies_count}}</span>
+                    {{end}}
                 </a>
 
                 <a href="admin/knowledge-base/" class="dept-nav-item {{if eq .nav_active "kb_admin"}}active{{end}}">

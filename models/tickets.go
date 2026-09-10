@@ -55,6 +55,16 @@ type Ticket struct {
 	Attachments       []TicketAttachment      `gorm:"foreignKey:TicketID;constraint:OnDelete:CASCADE;" json:"attachments"`
 	SLAPolicy         *SLAPolicy              `gorm:"foreignKey:SLAPolicyID" json:"sla_policy,omitempty"`
 	PriorityHistories []TicketPriorityHistory `gorm:"foreignKey:TicketID" json:"priority_histories,omitempty"`
+
+	// Transient UI fields
+	UnreadCount int `gorm:"-" json:"unread_count"`
+}
+
+func (t *Ticket) GetUnreadCount() int {
+	if t == nil {
+		return 0
+	}
+	return t.UnreadCount
 }
 
 func (t *Ticket) GetStatusDisplay() string {

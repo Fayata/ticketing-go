@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"log"
@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
+	"time"
 	"ticketing/config"
 	"ticketing/models"
 	"ticketing/services"
@@ -75,6 +76,20 @@ func (h *WSHandler) HandleTicketWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.hub.RegisterClient(client)
+
+	// Mark unread messages from counterpart as read upon joining the room
+	go func() {
+		res := config.DB.Model(&models.TicketReply{}).
+			Where("ticket_id = ? AND user_id != ? AND is_read = ?", ticketID, user.ID, false).
+			Updates(map[string]interface{}{
+				"is_read":      true,
+				"is_delivered": true,
+				"read_at":      time.Now(),
+			})
+		if res.RowsAffected > 0 && h.hub != nil {
+			h.hub.BroadcastMessagesRead(uint(ticketID), user.ID)
+		}
+	}()
 
 	go client.WritePump()
 	client.ReadPump()

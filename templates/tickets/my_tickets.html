@@ -55,6 +55,9 @@
                                 <span class="status-badge {{getStatusClass .Status}}">
                                     {{.GetStatusDisplay}}
                                 </span>
+                                {{if gt .GetUnreadCount 0}}
+                                <span class="nav-badge" title="Pesan baru belum dibaca" style="font-size: 0.72rem; padding: 0.15rem 0.55rem; margin-left: 0.35rem;">{{.GetUnreadCount}} pesan baru</span>
+                                {{end}}
                             </div>
                             <h3 class="ticket-title">{{.Title}}</h3>
                             <div class="ticket-meta">
@@ -72,6 +75,9 @@
                                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                                     </svg>
                                     {{.GetReplyCount}} balasan
+                                    {{if gt .GetUnreadCount 0}}
+                                    <span class="nav-badge" style="font-size: 0.68rem; padding: 0.1rem 0.45rem; margin-left: 0.25rem;">{{.GetUnreadCount}} belum dibaca</span>
+                                    {{end}}
                                 </span>
                             </div>
                         </div>

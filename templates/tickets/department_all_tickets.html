@@ -39,12 +39,12 @@
         <input type="hidden" name="tab" value="all">
 
         <div class="dept-all-field">
-            <label>Departemen</label>
-            <select name="department" class="dept-all-select">
-                <option value="ALL">Semua Departemen</option>
-                {{range .departments}}
-                <option value="{{.ID}}" {{if eq $.filter_dept (printf "%d" .ID)}}selected{{end}}>{{.Name}}</option>
-                {{end}}
+            <label>Urutkan</label>
+            <select name="sort" class="dept-all-select">
+                <option value="latest" {{if or (eq .filter_sort "") (eq .filter_sort "latest")}}selected{{end}}>Aktivitas Terbaru</option>
+                <option value="unread" {{if eq .filter_sort "unread"}}selected{{end}}>Pesan Belum Dibaca</option>
+                <option value="newest" {{if eq .filter_sort "newest"}}selected{{end}}>Tiket Dibuat (Terbaru)</option>
+                <option value="oldest" {{if eq .filter_sort "oldest"}}selected{{end}}>Tiket Dibuat (Terlama)</option>
             </select>
         </div>
 
@@ -94,7 +94,12 @@
                 {{range .tickets}}
                 {{$sla := .GetSLABadgeInfo}}
                 <tr {{if $sla.IsBreached}}class="dat-row--breached"{{end}}>
-                    <td class="dept-all-cell-id">{{.GetTicketNumber}}</td>
+                    <td class="dept-all-cell-id">
+                        {{.GetTicketNumber}}
+                        {{if gt .GetUnreadCount 0}}
+                        <span class="nav-badge" title="Pesan baru belum dibaca" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; margin-left: 0.25rem;">{{.GetUnreadCount}} baru</span>
+                        {{end}}
+                    </td>
                     <td>
                         <span class="dept-all-dept-badge">
                             {{if .Department}}{{.Department.Name}}{{else}}Umum{{end}}

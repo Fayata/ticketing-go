@@ -233,6 +233,27 @@ func (h *TicketHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, config.Path("/tiket"), http.StatusSeeOther)
 		return
 	}
+
+	// Mark staff replies as read for this ticket
+	readRes := config.DB.Model(&models.TicketReply{}).
+		Where("ticket_id = ? AND user_id != ? AND is_read = ?", ticketID, user.ID, false).
+		Updates(map[string]interface{}{
+			"is_read":      true,
+			"is_delivered": true,
+			"read_at":      time.Now(),
+		})
+	if readRes.RowsAffected > 0 && h.wsHub != nil {
+		h.wsHub.BroadcastMessagesRead(uint(ticketID), user.ID)
+	}
+
+	// Mark notifications for this ticket as read
+	_ = config.DB.Model(&models.Notification{}).
+		Where("user_id = ? AND ticket_id = ? AND is_read = ?", user.ID, ticketID, false).
+		Updates(map[string]interface{}{
+			"is_read": true,
+			"read_at": time.Now(),
+		}).Error
+
 	detail, err := h.ticketService.GetTicketDetailForUser(user.ID, ticketID)
 	if err != nil {
 		http.Error(w, "Ticket not found", http.StatusNotFound)
@@ -305,7 +326,18 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	reply, ticket, err := h.ticketService.AddReplyWithAttachments(uint(ticketID), user.ID, message, attachments)
+	isDelivered := false
+	isRead := false
+	if h.wsHub != nil {
+		if h.wsHub.HasOtherParticipantInRoom(uint(ticketID), user.ID) {
+			isDelivered = true
+			isRead = true
+		} else if tkt.AssignedToID != nil && h.wsHub.IsUserOnline(*tkt.AssignedToID) {
+			isDelivered = true
+		}
+	}
+
+	reply, ticket, err := h.ticketService.AddReplyWithAttachments(uint(ticketID), user.ID, message, attachments, isDelivered, isRead)
 	if err != nil {
 		utils.CleanupAttachments(attachments)
 		http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID))+"?error="+url.QueryEscape(err.Error()), http.StatusSeeOther)
@@ -334,6 +366,9 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 			UserDisplayName: user.GetFullName(),
 			IsStaff:         user.IsStaff,
 			Message:         reply.Message,
+			IsRead:          reply.IsRead,
+			IsDelivered:     reply.IsDelivered,
+			ReadStatus:      reply.GetReadStatusClass(),
 			CreatedAt:       reply.CreatedAt.Format("15:04"),
 			CreatedAtISO:    reply.CreatedAt.Format(time.RFC3339),
 			Attachments:     wsAtts,
@@ -494,6 +529,18 @@ func (h *TicketHandler) GetTicketMessagesAPI(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Mark unread messages from counterpart as read when polling
+	readRes := config.DB.Model(&models.TicketReply{}).
+		Where("ticket_id = ? AND user_id != ? AND is_read = ?", ticketID, user.ID, false).
+		Updates(map[string]interface{}{
+			"is_read":      true,
+			"is_delivered": true,
+			"read_at":      time.Now(),
+		})
+	if readRes.RowsAffected > 0 && h.wsHub != nil {
+		h.wsHub.BroadcastMessagesRead(uint(ticketID), user.ID)
+	}
+
 	query := config.DB.Preload("User").Preload("Attachments").Where("ticket_id = ?", ticketID)
 	if afterID > 0 {
 		query = query.Where("id > ?", afterID)
@@ -522,6 +569,9 @@ func (h *TicketHandler) GetTicketMessagesAPI(w http.ResponseWriter, r *http.Requ
 		UserDisplayName string    `json:"user_display_name"`
 		IsStaff         bool      `json:"is_staff"`
 		Message         string    `json:"message"`
+		IsRead          bool      `json:"is_read"`
+		IsDelivered     bool      `json:"is_delivered"`
+		ReadStatus      string    `json:"read_status"`
 		CreatedAt       string    `json:"created_at"`
 		CreatedAtISO    string    `json:"created_at_iso"`
 		Attachments     []attResp `json:"attachments"`
@@ -548,6 +598,9 @@ func (h *TicketHandler) GetTicketMessagesAPI(w http.ResponseWriter, r *http.Requ
 			UserDisplayName: rp.User.GetFullName(),
 			IsStaff:         rp.User.IsStaff,
 			Message:         rp.Message,
+			IsRead:          rp.IsRead,
+			IsDelivered:     rp.IsDelivered,
+			ReadStatus:      rp.GetReadStatusClass(),
 			CreatedAt:       rp.CreatedAt.Format("15:04"),
 			CreatedAtISO:    rp.CreatedAt.Format(time.RFC3339),
 			Attachments:     atts,

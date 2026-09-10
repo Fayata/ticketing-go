@@ -74,11 +74,31 @@ func GetUnreadCount(db *gorm.DB, userID uint) (int64, error) {
 	return count, err
 }
 
-// Hitung notif balasan (reply) yang belum dibaca — untuk badge "Tiket Saya"
+// Hitung pesan balasan (reply) yang belum dibaca user pembuat tiket — untuk badge "Tiket Saya"
 func GetUnreadRepliesCount(db *gorm.DB, userID uint) (int64, error) {
+	if db == nil {
+		return 0, nil
+	}
 	var count int64
-	err := db.Model(&Notification{}).
-		Where("user_id = ? AND type = ? AND is_read = ?", userID, NotificationTypeReply, false).
+	err := db.Model(&TicketReply{}).
+		Joins("JOIN tickets ON tickets.id = ticket_replies.ticket_id").
+		Where("tickets.created_by_id = ? AND ticket_replies.user_id != ? AND ticket_replies.is_read = ?", userID, userID, false).
 		Count(&count).Error
+	return count, err
+}
+
+// Hitung pesan balasan (reply) dari user yang belum dibaca oleh staff di tiket departemennya
+func GetUnreadRepliesCountForStaff(db *gorm.DB, staffID uint, deptID uint) (int64, error) {
+	if db == nil {
+		return 0, nil
+	}
+	var count int64
+	q := db.Model(&TicketReply{}).
+		Joins("JOIN tickets ON tickets.id = ticket_replies.ticket_id").
+		Where("ticket_replies.user_id != ? AND ticket_replies.is_read = ?", staffID, false)
+	if deptID > 0 {
+		q = q.Where("tickets.department_id = ?", deptID)
+	}
+	err := q.Count(&count).Error
 	return count, err
 }

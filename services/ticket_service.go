@@ -247,6 +247,17 @@ func (s *TicketService) GetMyTickets(userID uint, searchQuery, statusFilter, pri
 
 	var tickets []*models.Ticket
 	err := query.Order("created_at DESC").Find(&tickets).Error
+	if err == nil {
+		for _, t := range tickets {
+			unread := 0
+			for _, r := range t.Replies {
+				if r.UserID != userID && !r.IsRead {
+					unread++
+				}
+			}
+			t.UnreadCount = unread
+		}
+	}
 	return tickets, err
 }
 
@@ -285,7 +296,7 @@ func (s *TicketService) AddReply(ticketID uint, userID uint, message string) (re
 }
 
 // AddReplyWithAttachments adds a reply with attachments to user's ticket.
-func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, message string, attachments []models.TicketAttachment) (reply *models.TicketReply, ticket *models.Ticket, err error) {
+func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, message string, attachments []models.TicketAttachment, deliveryStatus ...bool) (reply *models.TicketReply, ticket *models.Ticket, err error) {
 	var tkt models.Ticket
 	if err := config.DB.Preload("CreatedBy").Where("id = ? AND created_by_id = ?", ticketID, userID).First(&tkt).Error; err != nil {
 		return nil, nil, err
@@ -293,7 +304,29 @@ func (s *TicketService) AddReplyWithAttachments(ticketID uint, userID uint, mess
 	if tkt.Status == models.StatusClosed {
 		return nil, nil, errors.New("tiket ini sudah ditutup dan tidak bisa dibalas")
 	}
-	reply = &models.TicketReply{TicketID: tkt.ID, UserID: userID, Message: message}
+
+	isDelivered := false
+	isRead := false
+	if len(deliveryStatus) > 0 {
+		isDelivered = deliveryStatus[0]
+	}
+	if len(deliveryStatus) > 1 {
+		isRead = deliveryStatus[1]
+	}
+	var readAt *time.Time
+	if isRead {
+		nowRead := time.Now()
+		readAt = &nowRead
+	}
+
+	reply = &models.TicketReply{
+		TicketID:    tkt.ID,
+		UserID:      userID,
+		Message:     message,
+		IsDelivered: isDelivered,
+		IsRead:      isRead,
+		ReadAt:      readAt,
+	}
 	if err := config.DB.Create(reply).Error; err != nil {
 		logging.TicketChat.Error("Failed to save ticket reply",
 			"ticket_id", tkt.ID,

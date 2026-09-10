@@ -173,6 +173,29 @@ html[data-theme="dark"],
   .msg-group.mine .bubble-wrap:first-child .bubble{ border-top-left-radius:12px; border-top-right-radius:4px; }
   .msg-time{ font-size:10.5px; color:var(--text-muted); margin-top:4px; display:block; }
   .msg-group.mine .msg-time{ text-align:right; }
+  .msg-status {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    margin-left: 4px;
+    vertical-align: middle;
+    line-height: 1;
+    cursor: default;
+    user-select: none;
+  }
+  .msg-status.sent {
+    color: #94a3b8;
+  }
+  .msg-status.delivered {
+    color: #94a3b8;
+  }
+  .msg-status.read {
+    color: #0284c7;
+  }
+  [data-theme="dark"] .msg-status.read {
+    color: #38bdf8;
+  }
 
   /* ---------- COMPOSER ---------- */
   .composer{ border-top:1px solid var(--border); padding: 12px 18px; flex-shrink:0; }

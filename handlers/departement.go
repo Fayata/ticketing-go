@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -292,20 +293,21 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 
 	activeTab := r.URL.Query().Get("tab") // "", "sla_breached", "mine"
 	statusFilter := r.URL.Query().Get("status")
-	deptFilter := r.URL.Query().Get("department")
+	sortFilter := r.URL.Query().Get("sort")
+	if sortFilter == "" {
+		sortFilter = "latest"
+	}
 	now := time.Now()
 
 	// Base query factory with strict department isolation
 	baseQuery := func() *gorm.DB {
-		q := config.DB.Preload("Department").Preload("CreatedBy").Preload("AssignedTo").Model(&models.Ticket{})
+		q := config.DB.Preload("Department").Preload("CreatedBy").Preload("AssignedTo").Preload("Replies").Model(&models.Ticket{})
 		if !user.IsSuperAdmin {
 			if staffUser.DepartmentID != nil {
 				q = q.Where("tickets.department_id = ?", *staffUser.DepartmentID)
 			} else {
 				q = q.Where("1 = 0")
 			}
-		} else if deptFilter != "" && deptFilter != "ALL" {
-			q = q.Where("tickets.department_id = ?", deptFilter)
 		}
 		return q
 	}
@@ -332,7 +334,14 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 		q := baseQuery().Where("assigned_to_id = ?", user.ID).Where("status != ?", models.StatusClosed)
 		q.Count(&mineCount)
 		if activeTab == "mine" {
-			q.Order("created_at DESC").Find(&mineTickets)
+			switch sortFilter {
+			case "newest":
+				q.Order("created_at DESC").Find(&mineTickets)
+			case "oldest":
+				q.Order("created_at ASC").Find(&mineTickets)
+			default:
+				q.Order("updated_at DESC").Find(&mineTickets)
+			}
 		}
 	}
 
@@ -343,7 +352,14 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 		if statusFilter != "" && statusFilter != "ALL" {
 			q = q.Where("status = ?", statusFilter)
 		}
-		q.Order("created_at DESC").Find(&tickets)
+		switch sortFilter {
+		case "newest":
+			q.Order("created_at DESC").Find(&tickets)
+		case "oldest":
+			q.Order("created_at ASC").Find(&tickets)
+		default:
+			q.Order("updated_at DESC").Find(&tickets)
+		}
 	}
 
 	// Pilih slice yang ditampilkan berdasarkan tab aktif
@@ -353,6 +369,27 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 		displayTickets = slaBreachedTickets
 	case "mine":
 		displayTickets = mineTickets
+	}
+
+	// Calculate unread message count for each ticket for staff
+	for _, t := range displayTickets {
+		count := 0
+		for _, r := range t.Replies {
+			if r.UserID != user.ID && !r.IsRead {
+				count++
+			}
+		}
+		t.UnreadCount = count
+	}
+
+	// If sorting by "unread", prioritize tickets with unread replies
+	if sortFilter == "unread" {
+		sort.SliceStable(displayTickets, func(i, j int) bool {
+			if displayTickets[i].UnreadCount != displayTickets[j].UnreadCount {
+				return displayTickets[i].UnreadCount > displayTickets[j].UnreadCount
+			}
+			return displayTickets[i].UpdatedAt.After(displayTickets[j].UpdatedAt)
+		})
 	}
 
 	// Ratings map untuk tiket yang sudah closed
@@ -388,7 +425,7 @@ func (h *DepartmentHandler) ShowAllTickets(w http.ResponseWriter, r *http.Reques
 		"tickets":            displayTickets,
 		"departments":        departments,
 		"filter_status":      statusFilter,
-		"filter_dept":        deptFilter,
+		"filter_sort":        sortFilter,
 		"ratings_map":        ratingsMap,
 		"active_tab":         activeTab,
 		"sla_breached_count": slaBreachedCount,
@@ -437,6 +474,33 @@ func (h *DepartmentHandler) ShowTicketDetail(w http.ResponseWriter, r *http.Requ
 			return
 		}
 	}
+
+	// Mark user replies as read for staff viewing this ticket
+	readRes := config.DB.Model(&models.TicketReply{}).
+		Where("ticket_id = ? AND user_id != ? AND is_read = ?", ticketID, user.ID, false).
+		Updates(map[string]interface{}{
+			"is_read":      true,
+			"is_delivered": true,
+			"read_at":      time.Now(),
+		})
+	if readRes.RowsAffected > 0 && h.wsHub != nil {
+		h.wsHub.BroadcastMessagesRead(ticket.ID, user.ID)
+	}
+	// Sync in-memory replies for immediate template rendering
+	for i := range ticket.Replies {
+		if ticket.Replies[i].UserID != user.ID {
+			ticket.Replies[i].IsRead = true
+			ticket.Replies[i].IsDelivered = true
+		}
+	}
+
+	// Mark notifications for this ticket as read for staff
+	_ = config.DB.Model(&models.Notification{}).
+		Where("user_id = ? AND ticket_id = ? AND is_read = ?", user.ID, ticketID, false).
+		Updates(map[string]interface{}{
+			"is_read": true,
+			"read_at": time.Now(),
+		}).Error
 
 	isOwner := false
 	if ticket.AssignedToID != nil && *ticket.AssignedToID == user.ID {
@@ -544,7 +608,30 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	reply := models.TicketReply{TicketID: ticket.ID, UserID: user.ID, Message: message}
+	isDelivered := false
+	isRead := false
+	if h.wsHub != nil {
+		if h.wsHub.IsUserInTicketRoom(ticket.ID, ticket.CreatedByID) {
+			isDelivered = true
+			isRead = true
+		} else if h.wsHub.IsUserOnline(ticket.CreatedByID) {
+			isDelivered = true
+		}
+	}
+	var readAt *time.Time
+	if isRead {
+		nowRead := time.Now()
+		readAt = &nowRead
+	}
+
+	reply := models.TicketReply{
+		TicketID:    ticket.ID,
+		UserID:      user.ID,
+		Message:     message,
+		IsDelivered: isDelivered,
+		IsRead:      isRead,
+		ReadAt:      readAt,
+	}
 	if err := config.DB.Create(&reply).Error; err != nil {
 		utils.CleanupAttachments(attachments)
 		log.Printf("[Staff][DepartmentReply] Gagal menyimpan balasan: %v", err)
@@ -584,6 +671,9 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 			UserDisplayName: user.GetFullName(),
 			IsStaff:         true,
 			Message:         reply.Message,
+			IsRead:          reply.IsRead,
+			IsDelivered:     reply.IsDelivered,
+			ReadStatus:      reply.GetReadStatusClass(),
 			CreatedAt:       reply.CreatedAt.Format("15:04"),
 			CreatedAtISO:    reply.CreatedAt.Format(time.RFC3339),
 			Attachments:     wsAtts,

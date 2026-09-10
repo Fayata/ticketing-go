@@ -162,7 +162,7 @@
                 </div>
                 {{end}}
               </div>
-              <span class="msg-time">{{date .CreatedAt}}</span>
+              <span class="msg-time">{{date .CreatedAt}}{{if eq .UserID $currentUser.ID}} <span class="msg-status {{.GetReadStatusClass}}" title="{{.GetReadStatusTitle}}">{{.GetReadStatusCheck}}</span>{{end}}</span>
             </div>
           </div>
         </div>

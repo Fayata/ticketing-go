@@ -635,10 +635,33 @@
 
       bubbleWrap.appendChild(bubble);
 
-      // Time
+      // Time & Read Status
       const timeSpan = document.createElement('span');
       timeSpan.className = 'msg-time';
-      timeSpan.textContent = reply.created_at || '';
+      timeSpan.textContent = (reply.created_at || '') + ' ';
+
+      if (isMine) {
+        const statusSpan = document.createElement('span');
+        let statusClass = 'sent';
+        let statusCheck = '✓';
+        let statusTitle = 'Terkirim';
+
+        if (reply.is_read || reply.read_status === 'read') {
+          statusClass = 'read';
+          statusCheck = '✓✓';
+          statusTitle = 'Sudah dibaca';
+        } else if (reply.is_delivered || reply.read_status === 'delivered') {
+          statusClass = 'delivered';
+          statusCheck = '✓✓';
+          statusTitle = 'Tersampaikan';
+        }
+
+        statusSpan.className = 'msg-status ' + statusClass;
+        statusSpan.textContent = statusCheck;
+        statusSpan.title = statusTitle;
+        timeSpan.appendChild(statusSpan);
+      }
+
       bubbleWrap.appendChild(timeSpan);
 
       stack.appendChild(bubbleWrap);
@@ -729,6 +752,13 @@
                 if (reply.id > lastReplyId) lastReplyId = reply.id;
                 chatThread.scrollTop = chatThread.scrollHeight;
               }
+            } else if (data && data.type === 'messages_read') {
+              // Counterpart has read messages: turn all outgoing checks into double-blue
+              chatThread.querySelectorAll('.msg-group.mine .msg-status').forEach(el => {
+                el.className = 'msg-status read';
+                el.textContent = '✓✓';
+                el.title = 'Sudah dibaca';
+              });
             }
           } catch (e) {
             console.error('[TicketWS] Gagal memproses pesan:', e);
