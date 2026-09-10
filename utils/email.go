@@ -45,6 +45,8 @@ func (e *EmailService) sendRawMail(to string, rawMessage []byte) error {
 		skipVerify = e.cfg.EmailInsecureSkipVerify
 	}
 
+	log.Printf("[Email] Connecting to %s (Port %d, SkipVerify=%v)", addr, e.cfg.EmailPort, skipVerify)
+
 	// [Security] TLS config — proper certificate verification with optional skip verify for shared hosting
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: skipVerify,
