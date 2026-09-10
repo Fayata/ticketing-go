@@ -48,8 +48,11 @@ func (h *SettingsHandler) ShowSettings(w http.ResponseWriter, r *http.Request) {
 	errorMsg := r.URL.Query().Get("error")
 
 	data := AddBaseData(r, map[string]interface{}{
-		"title": "Settings - Portal Ticketing",
-		"user":  user,
+		"title":         "Pengaturan Akun - Portal Ticketing",
+		"page_title":    "Pengaturan Akun",
+		"page_subtitle": "Kelola informasi profil, preferensi, dan keamanan akun Anda",
+		"nav_active":    "settings",
+		"user":          user,
 	})
 
 	if successMsg != "" {
@@ -108,13 +111,16 @@ func (h *SettingsHandler) renderSettingsPage(w http.ResponseWriter, r *http.Requ
 	data = AddBaseData(r, data)
 
 	if data["title"] == nil {
-		data["title"] = "Settings - Portal Ticketing"
+		data["title"] = "Pengaturan Akun - Portal Ticketing"
 	}
 	if data["page_title"] == nil {
 		data["page_title"] = "Pengaturan Akun"
 	}
 	if data["page_subtitle"] == nil {
-		data["page_subtitle"] = "Kelola informasi profil dan keamanan akun Anda"
+		data["page_subtitle"] = "Kelola informasi profil, preferensi, dan keamanan akun Anda"
+	}
+	if data["nav_active"] == nil {
+		data["nav_active"] = "settings"
 	}
 	if data["template_name"] == nil {
 		data["template_name"] = "tickets/settings"

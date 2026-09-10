@@ -1,11 +1,12 @@
 {{define "tickets/settings_content"}}
-<link rel="stylesheet" href="static/css/settings.css">
-<div class="settings-container">
+<link rel="stylesheet" href="static/css/settings.css?v=3">
+
+<div class="settings-wrapper">
     {{if .success}}
     <div class="alert alert-success">
         <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M22 4L12 14.01L9 11.01" />
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
         </svg>
         <span>{{.success}}</span>
     </div>
@@ -15,8 +16,8 @@
     <div class="alert alert-error">
         <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
-            <path d="M12 8V12" />
-            <path d="M12 16H12.01" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
         <span>{{.error}}</span>
     </div>
@@ -26,112 +27,294 @@
     <div class="alert alert-error">
         <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10" />
-            <path d="M12 8V12" />
-            <path d="M12 16H12.01" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
         <span>
             {{if .errors.__all__}}
-            {{.errors.__all__}}
+                {{.errors.__all__}}
             {{else}}
-            Terjadi kesalahan. Silakan periksa kembali form Anda.
+                Terjadi kesalahan. Silakan periksa kembali formulir Anda di bawah ini.
             {{end}}
         </span>
     </div>
     {{end}}
 
-    <!-- Profile Settings -->
-    <div class="settings-card">
-        <h2>Informasi Profil</h2>
-        <form method="post" action="settings">
-            <input type="hidden" name="update_profile" value="1">
+    <!-- Main 2-Column Responsive Layout -->
+    <div class="settings-grid">
+        <!-- Left / Primary Column: Edit Forms -->
+        <div class="settings-main-col">
+            
+            <!-- Card 1: Informasi Profil -->
+            <div class="settings-card">
+                <div class="card-header-styled">
+                    <div class="header-icon-box primary">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div class="header-titles">
+                        <h3>Informasi Profil</h3>
+                        <p>Perbarui identitas profil dan alamat kontak email Anda</p>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" name="username" id="username" class="form-input"
-                    value="{{if .form_username}}{{.form_username}}{{else if .user}}{{.user.Username}}{{end}}" required>
-                {{if .errors.username}}
-                <div class="form-error">{{.errors.username}}</div>
-                {{end}}
+                <form method="post" action="settings" class="settings-form">
+                    <input type="hidden" name="update_profile" value="1">
+
+                    <div class="form-row-2col">
+                        <div class="form-group">
+                            <label for="first_name" class="form-label">
+                                <span>Nama Depan</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="text" name="first_name" id="first_name" class="form-input" placeholder="Nama depan Anda"
+                                    value="{{if .form_first}}{{.form_first}}{{else if .user}}{{.user.FirstName}}{{end}}">
+                            </div>
+                            {{if .errors.first_name}}
+                            <div class="form-error">{{.errors.first_name}}</div>
+                            {{end}}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="last_name" class="form-label">
+                                <span>Nama Belakang</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <input type="text" name="last_name" id="last_name" class="form-input" placeholder="Nama belakang Anda"
+                                    value="{{if .form_last}}{{.form_last}}{{else if .user}}{{.user.LastName}}{{end}}">
+                            </div>
+                            {{if .errors.last_name}}
+                            <div class="form-error">{{.errors.last_name}}</div>
+                            {{end}}
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username" class="form-label">
+                            <span>Username</span>
+                            <span class="required-indicator">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94"></path>
+                            </svg>
+                            <input type="text" name="username" id="username" class="form-input with-icon"
+                                value="{{if .form_username}}{{.form_username}}{{else if .user}}{{.user.Username}}{{end}}" required>
+                        </div>
+                        {{if .errors.username}}
+                        <div class="form-error">{{.errors.username}}</div>
+                        {{end}}
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email" class="form-label">
+                            <span>Alamat Email</span>
+                            <span class="required-indicator">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                            <input type="email" name="email" id="email" class="form-input with-icon"
+                                value="{{if .form_email}}{{.form_email}}{{else if .user}}{{.user.GetEmail}}{{end}}" required>
+                        </div>
+                        <span class="form-hint">Email ini digunakan untuk autentikasi dan notifikasi riwayat tiket Anda.</span>
+                        {{if .errors.email}}
+                        <div class="form-error">{{.errors.email}}</div>
+                        {{end}}
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-theme-primary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            <span>Simpan Perubahan</span>
+                        </button>
+                    </div>
+                </form>
             </div>
 
-            <div class="form-group">
-                <label for="email" class="form-label">Email</label>
-                <input type="email" name="email" id="email" class="form-input"
-                    value="{{if .form_email}}{{.form_email}}{{else if .user}}{{.user.GetEmail}}{{end}}" required>
-                {{if .errors.email}}
-                <div class="form-error">{{.errors.email}}</div>
-                {{end}}
-            </div>
+            <!-- Card 2: Ubah Password -->
+            <div class="settings-card">
+                <div class="card-header-styled">
+                    <div class="header-icon-box warning">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <div class="header-titles">
+                        <h3>Ubah Password</h3>
+                        <p>Pastikan akun Anda menggunakan kata sandi yang aman dan sulit ditebak</p>
+                    </div>
+                </div>
 
-            <div class="form-group">
-                <label for="first_name" class="form-label">Nama Depan</label>
-                <input type="text" name="first_name" id="first_name" class="form-input"
-                    value="{{if .form_first}}{{.form_first}}{{else if .user}}{{.user.FirstName}}{{end}}">
-                {{if .errors.first_name}}
-                <div class="form-error">{{.errors.first_name}}</div>
-                {{end}}
-            </div>
+                <form method="post" action="settings" class="settings-form">
+                    <input type="hidden" name="change_password" value="1">
 
-            <div class="form-group">
-                <label for="last_name" class="form-label">Nama Belakang</label>
-                <input type="text" name="last_name" id="last_name" class="form-input"
-                    value="{{if .form_last}}{{.form_last}}{{else if .user}}{{.user.LastName}}{{end}}">
-                {{if .errors.last_name}}
-                <div class="form-error">{{.errors.last_name}}</div>
-                {{end}}
-            </div>
+                    <div class="form-group">
+                        <label for="old_password" class="form-label">
+                            <span>Password Lama</span>
+                            <span class="required-indicator">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <input type="password" name="old_password" id="old_password" class="form-input with-icon" placeholder="Masukkan password saat ini" required>
+                        </div>
+                        {{if .errors.old_password}}
+                        <div class="form-error">{{.errors.old_password}}</div>
+                        {{end}}
+                    </div>
 
-            <button type="submit" class="btn-primary">Simpan Perubahan</button>
-        </form>
-    </div>
+                    <div class="form-row-2col">
+                        <div class="form-group">
+                            <label for="new_password1" class="form-label">
+                                <span>Password Baru</span>
+                                <span class="required-indicator">*</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 2l-2 2m-2-2l2 2M3 21l9-9m3 3l-3-3m5-5l-2.5 2.5"></path>
+                                </svg>
+                                <input type="password" name="new_password1" id="new_password1" class="form-input with-icon" placeholder="Minimal 8 karakter" required>
+                            </div>
+                            {{if .errors.new_password1}}
+                            <div class="form-error">{{.errors.new_password1}}</div>
+                            {{end}}
+                        </div>
 
-    <!-- Password Change -->
-    <div class="settings-card">
-        <h2>Ubah Password</h2>
-        <form method="post" action="settings">
-            <input type="hidden" name="change_password" value="1">
+                        <div class="form-group">
+                            <label for="new_password2" class="form-label">
+                                <span>Ulangi Password Baru</span>
+                                <span class="required-indicator">*</span>
+                            </label>
+                            <div class="input-wrapper">
+                                <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <input type="password" name="new_password2" id="new_password2" class="form-input with-icon" placeholder="Ketik ulang password baru" required>
+                            </div>
+                            {{if .errors.new_password2}}
+                            <div class="form-error">{{.errors.new_password2}}</div>
+                            {{end}}
+                        </div>
+                    </div>
 
-            <div class="form-group">
-                <label for="old_password" class="form-label">Password Lama</label>
-                <input type="password" name="old_password" id="old_password" class="form-input" required>
-                {{if .errors.old_password}}
-                <div class="form-error">{{.errors.old_password}}</div>
-                {{end}}
-            </div>
-
-            <div class="form-group">
-                <label for="new_password1" class="form-label">Password Baru</label>
-                <input type="password" name="new_password1" id="new_password1" class="form-input" required>
-                {{if .errors.new_password1}}
-                <div class="form-error">{{.errors.new_password1}}</div>
-                {{end}}
-            </div>
-
-            <div class="form-group">
-                <label for="new_password2" class="form-label">Konfirmasi Password Baru</label>
-                <input type="password" name="new_password2" id="new_password2" class="form-input" required>
-                {{if .errors.new_password2}}
-                <div class="form-error">{{.errors.new_password2}}</div>
-                {{end}}
-            </div>
-
-            <button type="submit" class="btn-primary">Ubah Password</button>
-        </form>
-    </div>
-
-    <!-- Account Info -->
-    <div class="settings-card">
-        <h2>Informasi Akun</h2>
-        <div class="form-group">
-            <label class="form-label">Tanggal Bergabung</label>
-            <div class="account-info-item">
-                {{if .user}}{{date .user.CreatedAt}}{{end}}
+                    <div class="form-actions">
+                        <button type="submit" class="btn-theme-primary btn-warning-theme">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                            <span>Perbarui Password</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-        <div class="form-group">
-            <label class="form-label">Terakhir Login</label>
-            <div class="account-info-item">
-                {{if .user.LastLogin}}{{date .user.LastLogin}}{{else}}Belum pernah login{{end}}
+
+        <!-- Right / Sidebar Column: Overview & Meta -->
+        <div class="settings-side-col">
+            <!-- User Identity Badge Card -->
+            <div class="settings-card user-profile-card">
+                <div class="profile-badge-avatar">
+                    {{if .user}}{{slice .user.Username 0 2 | upper}}{{else}}US{{end}}
+                </div>
+                <h4 class="profile-name">{{if .user}}{{if .user.GetFullName}}{{.user.GetFullName}}{{else}}{{.user.Username}}{{end}}{{end}}</h4>
+                <p class="profile-handle">@{{if .user}}{{.user.Username}}{{end}}</p>
+                <div class="profile-roles">
+                    {{if and .user .user.IsSuperAdmin}}
+                    <span class="role-badge role-superadmin">Super Admin</span>
+                    {{else if and .user .user.IsStaff}}
+                    <span class="role-badge role-staff">Staff Support</span>
+                    {{else}}
+                    <span class="role-badge role-user">User Portal</span>
+                    {{end}}
+
+                    {{if and .user .user.IsActive}}
+                    <span class="role-badge role-active">Aktif</span>
+                    {{end}}
+                </div>
+            </div>
+
+            <!-- Account Meta Card -->
+            <div class="settings-card meta-info-card">
+                <div class="card-header-compact">
+                    <h4>Informasi Akun</h4>
+                </div>
+                <div class="meta-list">
+                    <div class="meta-item">
+                        <div class="meta-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                        </div>
+                        <div class="meta-body">
+                            <span class="meta-label">Tanggal Bergabung</span>
+                            <span class="meta-value">{{if .user}}{{date .user.CreatedAt}}{{else}}-{{end}}</span>
+                        </div>
+                    </div>
+
+                    <div class="meta-item">
+                        <div class="meta-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </div>
+                        <div class="meta-body">
+                            <span class="meta-label">Terakhir Login</span>
+                            <span class="meta-value">{{if and .user .user.LastLogin}}{{date .user.LastLogin}}{{else}}Sesi ini{{end}}</span>
+                        </div>
+                    </div>
+
+                    <div class="meta-item">
+                        <div class="meta-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                        </div>
+                        <div class="meta-body">
+                            <span class="meta-label">Status Verifikasi</span>
+                            <span class="meta-value">
+                                {{if and .user .user.IsVerified}}
+                                <span class="text-verified">✓ Terverifikasi</span>
+                                {{else}}
+                                <span class="text-unverified">Belum Verifikasi</span>
+                                {{end}}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Recommendation Card -->
+            <div class="settings-card security-tip-card">
+                <div class="tip-header">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <h5>Tips Keamanan Akun</h5>
+                </div>
+                <ul class="tip-list">
+                    <li>Gunakan minimal 8 karakter dengan kombinasi huruf dan angka.</li>
+                    <li>Jangan gunakan password yang sama dengan akun lain.</li>
+                    <li>Perbarui password secara berkala untuk menjaga keamanan data tiket Anda.</li>
+                </ul>
             </div>
         </div>
     </div>
