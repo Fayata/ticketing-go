@@ -121,6 +121,22 @@ func (t *Ticket) GetInitialAttachments() []TicketAttachment {
 	return list
 }
 
+// IsFirstResponseBreached returns true if the first response was evaluated and breached the SLA deadline.
+func (t *Ticket) IsFirstResponseBreached() bool {
+	if t == nil || t.FirstResponseMet == nil {
+		return false
+	}
+	return !*t.FirstResponseMet
+}
+
+// IsFirstResponseMetStatus returns true if the first response was evaluated and met the SLA deadline.
+func (t *Ticket) IsFirstResponseMetStatus() bool {
+	if t == nil || t.FirstResponseMet == nil {
+		return false
+	}
+	return *t.FirstResponseMet
+}
+
 // SLABadgeInfo holds UI presentation data for ticket SLA status.
 type SLABadgeInfo struct {
 	Class      string `json:"class"`       // "sla-badge-green", "sla-badge-yellow", "sla-badge-red", "sla-badge-gray"

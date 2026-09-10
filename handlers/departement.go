@@ -629,12 +629,23 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 		}
 	}()
 
+	var emailAtts []utils.EmailAttachment
+	for _, a := range reply.Attachments {
+		emailAtts = append(emailAtts, utils.EmailAttachment{
+			FileName: a.FileName,
+			FilePath: a.FilePath,
+			MimeType: a.MimeType,
+		})
+	}
+
 	go func() {
 		target := ticket.ReplyToEmail
 		if target == "" {
 			target = ticket.CreatedBy.GetEmail()
 		}
-		h.emailService.SendTicketReply(target, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), message, user.GetFullName())
+		if target != "" {
+			_ = h.emailService.SendTicketReplyWithAttachments(target, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), message, user.GetFullName(), emailAtts)
+		}
 	}()
 
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/departement/tiket/%d", ticketID)), http.StatusSeeOther)

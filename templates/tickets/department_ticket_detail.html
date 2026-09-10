@@ -267,8 +267,8 @@
           {{$sla := $ticket.GetSLABadgeInfo}}
           <span class="v">
             {{if $ticket.FirstResponseAt}}
-              <span class="sla-badge {{if and $ticket.FirstResponseMet (not *$ticket.FirstResponseMet)}}sla-badge-red{{else}}sla-badge-green{{end}}">
-                {{if and $ticket.FirstResponseMet (not *$ticket.FirstResponseMet)}}Terlewat{{else}}Terpenuhi{{end}}
+              <span class="sla-badge {{if $ticket.IsFirstResponseBreached}}sla-badge-red{{else}}sla-badge-green{{end}}">
+                {{if $ticket.IsFirstResponseBreached}}Terlewat{{else}}Terpenuhi{{end}}
               </span>
             {{else if $ticket.FirstResponseDeadline}}
               <span class="sla-badge {{$sla.Class}}" title="{{$sla.Detail}}">{{$sla.Label}}</span>

@@ -144,9 +144,17 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 	if ticket.Department != nil {
 		departmentName = ticket.Department.Name
 	}
+	var emailAtts []utils.EmailAttachment
+	for _, a := range attachments {
+		emailAtts = append(emailAtts, utils.EmailAttachment{
+			FileName: a.FileName,
+			FilePath: a.FilePath,
+			MimeType: a.MimeType,
+		})
+	}
 	go func() {
 		log.Printf(" Mengirim email konfirmasi ke: %s", replyToEmail)
-		_ = h.emailService.SendTicketConfirmation(replyToEmail, user.GetFullName(), ticket.Title, ticket.ID, departmentName, ticket.GetPriorityDisplay(), ticket.GetStatusDisplay(), ticket.Description)
+		_ = h.emailService.SendTicketConfirmationWithAttachments(replyToEmail, user.GetFullName(), ticket.Title, ticket.ID, departmentName, ticket.GetPriorityDisplay(), ticket.GetStatusDisplay(), ticket.Description, emailAtts)
 	}()
 	log.Printf("Ticket #%d created by user %s", ticket.ID, user.Username)
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/sukses/%d", ticket.ID)), http.StatusSeeOther)
@@ -332,14 +340,35 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	var emailAtts []utils.EmailAttachment
+	for _, a := range reply.Attachments {
+		emailAtts = append(emailAtts, utils.EmailAttachment{
+			FileName: a.FileName,
+			FilePath: a.FilePath,
+			MimeType: a.MimeType,
+		})
+	}
+
 	if reply.UserID != ticket.CreatedByID {
 		targetEmail := ticket.ReplyToEmail
 		if targetEmail == "" {
 			targetEmail = ticket.CreatedBy.GetEmail()
 		}
-		go func() {
-			_ = h.emailService.SendTicketReply(targetEmail, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName())
-		}()
+		if targetEmail != "" {
+			go func() {
+				_ = h.emailService.SendTicketReplyWithAttachments(targetEmail, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName(), emailAtts)
+			}()
+		}
+	} else if ticket.AssignedToID != nil {
+		var assignedStaff models.User
+		if config.DB.Select("id", "email", "username", "first_name", "last_name").First(&assignedStaff, *ticket.AssignedToID).Error == nil {
+			staffEmail := assignedStaff.GetEmail()
+			if staffEmail != "" {
+				go func() {
+					_ = h.emailService.SendTicketReplyWithAttachments(staffEmail, assignedStaff.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName(), emailAtts)
+				}()
+			}
+		}
 	}
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/%d", ticketID)), http.StatusSeeOther)
 }

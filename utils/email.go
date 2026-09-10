@@ -1,10 +1,17 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"log"
+	"net/http"
 	"net/smtp"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"ticketing/config"
 )
@@ -13,26 +20,20 @@ type EmailService struct {
 	cfg *config.Config
 }
 
+// EmailAttachment menyimpan metadata dan path/data berkas lampiran untuk dikirim via email.
+type EmailAttachment struct {
+	FileName string
+	FilePath string
+	MimeType string
+	Data     []byte
+}
+
 func NewEmailService(cfg *config.Config) *EmailService {
 	return &EmailService{cfg: cfg}
 }
 
-// SendMail dengan support dual mode (465 SSL & 587 STARTTLS)
-func (e *EmailService) SendMail(to, subject, body string) error {
-	// 1. Setup Headers
-	headers := make(map[string]string)
-	headers["From"] = e.cfg.EmailFrom
-	headers["To"] = to
-	headers["Subject"] = subject
-	headers["MIME-Version"] = "1.0"
-	headers["Content-Type"] = "text/plain; charset=\"UTF-8\""
-
-	message := ""
-	for k, v := range headers {
-		message += fmt.Sprintf("%s: %s\r\n", k, v)
-	}
-	message += "\r\n" + body
-
+// sendRawMail mengirimkan raw MIME message melalui koneksi SMTP (Port 465 SSL atau 587 STARTTLS).
+func (e *EmailService) sendRawMail(to string, rawMessage []byte) error {
 	addr := fmt.Sprintf("%s:%d", e.cfg.EmailHost, e.cfg.EmailPort)
 	host := e.cfg.EmailHost
 
@@ -40,7 +41,6 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 	var err error
 
 	// [Security] TLS config — proper certificate verification
-	// InsecureSkipVerify is only acceptable for development/testing
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: false, // [Security] Verify TLS certificates
 		ServerName:         host,
@@ -50,7 +50,6 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 	// LOGIKA UTAMA: Pilih metode koneksi berdasarkan Port
 	if e.cfg.EmailPort == 465 {
 		// --- METODE PORT 465 (SMTPS / Implicit SSL) ---
-		// Langsung connect pakai TLS, bypass STARTTLS handshake yang sering error
 		conn, err := tls.Dial("tcp", addr, tlsConfig)
 		if err != nil {
 			log.Printf("❌ Gagal connect SSL (Port 465): %v", err)
@@ -68,7 +67,6 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 
 	} else {
 		// --- METODE PORT 587 (STARTTLS) ---
-		// Fallback untuk port 587/25
 		client, err = smtp.Dial(addr)
 		if err != nil {
 			log.Printf("❌ Gagal dial (Port %d): %v", e.cfg.EmailPort, err)
@@ -85,15 +83,14 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 		}
 	}
 
-	// 2. Authenticate
-	// Menggunakan PlainAuth. Jika server butuh LOGIN auth, bisa ditambahkan nanti.
+	// Authenticate
 	auth := smtp.PlainAuth("", e.cfg.EmailUsername, e.cfg.EmailPassword, host)
 	if err = client.Auth(auth); err != nil {
 		log.Printf("❌ Gagal Auth: %v", err)
 		return err
 	}
 
-	// 3. Kirim Email
+	// Kirim Email
 	if err = client.Mail(e.cfg.EmailFrom); err != nil {
 		return err
 	}
@@ -105,7 +102,7 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 	if err != nil {
 		return err
 	}
-	_, err = w.Write([]byte(message))
+	_, err = w.Write(rawMessage)
 	if err != nil {
 		return err
 	}
@@ -115,7 +112,6 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 	}
 
 	if err = client.Quit(); err != nil {
-		// Error saat quit bisa diabaikan kadang-kadang
 		log.Printf("⚠️ Note: Quit error (biasanya aman): %v", err)
 	}
 
@@ -123,17 +119,147 @@ func (e *EmailService) SendMail(to, subject, body string) error {
 	return nil
 }
 
-// Helper functions wrapper (tidak berubah)
-func (e *EmailService) SendTicketConfirmation(to, username, title string, ticketID uint, department, priority, status, description string) error {
+// SendMail dengan support dual mode (465 SSL & 587 STARTTLS) untuk email teks biasa.
+func (e *EmailService) SendMail(to, subject, body string) error {
+	headers := make(map[string]string)
+	headers["From"] = e.cfg.EmailFrom
+	headers["To"] = to
+	headers["Subject"] = subject
+	headers["MIME-Version"] = "1.0"
+	headers["Content-Type"] = "text/plain; charset=\"UTF-8\""
+
+	message := ""
+	for k, v := range headers {
+		message += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+	message += "\r\n" + body
+
+	return e.sendRawMail(to, []byte(message))
+}
+
+// BuildMIMEMessage mengonstruksi raw payload email MIME multipart/mixed dengan berkas lampiran fisik.
+func BuildMIMEMessage(from, to, subject, body string, attachments []EmailAttachment) ([]byte, error) {
+	boundary := fmt.Sprintf("----=_NextPart_%d_%d", time.Now().UnixNano(), os.Getpid())
+	var buf bytes.Buffer
+
+	// Headers
+	buf.WriteString(fmt.Sprintf("From: %s\r\n", from))
+	buf.WriteString(fmt.Sprintf("To: %s\r\n", to))
+	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
+	buf.WriteString("MIME-Version: 1.0\r\n")
+	buf.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", boundary))
+	buf.WriteString("\r\n")
+
+	// Part 1: Body teks pesan
+	buf.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+	buf.WriteString("Content-Type: text/plain; charset=\"UTF-8\"\r\n")
+	buf.WriteString("Content-Transfer-Encoding: 7bit\r\n")
+	buf.WriteString("\r\n")
+	buf.WriteString(body)
+	buf.WriteString("\r\n\r\n")
+
+	// Part 2..N: Lampiran Berkas
+	for _, att := range attachments {
+		fileData := att.Data
+		if len(fileData) == 0 && att.FilePath != "" {
+			data, err := os.ReadFile(att.FilePath)
+			if err != nil {
+				log.Printf("⚠️ Gagal membaca berkas lampiran email %s: %v", att.FilePath, err)
+				continue
+			}
+			fileData = data
+		}
+		if len(fileData) == 0 {
+			continue
+		}
+
+		fileName := att.FileName
+		if fileName == "" {
+			fileName = filepath.Base(att.FilePath)
+		}
+		if fileName == "" || fileName == "." {
+			fileName = "attachment"
+		}
+
+		mimeType := att.MimeType
+		if mimeType == "" {
+			ext := strings.ToLower(filepath.Ext(fileName))
+			switch ext {
+			case ".pdf":
+				mimeType = "application/pdf"
+			case ".png":
+				mimeType = "image/png"
+			case ".jpg", ".jpeg":
+				mimeType = "image/jpeg"
+			case ".gif":
+				mimeType = "image/gif"
+			case ".webp":
+				mimeType = "image/webp"
+			default:
+				mimeType = http.DetectContentType(fileData)
+			}
+		}
+
+		buf.WriteString(fmt.Sprintf("--%s\r\n", boundary))
+		buf.WriteString(fmt.Sprintf("Content-Type: %s; name=\"%s\"\r\n", mimeType, fileName))
+		buf.WriteString("Content-Transfer-Encoding: base64\r\n")
+		buf.WriteString(fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"\r\n", fileName))
+		buf.WriteString("\r\n")
+
+		// Encode Base64 dengan batas 76 karakter per baris (RFC 2045)
+		encoded := base64.StdEncoding.EncodeToString(fileData)
+		for len(encoded) > 76 {
+			buf.WriteString(encoded[:76] + "\r\n")
+			encoded = encoded[76:]
+		}
+		buf.WriteString(encoded + "\r\n")
+	}
+
+	buf.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+	return buf.Bytes(), nil
+}
+
+// SendMailWithAttachments mengirim email dengan berkas lampiran fisik (MIME multipart/mixed).
+func (e *EmailService) SendMailWithAttachments(to, subject, body string, attachments []EmailAttachment) error {
+	if len(attachments) == 0 {
+		return e.SendMail(to, subject, body)
+	}
+
+	rawMsg, err := BuildMIMEMessage(e.cfg.EmailFrom, to, subject, body, attachments)
+	if err != nil {
+		return err
+	}
+
+	return e.sendRawMail(to, rawMsg)
+}
+
+// Helper functions wrapper
+func (e *EmailService) SendTicketConfirmationWithAttachments(to, username, title string, ticketID uint, department, priority, status, description string, attachments []EmailAttachment) error {
 	subject := fmt.Sprintf("[Ticket ID: %d] %s", ticketID, title)
-	body := fmt.Sprintf("Halo %s,\n\nTiket #%d berhasil dibuat.\nJudul: %s\n\nDeskripsi:\n%s\n\nSalam,\nTim Support", username, ticketID, title, description)
-	return e.SendMail(to, subject, body)
+	body := fmt.Sprintf("Halo %s,\n\nTiket #%d berhasil dibuat.\nJudul: %s\n\nDeskripsi:\n%s", username, ticketID, title, description)
+	if len(attachments) > 0 {
+		body += fmt.Sprintf("\n\n(Terdapat %d berkas lampiran yang disertakan)", len(attachments))
+	}
+	body += "\n\nSalam,\nTim Support"
+	return e.SendMailWithAttachments(to, subject, body, attachments)
+}
+
+func (e *EmailService) SendTicketConfirmation(to, username, title string, ticketID uint, department, priority, status, description string) error {
+	return e.SendTicketConfirmationWithAttachments(to, username, title, ticketID, department, priority, status, description, nil)
+}
+
+func (e *EmailService) SendTicketReplyWithAttachments(to, username, title string, ticketID uint, status, replyMessage, replierName string, attachments []EmailAttachment) error {
+	subject := fmt.Sprintf("RE: [Ticket ID: %d] %s", ticketID, title)
+	body := fmt.Sprintf("Halo %s,\n\nAda balasan baru dari %s:\n\n%s", username, replierName, replyMessage)
+	if len(attachments) > 0 {
+		body += fmt.Sprintf("\n\n(Terdapat %d berkas lampiran yang disertakan)", len(attachments))
+	}
+	body += "\n\nSalam,\nTim Support"
+	return e.SendMailWithAttachments(to, subject, body, attachments)
 }
 
 func (e *EmailService) SendTicketReply(to, username, title string, ticketID uint, status, replyMessage, replierName string) error {
-	subject := fmt.Sprintf("RE: [Ticket ID: %d] %s", ticketID, title)
-	body := fmt.Sprintf("Halo %s,\n\nAda balasan baru dari %s:\n\n%s\n\nSalam,\nTim Support", username, replierName, replyMessage)
-	return e.SendMail(to, subject, body)
+	return e.SendTicketReplyWithAttachments(to, username, title, ticketID, status, replyMessage, replierName, nil)
 }
 
 func (e *EmailService) SendRatingRequest(to, username, title string, ticketID uint, ratingToken string) error {
