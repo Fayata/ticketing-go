@@ -242,8 +242,10 @@ func (e *EmailService) SendMailWithAttachments(to, subject, body string, attachm
 
 // Helper functions wrapper
 func (e *EmailService) SendTicketConfirmationWithAttachments(to, username, title string, ticketID uint, department, priority, status, description string, attachments []EmailAttachment) error {
-	subject := fmt.Sprintf("[T%s-%04d] %s", ticketID, title)
-	body := fmt.Sprintf("Halo %s,\n\nKami telah menerima request anda dan tiket T%s-%04d sudah di assign ke tim terkait.\nJudul: %s\n\nDeskripsi:\n%s \n Terima kasih atas kesediannya untuk menunggu serta kerjasamanya", username, ticketID, title, description)
+	year := time.Now().Format("06")
+	ticketNum := fmt.Sprintf("T%s-%04d", year, ticketID)
+	subject := fmt.Sprintf("[%s] %s", ticketNum, title)
+	body := fmt.Sprintf("Halo %s,\n\nKami telah menerima request anda dan tiket %s sudah di assign ke tim terkait.\nJudul: %s\n\nDeskripsi:\n%s\n\nTerima kasih atas kesediannya untuk menunggu serta kerjasamanya", username, ticketNum, title, description)
 	if len(attachments) > 0 {
 		body += fmt.Sprintf("\n\n(Terdapat %d berkas lampiran yang disertakan)", len(attachments))
 	}
@@ -256,8 +258,10 @@ func (e *EmailService) SendTicketConfirmation(to, username, title string, ticket
 }
 
 func (e *EmailService) SendTicketReplyWithAttachments(to, username, title string, ticketID uint, status, replyMessage, replierName string, attachments []EmailAttachment) error {
-	subject := fmt.Sprintf("RE: [T%s-%04d] %s", ticketID, title)
-	body := fmt.Sprintf("Halo %s,\n\nAda balasan baru dari %s:\n\n%s", username, replierName, replyMessage)
+	year := time.Now().Format("06")
+	ticketNum := fmt.Sprintf("T%s-%04d", year, ticketID)
+	subject := fmt.Sprintf("RE: [%s] %s", ticketNum, title)
+	body := fmt.Sprintf("Halo %s,\n\nAda balasan baru dari %s pada tiket %s:\n\n%s", username, replierName, ticketNum, replyMessage)
 	if len(attachments) > 0 {
 		body += fmt.Sprintf("\n\n(Terdapat %d berkas lampiran yang disertakan)", len(attachments))
 	}
