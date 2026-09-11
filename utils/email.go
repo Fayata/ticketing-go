@@ -242,8 +242,8 @@ func (e *EmailService) SendMailWithAttachments(to, subject, body string, attachm
 
 // Helper functions wrapper
 func (e *EmailService) SendTicketConfirmationWithAttachments(to, username, title string, ticketID uint, department, priority, status, description string, attachments []EmailAttachment) error {
-	subject := fmt.Sprintf("[Ticket ID: %d] %s", ticketID, title)
-	body := fmt.Sprintf("Halo %s,\n\nTiket #%d berhasil dibuat.\nJudul: %s\n\nDeskripsi:\n%s", username, ticketID, title, description)
+	subject := fmt.Sprintf("[T%s-%04d] %s", ticketID, title)
+	body := fmt.Sprintf("Halo %s,\n\nKami telah menerima request anda dan tiket T%s-%04d sudah di assign ke tim terkait.\nJudul: %s\n\nDeskripsi:\n%s \n Terima kasih atas kesediannya untuk menunggu serta kerjasamanya", username, ticketID, title, description)
 	if len(attachments) > 0 {
 		body += fmt.Sprintf("\n\n(Terdapat %d berkas lampiran yang disertakan)", len(attachments))
 	}
@@ -256,7 +256,7 @@ func (e *EmailService) SendTicketConfirmation(to, username, title string, ticket
 }
 
 func (e *EmailService) SendTicketReplyWithAttachments(to, username, title string, ticketID uint, status, replyMessage, replierName string, attachments []EmailAttachment) error {
-	subject := fmt.Sprintf("RE: [Ticket ID: %d] %s", ticketID, title)
+	subject := fmt.Sprintf("RE: [T%s-%04d] %s", ticketID, title)
 	body := fmt.Sprintf("Halo %s,\n\nAda balasan baru dari %s:\n\n%s", username, replierName, replyMessage)
 	if len(attachments) > 0 {
 		body += fmt.Sprintf("\n\n(Terdapat %d berkas lampiran yang disertakan)", len(attachments))
