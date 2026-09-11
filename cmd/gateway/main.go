@@ -79,6 +79,7 @@ func main() {
 	mux.Handle("/api/dashboard", ticketProxy)
 	mux.Handle("/ws/ticket/", ticketProxy)
 	mux.Handle("/ws/ticket", ticketProxy)
+	mux.Handle("/api/heartbeat", ticketProxy)
 
 	// Notification routes
 	mux.Handle("/api/notifications/", notificationProxy)

@@ -90,7 +90,9 @@ func main() {
 		aiService,
 		adminSearchService,
 	)
-	departmentHandler := handlers.NewDepartmentHandler(cfg, emailService, staffDashboardService)
+	wsHub := services.NewWSHub()
+	go wsHub.Run()
+	departmentHandler := handlers.NewDepartmentHandler(cfg, emailService, staffDashboardService, wsHub)
 	
 	// Create multiplexer
 	mux := http.NewServeMux()

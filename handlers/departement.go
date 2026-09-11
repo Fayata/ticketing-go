@@ -45,6 +45,17 @@ func (h *DepartmentHandler) SetWSHub(hub *services.WSHub) {
 	h.wsHub = hub
 }
 
+func (h *DepartmentHandler) isRecipientOnline(userID uint) bool {
+	if h.wsHub != nil && h.wsHub.IsUserOnline(userID) {
+		return true
+	}
+	var recipient models.User
+	if err := config.DB.Select("id", "last_active_at").First(&recipient, userID).Error; err == nil {
+		return recipient.IsOnline()
+	}
+	return false
+}
+
 // addDepartmentData menambah data dasar (user, nav) untuk semua halaman staff/departemen.
 func (h *DepartmentHandler) addDepartmentData(r *http.Request, data map[string]interface{}) map[string]interface{} {
 	baseData := AddBaseData(r, data)
@@ -610,13 +621,11 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 
 	isDelivered := false
 	isRead := false
-	if h.wsHub != nil {
-		if h.wsHub.IsUserInTicketRoom(ticket.ID, ticket.CreatedByID) {
-			isDelivered = true
-			isRead = true
-		} else if h.wsHub.IsUserOnline(ticket.CreatedByID) {
-			isDelivered = true
-		}
+	if h.wsHub != nil && h.wsHub.IsUserInTicketRoom(ticket.ID, ticket.CreatedByID) {
+		isDelivered = true
+		isRead = true
+	} else if h.isRecipientOnline(ticket.CreatedByID) {
+		isDelivered = true
 	}
 	var readAt *time.Time
 	if isRead {

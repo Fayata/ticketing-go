@@ -35,6 +35,30 @@ func (h *TicketHandler) SetWSHub(hub *services.WSHub) {
 	h.wsHub = hub
 }
 
+func (h *TicketHandler) isStaffOnline(tkt *models.Ticket) bool {
+	if tkt == nil {
+		return false
+	}
+	if tkt.AssignedToID != nil && *tkt.AssignedToID > 0 {
+		if h.wsHub != nil && h.wsHub.IsUserOnline(*tkt.AssignedToID) {
+			return true
+		}
+		var staff models.User
+		if err := config.DB.Select("id", "last_active_at").First(&staff, *tkt.AssignedToID).Error; err == nil {
+			return staff.IsOnline()
+		}
+		return false
+	}
+	if tkt.DepartmentID != nil && *tkt.DepartmentID > 0 {
+		var count int64
+		config.DB.Model(&models.User{}).
+			Where("department_id = ? AND is_staff = ? AND last_active_at >= ?", *tkt.DepartmentID, true, time.Now().Add(-2*time.Minute)).
+			Count(&count)
+		return count > 0
+	}
+	return false
+}
+
 // HandleCreateTicket mengarahkan GET ke form buat tiket, POST ke proses simpan.
 func (h *TicketHandler) HandleCreateTicket(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
@@ -328,13 +352,11 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 
 	isDelivered := false
 	isRead := false
-	if h.wsHub != nil {
-		if h.wsHub.HasOtherParticipantInRoom(uint(ticketID), user.ID) {
-			isDelivered = true
-			isRead = true
-		} else if tkt.AssignedToID != nil && h.wsHub.IsUserOnline(*tkt.AssignedToID) {
-			isDelivered = true
-		}
+	if h.wsHub != nil && h.wsHub.HasOtherParticipantInRoom(uint(ticketID), user.ID) {
+		isDelivered = true
+		isRead = true
+	} else if h.isStaffOnline(&tkt) {
+		isDelivered = true
 	}
 
 	reply, ticket, err := h.ticketService.AddReplyWithAttachments(uint(ticketID), user.ID, message, attachments, isDelivered, isRead)
@@ -607,9 +629,35 @@ func (h *TicketHandler) GetTicketMessagesAPI(w http.ResponseWriter, r *http.Requ
 		})
 	}
 
+	// Status updates for sender's outgoing messages in this ticket
+	type statusItem struct {
+		ID         uint   `json:"id"`
+		ReadStatus string `json:"read_status"`
+		Check      string `json:"check"`
+		Title      string `json:"title"`
+	}
+
+	var myReplies []models.TicketReply
+	config.DB.Select("id", "is_read", "is_delivered").
+		Where("ticket_id = ? AND user_id = ?", ticketID, user.ID).
+		Order("id DESC").
+		Limit(50).
+		Find(&myReplies)
+
+	var statuses []statusItem
+	for _, mr := range myReplies {
+		statuses = append(statuses, statusItem{
+			ID:         mr.ID,
+			ReadStatus: mr.GetReadStatusClass(),
+			Check:      mr.GetReadStatusCheck(),
+			Title:      mr.GetReadStatusTitle(),
+		})
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"ticket_id": ticketID,
 		"replies":   respList,
+		"statuses":  statuses,
 	})
 }

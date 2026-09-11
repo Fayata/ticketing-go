@@ -111,6 +111,10 @@ func main() {
 	mux.Handle("/api/ticket", middleware.AuthRequired(http.HandlerFunc(ticketHandler.GetTicketMessagesAPI)))
 	mux.Handle("/api/dashboard/live", middleware.AuthRequired(middleware.PortalUserRequired(http.HandlerFunc(dashboardHandler.GetLiveDashboardAPI))))
 	mux.Handle("/ws/ticket/", middleware.AuthRequired(http.HandlerFunc(wsHandler.HandleTicketWS)))
+	mux.Handle("/api/heartbeat", middleware.AuthRequired(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})))
 
 	// Health check
 	mux.HandleFunc("/health", HealthCheckHandler)

@@ -716,6 +716,20 @@
               chatThread.scrollTop = chatThread.scrollHeight;
             }
           }
+
+          // Sync status of existing messages (sent -> delivered -> read)
+          if (data && data.statuses && data.statuses.length > 0) {
+            data.statuses.forEach(s => {
+              const statusEl = chatThread.querySelector('[data-reply-id="' + s.id + '"] .msg-status');
+              if (statusEl) {
+                if (!statusEl.classList.contains(s.read_status)) {
+                  statusEl.className = 'msg-status ' + s.read_status;
+                  statusEl.textContent = s.check;
+                  statusEl.title = s.title;
+                }
+              }
+            });
+          }
         })
         .catch(() => {
           isPolling = false;

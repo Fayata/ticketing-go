@@ -79,6 +79,20 @@
       }
     }
   });
+
+  // Heartbeat to maintain online / delivered status while browser tab is open
+  function sendHeartbeat() {
+    if (document.visibilityState === 'visible') {
+      var base = document.querySelector('base');
+      var prefix = (base && base.getAttribute('href')) ? base.getAttribute('href').replace(/\/$/, '') : '';
+      if (!prefix && window.location.pathname.indexOf('/Ticketing') !== -1) {
+        prefix = '/Ticketing';
+      }
+      fetch(prefix + '/api/heartbeat', { method: 'POST', credentials: 'same-origin' }).catch(function(){});
+    }
+  }
+  setTimeout(sendHeartbeat, 3000);
+  setInterval(sendHeartbeat, 45000);
 })();
 
 

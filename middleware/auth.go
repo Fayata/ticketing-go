@@ -3,6 +3,8 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"sync"
+	"time"
 
 	"ticketing/config"
 	"ticketing/internal/logging"
@@ -16,6 +18,43 @@ const (
 	AuthenticatedKey      contextKey = "authenticated"
 	ActiveTicketsCountKey contextKey = "active_tickets_count"
 )
+
+var (
+	activityMu       sync.Mutex
+	lastUserActivity = make(map[uint]time.Time)
+)
+
+// TouchUserActivity records user activity timestamp and marks pending messages as delivered.
+func TouchUserActivity(userID uint, isStaff bool, deptID *uint) {
+	activityMu.Lock()
+	lastTouch, exists := lastUserActivity[userID]
+	now := time.Now()
+	if exists && now.Sub(lastTouch) < 30*time.Second {
+		activityMu.Unlock()
+		return
+	}
+	lastUserActivity[userID] = now
+	activityMu.Unlock()
+
+	go func() {
+		config.DB.Model(&models.User{}).Where("id = ?", userID).Update("last_active_at", now)
+
+		// Auto-deliver any pending messages sent to this user
+		config.DB.Model(&models.TicketReply{}).
+			Where("ticket_id IN (SELECT id FROM tickets WHERE created_by_id = ?) AND user_id != ? AND is_delivered = ?", userID, userID, false).
+			Update("is_delivered", true)
+
+		if isStaff {
+			q := config.DB.Model(&models.TicketReply{}).Where("user_id != ? AND is_delivered = ?", userID, false)
+			if deptID != nil {
+				q = q.Where("ticket_id IN (SELECT id FROM tickets WHERE assigned_to_id = ? OR department_id = ?)", userID, *deptID)
+			} else {
+				q = q.Where("ticket_id IN (SELECT id FROM tickets WHERE assigned_to_id = ?)", userID)
+			}
+			q.Update("is_delivered", true)
+		}
+	}()
+}
 
 // AuthRequired memastikan user sudah login; load user ke context, redirect ke login jika belum.
 func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
@@ -42,6 +81,8 @@ func AuthRequired(next http.HandlerFunc) http.HandlerFunc {
 
 		ctx := context.WithValue(r.Context(), UserKey, &user)
 		ctx = context.WithValue(ctx, AuthenticatedKey, true)
+
+		TouchUserActivity(user.ID, user.IsStaff || user.IsSuperAdmin, user.DepartmentID)
 
 		var activeCount int64
 		config.DB.Model(&models.Ticket{}).

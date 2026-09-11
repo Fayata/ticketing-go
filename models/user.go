@@ -19,12 +19,13 @@ type User struct {
 	IsStaff      bool `gorm:"default:false" json:"is_staff"`
 	IsSuperAdmin bool `gorm:"default:false" json:"is_super_admin"`
 
-	IsActive   bool           `gorm:"default:true" json:"is_active"`
-	LastLogin  *time.Time     `json:"last_login"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
-	IsVerified bool           `gorm:"default:false" json:"is_verified"`
+	IsActive     bool           `gorm:"default:true" json:"is_active"`
+	LastLogin    *time.Time     `json:"last_login"`
+	LastActiveAt *time.Time     `gorm:"index" json:"last_active_at"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
+	IsVerified   bool           `gorm:"default:false" json:"is_verified"`
 
 	DepartmentID *uint       `json:"department_id"`
 	Department   *Department `gorm:"foreignKey:DepartmentID" json:"department"`
@@ -75,3 +76,12 @@ func (u *User) HasPortalAccess() bool {
 	}
 	return false
 }
+
+// IsOnline returns true if the user was active within the last 2 minutes.
+func (u *User) IsOnline() bool {
+	if u == nil || u.LastActiveAt == nil {
+		return false
+	}
+	return time.Since(*u.LastActiveAt) < 2*time.Minute
+}
+
