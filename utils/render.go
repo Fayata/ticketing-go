@@ -230,6 +230,9 @@ func RenderTemplate(w http.ResponseWriter, tmplName string, data interface{}) {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
 
 	start := time.Now()
 	err := templates.ExecuteTemplate(w, tmplName, data)

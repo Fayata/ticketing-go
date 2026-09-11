@@ -163,6 +163,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Optimistic badge cleanup when user clicks on a ticket item
+    document.querySelectorAll('.ticket-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+            var badge = this.querySelector('.nav-badge');
+            if (badge) {
+                badge.style.display = 'none';
+            }
+        });
+    });
 });
 
 // Export functions for use in other scripts

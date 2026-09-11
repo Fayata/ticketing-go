@@ -34,4 +34,17 @@
             } else if (overlay && overlay.parentNode) { overlay.parentNode.removeChild(overlay); overlay = null; }
         });
     }
+
+    // Optimistic badge cleanup when staff clicks a ticket row or link
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.dept-all-table tbody tr, .staff-table-row').forEach(function(row) {
+            row.addEventListener('click', function() {
+                var badge = this.querySelector('.nav-badge, .dept-nav-badge');
+                if (badge) {
+                    badge.style.display = 'none';
+                }
+            });
+        });
+    });
 })();
+

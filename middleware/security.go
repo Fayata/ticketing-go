@@ -36,10 +36,13 @@ func SecurityHeaders(next http.Handler, debug bool) http.Handler {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
 
-		// [Security] Prevent caching of sensitive pages
-		if strings.HasPrefix(r.URL.Path, "/admin") || strings.HasPrefix(r.URL.Path, "/api/") {
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private")
+		// [Security] Prevent caching of sensitive and dynamic portal pages
+		if strings.HasPrefix(r.URL.Path, "/admin") || strings.HasPrefix(r.URL.Path, "/api/") ||
+			strings.HasPrefix(r.URL.Path, "/tiket") || strings.HasPrefix(r.URL.Path, "/departement") ||
+			strings.HasPrefix(r.URL.Path, "/department") || r.URL.Path == "/dashboard" {
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, private, max-age=0")
 			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
 		}
 
 		next.ServeHTTP(w, r)

@@ -60,5 +60,25 @@
       toggleTheme();
     });
   });
+
+  // Auto-reload on browser back/forward navigation (bfcache) to prevent stale state and unread badges
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+      window.location.reload();
+      return;
+    }
+    if (window.performance) {
+      var navEntries = window.performance.getEntriesByType && window.performance.getEntriesByType('navigation');
+      if (navEntries && navEntries.length > 0 && navEntries[0].type === 'back_forward') {
+        window.location.reload();
+        return;
+      }
+      if (window.performance.navigation && window.performance.navigation.type === 2) {
+        window.location.reload();
+        return;
+      }
+    }
+  });
 })();
+
 
