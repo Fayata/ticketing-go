@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="static/css/user_form.css">
     <link rel="stylesheet" href="static/css/alerts-dept.css">
     <link rel="stylesheet" href="static/css/sla_policy.css">
+    <link rel="stylesheet" href="static/css/admin_reports.css">
 </head>
 
 <body>
@@ -74,6 +75,13 @@
                         <polyline points="12 6 12 12 16 14" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                     <span class="dept-nav-label">Kebijakan SLA</span>
+                </a>
+
+                <a href="admin/reports" class="dept-nav-item {{if eq .nav_active "admin_reports"}}active{{end}}">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.5L17 7.5V19a2 2 0 0 1-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="dept-nav-label">Laporan Kinerja</span>
                 </a>
 
                 <a href="admin/knowledge-base/" class="dept-nav-item {{if eq .nav_active "admin_kb"}}active{{end}}">
@@ -182,6 +190,8 @@
                 {{template "admin/kb_article_edit_content" .}}
                 {{else if eq .template_name "admin/search_results"}}
                 {{template "admin/search_results_content" .}}
+                {{else if eq .template_name "admin/reports"}}
+                {{template "admin/reports_content" .}}
                 {{else}}
                 {{template "admin/users_list_content" .}}
                 {{end}}
@@ -191,6 +201,7 @@
     <script src="static/js/alerts.js"></script>
     <script src="static/js/theme.js"></script>
     <script src="static/js/department-base.js"></script>
+    <script src="static/js/admin_reports.js"></script>
 </body>
 
 </html>

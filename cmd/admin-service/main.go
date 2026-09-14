@@ -79,6 +79,7 @@ func main() {
 	adminDashboardService := services.NewAdminDashboardService()
 	aiService := services.NewAIService(cfg)
 	adminSearchService := services.NewAdminSearchService()
+	adminReportService := services.NewAdminReportService()
 	staffDashboardService := services.NewStaffDashboardService()
 	emailService := utils.NewEmailService(cfg)
 	// kbService := services.NewKBService(db) // Used later if handlers take this
@@ -89,6 +90,7 @@ func main() {
 		adminDashboardService,
 		aiService,
 		adminSearchService,
+		adminReportService,
 	)
 	wsHub := services.NewWSHub()
 	go wsHub.Run()
@@ -106,6 +108,7 @@ func main() {
 	adminMux.HandleFunc("/dashboard", AuditLogWrapper("Show Admin Dashboard", adminHandler.ShowAdminDashboard))
 	adminMux.HandleFunc("/api/live", adminHandler.GetLiveDashboardAPI)
 	adminMux.HandleFunc("/search", adminHandler.SearchAdmin)
+	adminMux.HandleFunc("/reports", AuditLogWrapper("Show Performance Report", adminHandler.ShowReports))
 	adminMux.HandleFunc("/users", adminHandler.ListUsers)
 	adminMux.HandleFunc("/users/create", ValidateUserCreation(adminHandler.CreateUserForm))
 	adminMux.HandleFunc("/users/toggle/", AuditLogWrapper("Toggle User Status", adminHandler.ToggleUserStatus))

@@ -31,14 +31,27 @@ const (
 )
 
 type AdminHandler struct {
-	cfg              *config.Config
-	adminDashService *services.AdminDashboardService
-	aiService        *services.AIService
-	adminSearch      *services.AdminSearchService
+	cfg                *config.Config
+	adminDashService   *services.AdminDashboardService
+	aiService          *services.AIService
+	adminSearch        *services.AdminSearchService
+	adminReportService *services.AdminReportService
 }
 
-func NewAdminHandler(cfg *config.Config, adminDashService *services.AdminDashboardService, aiService *services.AIService, adminSearch *services.AdminSearchService) *AdminHandler {
-	return &AdminHandler{cfg: cfg, adminDashService: adminDashService, aiService: aiService, adminSearch: adminSearch}
+func NewAdminHandler(cfg *config.Config, adminDashService *services.AdminDashboardService, aiService *services.AIService, adminSearch *services.AdminSearchService, adminReportService ...*services.AdminReportService) *AdminHandler {
+	var reportSvc *services.AdminReportService
+	if len(adminReportService) > 0 && adminReportService[0] != nil {
+		reportSvc = adminReportService[0]
+	} else {
+		reportSvc = services.NewAdminReportService()
+	}
+	return &AdminHandler{
+		cfg:                cfg,
+		adminDashService:   adminDashService,
+		aiService:          aiService,
+		adminSearch:        adminSearch,
+		adminReportService: reportSvc,
+	}
 }
 
 // ShowAdminDashboard menampilkan halaman dashboard admin: KPI, grafik, tiket terbaru, menunggu terlama.
@@ -1786,5 +1799,68 @@ func (h *AdminHandler) ToggleSLAPolicyStatus(w http.ResponseWriter, r *http.Requ
 		msg = "Kebijakan SLA berhasil diaktifkan"
 	}
 	http.Redirect(w, r, config.Path("/admin/sla-policies")+"?success="+url.QueryEscape(msg), http.StatusSeeOther)
+}
+
+// ShowReports menampilkan halaman laporan kinerja bulanan admin.
+func (h *AdminHandler) ShowReports(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if h.adminReportService == nil {
+		h.adminReportService = services.NewAdminReportService()
+	}
+
+	now := time.Now()
+	month := int(now.Month())
+	year := now.Year()
+
+	periodQuery := strings.TrimSpace(r.URL.Query().Get("period"))
+	if periodQuery != "" {
+		if t, err := time.Parse("2006-01", periodQuery); err == nil {
+			month = int(t.Month())
+			year = t.Year()
+		}
+	} else {
+		if m, err := strconv.Atoi(r.URL.Query().Get("month")); err == nil && m >= 1 && m <= 12 {
+			month = m
+		}
+		if y, err := strconv.Atoi(r.URL.Query().Get("year")); err == nil && y >= 2000 {
+			year = y
+		}
+	}
+
+	var companyIDPtr *uint
+	if compStr := strings.TrimSpace(r.URL.Query().Get("company_id")); compStr != "" {
+		if cid, err := strconv.ParseUint(compStr, 10, 64); err == nil && cid > 0 {
+			uCID := uint(cid)
+			companyIDPtr = &uCID
+		}
+	}
+
+	filter := services.MonthlyReportFilter{
+		Month:     month,
+		Year:      year,
+		CompanyID: companyIDPtr,
+	}
+
+	reportData, err := h.adminReportService.GetMonthlyCompanyReport(filter)
+	if err != nil {
+		log.Printf("[Admin] Failed to generate monthly report: %v", err)
+		http.Error(w, "Gagal memuat laporan kinerja", http.StatusInternalServerError)
+		return
+	}
+
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         "Laporan Kinerja Penanganan Tiket — Ticketing",
+		"page_title":    "Laporan Kinerja",
+		"page_subtitle": "Rekapitulasi Bulanan Kinerja Tiket per Perusahaan & Departemen",
+		"nav_active":    "admin_reports",
+		"template_name": "admin/reports",
+		"report":        reportData,
+	})
+
+	RenderTemplate(w, "admin/reports", data)
 }
 

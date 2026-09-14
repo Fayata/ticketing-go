@@ -42,7 +42,8 @@ func main() {
 	adminDashboardService := services.NewAdminDashboardService()
 	aiService := services.NewAIService(cfg)
 	adminSearchService := services.NewAdminSearchService()
-	adminHandler := handlers.NewAdminHandler(cfg, adminDashboardService, aiService, adminSearchService)
+	adminReportService := services.NewAdminReportService()
+	adminHandler := handlers.NewAdminHandler(cfg, adminDashboardService, aiService, adminSearchService, adminReportService)
 
 	dashboardService := services.NewDashboardService()
 	kbService := services.NewKBService()
@@ -130,6 +131,7 @@ func main() {
 	mux.HandleFunc("/admin/sla-policies/create", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.CreateSLAPolicyForm))))
 	mux.HandleFunc("/admin/sla-policies/edit/", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.EditSLAPolicyForm))))
 	mux.HandleFunc("/admin/sla-policies/toggle/", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ToggleSLAPolicyStatus))))
+	mux.HandleFunc("/admin/reports", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ShowReports))))
 	mux.HandleFunc("/admin/knowledge-base", middleware.AuthRequired(middleware.EmailRequired(middleware.StaffOrSuperAdminRequired(adminHandler.ListKBAdmin))))
 	mux.HandleFunc("/admin/knowledge-base/categories/create", middleware.AuthRequired(middleware.EmailRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryForm))))
 	mux.HandleFunc("/admin/knowledge-base/categories/create/post", middleware.AuthRequired(middleware.EmailRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryPost))))
