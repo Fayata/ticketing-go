@@ -10,30 +10,28 @@
             <h1 class="print-org-title">SISTEM MONITORING TICKETING SUPPORT</h1>
             <p class="print-report-title">LAPORAN KINERJA PENANGANAN TIKET BULANAN</p>
         </div>
-        <div class="print-meta-grid">
-            <div class="print-meta-item">
-                <span class="meta-label">Periode Laporan:</span>
-                <span class="meta-val"><strong>{{.report.PeriodLabel}}</strong></span>
-            </div>
-            <div class="print-meta-item">
-                <span class="meta-label">Dicetak Pada:</span>
-                <span class="meta-val">{{.report.GeneratedAtFormatted}}</span>
-            </div>
-            <div class="print-meta-item">
-                <span class="meta-label">Dicetak Oleh:</span>
-                <span class="meta-val">{{if .user}}{{getFullName .user}} ({{.user.Username}}){{else}}Administrator{{end}}</span>
-            </div>
-            <div class="print-meta-item">
-                <span class="meta-label">Status Filter:</span>
-                <span class="meta-val">
-                    {{if .report.SelectedCompanyID}}
-                        Perusahaan Terpilih (ID: #{{.report.SelectedCompanyID}})
-                    {{else}}
-                        Seluruh Perusahaan & Rekanan
-                    {{end}}
-                </span>
-            </div>
-        </div>
+        <table class="print-meta-table">
+            <tbody>
+                <tr>
+                    <td class="pm-label">Periode Laporan</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val"><strong>{{.report.PeriodLabel}}</strong></td>
+                    <td class="pm-gap"></td>
+                    <td class="pm-label">Dicetak Pada</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val">{{.report.GeneratedAtFormatted}}</td>
+                </tr>
+                <tr>
+                    <td class="pm-label">Dicetak Oleh</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val">{{if .user}}{{getFullName .user}} ({{.user.Username}}){{else}}Administrator{{end}}</td>
+                    <td class="pm-gap"></td>
+                    <td class="pm-label">Filter Perusahaan</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val">{{.report.SelectedCompanyName}}</td>
+                </tr>
+            </tbody>
+        </table>
         <hr class="print-divider">
     </div>
 

@@ -505,7 +505,30 @@
 /* ========================================================= */
 /* Print-to-PDF Media Query Optimization                     */
 /* ========================================================= */
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
 @media print {
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    /* Reset background and layout for clean paper printing without browser chrome */
+    html,
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 12mm 15mm 15mm 15mm !important;
+        width: 100% !important;
+        height: auto !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
     /* Hide layout chrome and non-printable items */
     .dept-sidebar,
     .dept-header,
@@ -521,8 +544,6 @@
         display: none !important;
     }
 
-    /* Reset background and layout for clean paper printing */
-    body,
     .department-layout,
     .dept-main,
     .dept-content-scrollable,
@@ -540,12 +561,12 @@
     /* Show Official Document Header */
     .print-header {
         display: block !important;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.25rem;
     }
 
     .print-header-top {
         text-align: center;
-        margin-bottom: 1rem;
+        margin-bottom: 0.85rem;
     }
 
     .print-org-title {
@@ -563,22 +584,45 @@
         margin: 0;
     }
 
-    .print-meta-grid {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.5rem 1.5rem;
+    /* Print Metadata Table: Rapi, simetris, dan tidak terpotong */
+    .print-meta-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin: 0.75rem 0 0.4rem 0 !important;
         font-size: 0.85rem !important;
         color: #374151 !important;
-        margin: 1rem 0;
+        border: none !important;
     }
 
-    .print-meta-item {
-        display: flex;
-        justify-content: space-between;
+    .print-meta-table tr,
+    .print-meta-table td {
+        border: none !important;
+        padding: 0.2rem 0 !important;
+        background: transparent !important;
+        vertical-align: middle !important;
     }
 
-    .meta-label {
-        font-weight: 600;
+    .print-meta-table .pm-label {
+        width: 120px !important;
+        font-weight: 600 !important;
+        color: #4b5563 !important;
+        white-space: nowrap !important;
+    }
+
+    .print-meta-table .pm-sep {
+        width: 14px !important;
+        text-align: center !important;
+        font-weight: 600 !important;
+        color: #6b7280 !important;
+    }
+
+    .print-meta-table .pm-val {
+        color: #111827 !important;
+        white-space: nowrap !important;
+    }
+
+    .print-meta-table .pm-gap {
+        width: 2.5rem !important;
     }
 
     .print-divider {

@@ -87,10 +87,12 @@ func TestReportTemplate_GrandTotalVisibility(t *testing.T) {
 	// Case 1: Filtered to specific company (SelectedCompanyID = 1) -> Grand total must NOT appear
 	{
 		reportData := &services.MonthlyReportData{
-			PeriodLabel:       "September 2026",
-			CompanyList:       mockCompanyList,
-			GrandTotal:        grandTotal,
-			SelectedCompanyID: 1,
+			PeriodLabel:          "September 2026",
+			CompanyList:          mockCompanyList,
+			GrandTotal:           grandTotal,
+			SelectedCompanyID:    1,
+			SelectedCompanyName:  "PT Utama (DEFAULT)",
+			GeneratedAtFormatted: "14 Sep 2026, 15:50 WIB",
 		}
 		data := map[string]interface{}{
 			"report":        reportData,
@@ -107,15 +109,23 @@ func TestReportTemplate_GrandTotalVisibility(t *testing.T) {
 		if !strings.Contains(body, "Subtotal PT Utama:") {
 			t.Errorf("Subtotal PT Utama should appear when filtered to PT Utama")
 		}
+		if !strings.Contains(body, "print-meta-table") {
+			t.Errorf("print-meta-table should be present in rendered HTML")
+		}
+		if !strings.Contains(body, "PT Utama (DEFAULT)") {
+			t.Errorf("Selected company name should be present in print metadata")
+		}
 	}
 
 	// Case 2: Filtered to Semua Perusahaan (SelectedCompanyID = 0) -> Grand total MUST appear
 	{
 		reportData := &services.MonthlyReportData{
-			PeriodLabel:       "September 2026",
-			CompanyList:       mockCompanyList,
-			GrandTotal:        grandTotal,
-			SelectedCompanyID: 0,
+			PeriodLabel:          "September 2026",
+			CompanyList:          mockCompanyList,
+			GrandTotal:           grandTotal,
+			SelectedCompanyID:    0,
+			SelectedCompanyName:  "Semua Perusahaan",
+			GeneratedAtFormatted: "14 Sep 2026, 15:50 WIB",
 		}
 		data := map[string]interface{}{
 			"report":        reportData,
@@ -131,6 +141,9 @@ func TestReportTemplate_GrandTotalVisibility(t *testing.T) {
 		}
 		if !strings.Contains(body, "Subtotal PT Utama:") {
 			t.Errorf("Subtotal PT Utama should appear")
+		}
+		if !strings.Contains(body, "Semua Perusahaan") {
+			t.Errorf("Semua Perusahaan should be present in print metadata")
 		}
 	}
 }

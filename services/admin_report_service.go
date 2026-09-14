@@ -83,6 +83,7 @@ type MonthlyReportData struct {
 	GrandTotal             GrandTotalSummary
 	AllCompanies           []models.Company // Untuk dropdown filter PT
 	SelectedCompanyID      uint
+	SelectedCompanyName    string // misal: "PT Utama (DEFAULT)" atau "Semua Perusahaan"
 	GeneratedAtFormatted   string
 }
 
@@ -132,6 +133,7 @@ func (s *AdminReportService) GetMonthOptions(selectedMonth, selectedYear int) []
 // GetMonthlyCompanyReport mengagregasi data kinerja tiket per PT dan per departemen untuk bulan terpilih.
 func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter) (*MonthlyReportData, error) {
 	now := time.Now()
+	wibZone := time.FixedZone("WIB", 7*3600)
 
 	// Default ke bulan dan tahun sekarang jika tidak dispesifikasikan
 	if filter.Month < 1 || filter.Month > 12 {
@@ -144,6 +146,11 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	var selectedCID uint
 	if filter.CompanyID != nil {
 		selectedCID = *filter.CompanyID
+	}
+
+	selectedCompName := "Semua Perusahaan"
+	if selectedCID > 0 {
+		selectedCompName = fmt.Sprintf("Perusahaan #%d", selectedCID)
 	}
 
 	logging.AdminReports.Info("GetMonthlyCompanyReport started",
@@ -159,7 +166,8 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		PeriodLabel:          fmt.Sprintf("%s %d", GetMonthName(filter.Month), filter.Year),
 		MonthOptions:         s.GetMonthOptions(filter.Month, filter.Year),
 		SelectedCompanyID:    selectedCID,
-		GeneratedAtFormatted: now.Format("02 Jan 2006, 15:04"),
+		SelectedCompanyName:  selectedCompName,
+		GeneratedAtFormatted: now.In(wibZone).Format("02 Jan 2006, 15:04") + " WIB",
 	}
 
 	if config.DB == nil {
@@ -171,6 +179,19 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	var allCompanies []models.Company
 	config.DB.Order("name ASC").Find(&allCompanies)
 	report.AllCompanies = allCompanies
+
+	if selectedCID > 0 {
+		for _, c := range allCompanies {
+			if c.ID == selectedCID {
+				if c.Code != "" {
+					report.SelectedCompanyName = fmt.Sprintf("%s (%s)", c.Name, c.Code)
+				} else {
+					report.SelectedCompanyName = c.Name
+				}
+				break
+			}
+		}
+	}
 
 	// 2. Ambil master departemen
 	var allDepts []models.Department
