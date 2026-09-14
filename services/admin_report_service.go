@@ -140,10 +140,6 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		filter.Year = now.Year()
 	}
 
-	loc := now.Location()
-	startOfMonth := time.Date(filter.Year, time.Month(filter.Month), 1, 0, 0, 0, 0, loc)
-	endOfMonth := startOfMonth.AddDate(0, 1, 0).Add(-time.Nanosecond)
-
 	var selectedCID uint
 	if filter.CompanyID != nil {
 		selectedCID = *filter.CompanyID
@@ -163,39 +159,24 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		return report, nil
 	}
 
-	// Ambil daftar semua perusahaan aktif untuk opsi filter
-	config.DB.Order("name ASC").Find(&report.AllCompanies)
+	// 1. Ambil daftar semua perusahaan aktif untuk opsi filter dan master data
+	var allCompanies []models.Company
+	config.DB.Order("name ASC").Find(&allCompanies)
+	report.AllCompanies = allCompanies
 
-	// Ambil semua tiket pada rentang bulan ini
-	query := config.DB.Model(&models.Ticket{}).
-		Preload("Company").
-		Preload("Department").
-		Where("created_at >= ? AND created_at <= ? AND deleted_at IS NULL", startOfMonth, endOfMonth)
+	// 2. Ambil master departemen
+	var allDepts []models.Department
+	config.DB.Preload("Company").Order("name ASC").Find(&allDepts)
 
-	if filter.CompanyID != nil && *filter.CompanyID > 0 {
-		query = query.Where("company_id = ?", *filter.CompanyID)
-	}
-
-	var tickets []models.Ticket
-	if err := query.Order("created_at ASC").Find(&tickets).Error; err != nil {
-		return nil, err
-	}
-
-	// Ambil rating untuk tiket yang terpilih
-	var ticketIDs []uint
-	for _, t := range tickets {
-		ticketIDs = append(ticketIDs, t.ID)
-	}
-	ratingsMap := make(map[uint]int)
-	if len(ticketIDs) > 0 {
-		var ratings []models.TicketRating
-		config.DB.Where("ticket_id IN ?", ticketIDs).Find(&ratings)
-		for _, r := range ratings {
-			ratingsMap[r.TicketID] = r.Rating
+	// Filter companies jika user memilih 1 PT spesifik
+	targetCompanies := make([]models.Company, 0)
+	for _, comp := range allCompanies {
+		if filter.CompanyID != nil && *filter.CompanyID > 0 && comp.ID != *filter.CompanyID {
+			continue
 		}
+		targetCompanies = append(targetCompanies, comp)
 	}
 
-	// Ambil data Master Perusahaan & Departemen agar perusahaan yang 0 tiket tetap tampil jika diinginkan
 	type deptKey struct {
 		CompanyID    uint
 		DepartmentID uint
@@ -222,19 +203,100 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	companySeen := make(map[uint]bool)
 	companyMeta := make(map[uint]struct{ name, code string })
 
-	// Masukkan semua perusahaan yang ada ke meta
-	for _, comp := range report.AllCompanies {
-		if filter.CompanyID != nil && *filter.CompanyID > 0 && comp.ID != *filter.CompanyID {
-			continue
+	// Inisialisasi awal Master Perusahaan & Departemen agar selalu tampil di tabel bahkan saat 0 tiket
+	for _, comp := range targetCompanies {
+		cID := comp.ID
+		if !companySeen[cID] {
+			companySeen[cID] = true
+			companyOrder = append(companyOrder, cID)
+			companyMeta[cID] = struct{ name, code string }{name: comp.Name, code: comp.Code}
 		}
-		companyMeta[comp.ID] = struct{ name, code string }{name: comp.Name, code: comp.Code}
+
+		// Daftarkan semua departemen di bawah perusahaan ini
+		for _, dept := range allDepts {
+			if dept.CompanyID != nil && *dept.CompanyID == comp.ID {
+				key := deptKey{CompanyID: comp.ID, DepartmentID: dept.ID}
+				if _, exists := deptStatsMap[key]; !exists {
+					deptStatsMap[key] = &deptStats{
+						companyID:      comp.ID,
+						companyName:    comp.Name,
+						companyCode:    comp.Code,
+						departmentID:   dept.ID,
+						departmentName: dept.Name,
+					}
+				}
+			}
+		}
 	}
 
-	// Iterasi tiket untuk agregasi
+	// Daftarkan departemen tanpa perusahaan jika sedang melihat semua perusahaan
+	if filter.CompanyID == nil || *filter.CompanyID == 0 {
+		for _, dept := range allDepts {
+			if dept.CompanyID == nil || *dept.CompanyID == 0 {
+				if !companySeen[0] {
+					companySeen[0] = true
+					companyOrder = append(companyOrder, 0)
+					companyMeta[0] = struct{ name, code string }{name: "Umum / Tanpa Perusahaan", code: "DEFAULT"}
+				}
+				key := deptKey{CompanyID: 0, DepartmentID: dept.ID}
+				if _, exists := deptStatsMap[key]; !exists {
+					deptStatsMap[key] = &deptStats{
+						companyID:      0,
+						companyName:    "Umum / Tanpa Perusahaan",
+						companyCode:    "DEFAULT",
+						departmentID:   dept.ID,
+						departmentName: dept.Name,
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Query semua tiket pada rentang bulan ini (kompatibel lintas timezone)
+	loc := now.Location()
+	startOfMonth := time.Date(filter.Year, time.Month(filter.Month), 1, 0, 0, 0, 0, loc)
+	endOfMonth := startOfMonth.AddDate(0, 1, 0)
+
+	startOfMonthUTC := time.Date(filter.Year, time.Month(filter.Month), 1, 0, 0, 0, 0, time.UTC)
+	endOfMonthUTC := startOfMonthUTC.AddDate(0, 1, 0)
+
+	query := config.DB.Model(&models.Ticket{}).
+		Preload("Company").
+		Preload("Department").
+		Preload("Department.Company").
+		Where("((created_at >= ? AND created_at < ?) OR (created_at >= ? AND created_at < ?) OR (EXTRACT(YEAR FROM created_at) = ? AND EXTRACT(MONTH FROM created_at) = ?)) AND deleted_at IS NULL",
+			startOfMonth, endOfMonth, startOfMonthUTC, endOfMonthUTC, filter.Year, filter.Month)
+
+	if filter.CompanyID != nil && *filter.CompanyID > 0 {
+		query = query.Where("company_id = ?", *filter.CompanyID)
+	}
+
+	var tickets []models.Ticket
+	if err := query.Order("created_at ASC").Find(&tickets).Error; err != nil {
+		return nil, err
+	}
+
+	// Ambil rating untuk tiket yang terpilih
+	var ticketIDs []uint
+	for _, t := range tickets {
+		ticketIDs = append(ticketIDs, t.ID)
+	}
+	ratingsMap := make(map[uint]int)
+	if len(ticketIDs) > 0 {
+		var ratings []models.TicketRating
+		config.DB.Where("ticket_id IN ?", ticketIDs).Find(&ratings)
+		for _, r := range ratings {
+			ratingsMap[r.TicketID] = r.Rating
+		}
+	}
+
+	// 4. Iterasi tiket untuk agregasi data
 	for _, t := range tickets {
 		cID := uint(0)
-		cName := "Tanpa Perusahaan"
-		cCode := "-"
+		cName := "Umum / Tanpa Perusahaan"
+		cCode := "DEFAULT"
+
+		// Resolusi CompanyID dari tiket atau departemen terkait
 		if t.CompanyID != nil && *t.CompanyID > 0 {
 			cID = *t.CompanyID
 			if t.Company != nil {
@@ -244,6 +306,19 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 				cName = meta.name
 				cCode = meta.code
 			}
+		} else if t.Department != nil && t.Department.CompanyID != nil && *t.Department.CompanyID > 0 {
+			cID = *t.Department.CompanyID
+			if t.Department.Company != nil {
+				cName = t.Department.Company.Name
+				cCode = t.Department.Company.Code
+			} else if meta, ok := companyMeta[cID]; ok {
+				cName = meta.name
+				cCode = meta.code
+			}
+		}
+
+		if filter.CompanyID != nil && *filter.CompanyID > 0 && cID != *filter.CompanyID {
+			continue
 		}
 
 		dID := uint(0)
@@ -301,7 +376,6 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 				isResBreached = true
 			}
 		} else {
-			// Masih open tapi sudah lewat batas
 			if t.ResolutionDeadline != nil && now.After(*t.ResolutionDeadline) {
 				isResBreached = true
 			} else if t.EstimatedResolutionAt != nil && now.After(*t.EstimatedResolutionAt) {
@@ -362,7 +436,7 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 			if ds.totalTickets > 0 {
 				item.SLAMetRate = math.Round((float64(ds.slaMetCount)/float64(ds.totalTickets)*100)*10) / 10
 			} else {
-				item.SLAMetRate = 100.0
+				item.SLAMetRate = 0.0
 			}
 
 			if ds.ratedCount > 0 {
@@ -392,7 +466,7 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		if compItem.TotalTickets > 0 {
 			compItem.SLAMetRate = math.Round((float64(compItem.SLAMetCount)/float64(compItem.TotalTickets)*100)*10) / 10
 		} else {
-			compItem.SLAMetRate = 100.0
+			compItem.SLAMetRate = 0.0
 		}
 		if compItem.RatedCount > 0 {
 			compItem.AvgRating = math.Round((float64(compRatingScore)/float64(compItem.RatedCount))*10) / 10
@@ -415,7 +489,7 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	if grandTotal.TotalTickets > 0 {
 		grandTotal.OverallSLAMetRate = math.Round((float64(grandSLAMetTotal)/float64(grandTotal.TotalTickets)*100)*10) / 10
 	} else {
-		grandTotal.OverallSLAMetRate = 100.0
+		grandTotal.OverallSLAMetRate = 0.0
 	}
 	if grandTotal.TotalRatedCount > 0 {
 		grandTotal.OverallAvgRating = math.Round((float64(grandTotalRatingScore)/float64(grandTotal.TotalRatedCount))*10) / 10

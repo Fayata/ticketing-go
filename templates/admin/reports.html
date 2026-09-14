@@ -95,83 +95,6 @@
         </form>
     </div>
 
-    <!-- Ringkasan KPI Global Bulanan -->
-    <div class="report-summary-cards">
-        <div class="kpi-card kpi-total">
-            <div class="kpi-icon">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.5L17 7.5V19a2 2 0 01-2 2z" stroke-width="2"/>
-                </svg>
-            </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Total Tiket Masuk</span>
-                <span class="kpi-value">{{.report.GrandTotal.TotalTickets}}</span>
-                <span class="kpi-subtext">Periode {{.report.PeriodLabel}}</span>
-            </div>
-        </div>
-
-        <div class="kpi-card kpi-open">
-            <div class="kpi-icon">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
-                    <polyline points="12 6 12 12 16 14" stroke-width="2"/>
-                </svg>
-            </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Tiket Masih Open</span>
-                <span class="kpi-value">{{.report.GrandTotal.OpenTickets}}</span>
-                <span class="kpi-subtext">Menunggu / Sedang Diproses</span>
-            </div>
-        </div>
-
-        <div class="kpi-card kpi-closed">
-            <div class="kpi-icon">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2"/>
-                </svg>
-            </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Tiket Selesai</span>
-                <span class="kpi-value">{{.report.GrandTotal.ClosedTickets}}</span>
-                <span class="kpi-subtext">Status Closed</span>
-            </div>
-        </div>
-
-        <div class="kpi-card kpi-sla">
-            <div class="kpi-icon">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-width="2"/>
-                </svg>
-            </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Kepatuhan SLA</span>
-                <span class="kpi-value">{{printf "%.1f" .report.GrandTotal.OverallSLAMetRate}}%</span>
-                <span class="kpi-subtext">
-                    Respon Lewat: {{.report.GrandTotal.FirstResponseBreached}} | Resolusi Lewat: {{.report.GrandTotal.ResolutionBreached}}
-                </span>
-            </div>
-        </div>
-
-        <div class="kpi-card kpi-rating">
-            <div class="kpi-icon">
-                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke-width="2"/>
-                </svg>
-            </div>
-            <div class="kpi-content">
-                <span class="kpi-label">Rata-rata Rating CSAT</span>
-                <span class="kpi-value">
-                    {{if gt .report.GrandTotal.TotalRatedCount 0}}
-                        ★ {{printf "%.1f" .report.GrandTotal.OverallAvgRating}} / 5.0
-                    {{else}}
-                        -
-                    {{end}}
-                </span>
-                <span class="kpi-subtext">{{.report.GrandTotal.TotalRatedCount}} Tiket Dinilai</span>
-            </div>
-        </div>
-    </div>
-
     <!-- Tabel Hierarki Laporan Kinerja Bulanan -->
     <div class="card report-table-card">
         <div class="card-header report-table-header">
@@ -265,9 +188,13 @@
                                     {{end}}
                                 </td>
                                 <td class="col-rate text-center">
-                                    <span class="sla-rate-text {{if ge .SLAMetRate 90.0}}rate-good{{else if ge .SLAMetRate 75.0}}rate-warning{{else}}rate-danger{{end}}">
-                                        {{printf "%.1f" .SLAMetRate}}%
-                                    </span>
+                                    {{if gt .TotalTickets 0}}
+                                        <span class="sla-rate-text {{if ge .SLAMetRate 90.0}}rate-good{{else if ge .SLAMetRate 75.0}}rate-warning{{else}}rate-danger{{end}}">
+                                            {{printf "%.1f" .SLAMetRate}}%
+                                        </span>
+                                    {{else}}
+                                        <span class="text-muted">-</span>
+                                    {{end}}
                                 </td>
                                 <td class="col-rating text-center">
                                     {{if gt .RatedCount 0}}
@@ -289,7 +216,13 @@
                             <td class="col-num text-center subtotal-val">{{.ClosedTickets}}</td>
                             <td class="col-sla text-center subtotal-val">{{.FirstResponseBreached}}</td>
                             <td class="col-sla text-center subtotal-val">{{.ResolutionBreached}}</td>
-                            <td class="col-rate text-center subtotal-val">{{printf "%.1f" .SLAMetRate}}%</td>
+                            <td class="col-rate text-center subtotal-val">
+                                {{if gt .TotalTickets 0}}
+                                    {{printf "%.1f" .SLAMetRate}}%
+                                {{else}}
+                                    -
+                                {{end}}
+                            </td>
                             <td class="col-rating text-center subtotal-val">
                                 {{if gt .RatedCount 0}}
                                     ★ {{printf "%.1f" .AvgRating}} ({{.RatedCount}})
@@ -308,7 +241,13 @@
                             <td class="col-num text-center grand-total-val">{{.report.GrandTotal.ClosedTickets}}</td>
                             <td class="col-sla text-center grand-total-val">{{.report.GrandTotal.FirstResponseBreached}}</td>
                             <td class="col-sla text-center grand-total-val">{{.report.GrandTotal.ResolutionBreached}}</td>
-                            <td class="col-rate text-center grand-total-val">{{printf "%.1f" .report.GrandTotal.OverallSLAMetRate}}%</td>
+                            <td class="col-rate text-center grand-total-val">
+                                {{if gt .report.GrandTotal.TotalTickets 0}}
+                                    {{printf "%.1f" .report.GrandTotal.OverallSLAMetRate}}%
+                                {{else}}
+                                    -
+                                {{end}}
+                            </td>
                             <td class="col-rating text-center grand-total-val">
                                 {{if gt .report.GrandTotal.TotalRatedCount 0}}
                                     ★ {{printf "%.1f" .report.GrandTotal.OverallAvgRating}} ({{.report.GrandTotal.TotalRatedCount}})
