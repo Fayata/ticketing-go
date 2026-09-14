@@ -233,7 +233,8 @@
                         </tr>
                         {{end}}
 
-                        <!-- Grand Total Row -->
+                        <!-- Grand Total Row (Hanya tampil saat filter Semua Perusahaan aktif) -->
+                        {{if eq .report.SelectedCompanyID 0}}
                         <tr class="row-grand-total">
                             <td class="col-entity grand-total-label">GRAND TOTAL KESELURUHAN:</td>
                             <td class="col-num text-center grand-total-val">{{.report.GrandTotal.TotalTickets}}</td>
@@ -256,6 +257,7 @@
                                 {{end}}
                             </td>
                         </tr>
+                        {{end}}
                     {{end}}
                 </tbody>
             </table>
