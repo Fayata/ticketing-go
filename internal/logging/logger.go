@@ -56,6 +56,10 @@ var (
 	SystemPanic     *slog.Logger
 	SystemLifecycle *slog.Logger
 
+	// Admin sub-loggers
+	AdminReports *slog.Logger
+	AdminAudit   *slog.Logger
+
 	// Group loggers (shortcuts)
 	HTTP          *slog.Logger
 	DB            *slog.Logger
@@ -63,6 +67,7 @@ var (
 	Tickets       *slog.Logger
 	SLA           *slog.Logger
 	Notifications *slog.Logger
+	Admin         *slog.Logger
 	System        *slog.Logger
 )
 
@@ -107,12 +112,16 @@ func initFallbackLoggers(serviceName string) {
 	SystemPanic = base.With("category", "system", "subcategory", "panic")
 	SystemLifecycle = base.With("category", "system", "subcategory", "lifecycle")
 
+	AdminReports = base.With("category", "admin", "subcategory", "reports")
+	AdminAudit = base.With("category", "admin", "subcategory", "audit")
+
 	HTTP = HTTPAccess
 	DB = DBQueries
 	Auth = AuthLogin
 	Tickets = TicketLifecycle
 	SLA = SLACalculations
 	Notifications = NotificationInApp
+	Admin = AdminReports
 	System = SystemLifecycle
 
 	slog.SetDefault(SystemLifecycle)
@@ -190,6 +199,10 @@ func Init(serviceName string, customBaseDir ...string) {
 		SystemPanic = makeLogger("system", "panic", "panic.json.log")
 		SystemLifecycle = makeLogger("system", "lifecycle", "lifecycle.json.log")
 
+		// Admin
+		AdminReports = makeLogger("admin", "reports", "reports.json.log")
+		AdminAudit = makeLogger("admin", "audit", "audit.json.log")
+
 		// Group shortcuts
 		HTTP = HTTPAccess
 		DB = DBQueries
@@ -197,6 +210,7 @@ func Init(serviceName string, customBaseDir ...string) {
 		Tickets = TicketLifecycle
 		SLA = SLACalculations
 		Notifications = NotificationInApp
+		Admin = AdminReports
 		System = SystemLifecycle
 
 		slog.SetDefault(SystemLifecycle)

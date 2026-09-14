@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 	"ticketing/models"
 )
 
@@ -145,6 +146,12 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		selectedCID = *filter.CompanyID
 	}
 
+	logging.AdminReports.Info("GetMonthlyCompanyReport started",
+		"filter_month", filter.Month,
+		"filter_year", filter.Year,
+		"filter_company_id", selectedCID,
+	)
+
 	report := &MonthlyReportData{
 		Filter:               filter,
 		MonthName:            GetMonthName(filter.Month),
@@ -156,6 +163,7 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	}
 
 	if config.DB == nil {
+		logging.AdminReports.Warn("Database instance is nil, returning empty report")
 		return report, nil
 	}
 
@@ -167,6 +175,38 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	// 2. Ambil master departemen
 	var allDepts []models.Department
 	config.DB.Preload("Company").Order("name ASC").Find(&allDepts)
+
+	// DB Diagnostics logging
+	var totalTicketsAll int64
+	config.DB.Model(&models.Ticket{}).Count(&totalTicketsAll)
+	logging.AdminReports.Info("Database diagnostics",
+		"total_tickets_in_db", totalTicketsAll,
+		"companies_master_count", len(allCompanies),
+		"departments_master_count", len(allDepts),
+	)
+
+	// Log sampel tiket terbaru di DB (maks 5) untuk memudahkan verifikasi
+	var sampleTickets []models.Ticket
+	config.DB.Order("id desc").Limit(5).Find(&sampleTickets)
+	for _, st := range sampleTickets {
+		var cidVal uint
+		if st.CompanyID != nil {
+			cidVal = *st.CompanyID
+		}
+		var didVal uint
+		if st.DepartmentID != nil {
+			didVal = *st.DepartmentID
+		}
+		logging.AdminReports.Debug("DB sample ticket",
+			"id", st.ID,
+			"ticket_number", st.GetTicketNumber(),
+			"title", st.Title,
+			"status", st.Status,
+			"created_at", st.CreatedAt.Format(time.RFC3339),
+			"department_id", didVal,
+			"company_id", cidVal,
+		)
+	}
 
 	// Filter companies jika user memilih 1 PT spesifik
 	targetCompanies := make([]models.Company, 0)
@@ -203,16 +243,20 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	companySeen := make(map[uint]bool)
 	companyMeta := make(map[uint]struct{ name, code string })
 
-	// Inisialisasi awal Master Perusahaan & Departemen agar selalu tampil di tabel bahkan saat 0 tiket
+	// Master lookup map untuk metadata perusahaan
+	for _, comp := range allCompanies {
+		companyMeta[comp.ID] = struct{ name, code string }{name: comp.Name, code: comp.Code}
+	}
+	companyMeta[0] = struct{ name, code string }{name: "Umum / Tanpa Perusahaan", code: "DEFAULT"}
+
+	// 1) Daftarkan perusahaan terpilih beserta departemennya
 	for _, comp := range targetCompanies {
 		cID := comp.ID
 		if !companySeen[cID] {
 			companySeen[cID] = true
 			companyOrder = append(companyOrder, cID)
-			companyMeta[cID] = struct{ name, code string }{name: comp.Name, code: comp.Code}
 		}
 
-		// Daftarkan semua departemen di bawah perusahaan ini
 		for _, dept := range allDepts {
 			if dept.CompanyID != nil && *dept.CompanyID == comp.ID {
 				key := deptKey{CompanyID: comp.ID, DepartmentID: dept.ID}
@@ -229,27 +273,55 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		}
 	}
 
-	// Daftarkan departemen tanpa perusahaan jika sedang melihat semua perusahaan
-	if filter.CompanyID == nil || *filter.CompanyID == 0 {
-		for _, dept := range allDepts {
-			if dept.CompanyID == nil || *dept.CompanyID == 0 {
-				if !companySeen[0] {
-					companySeen[0] = true
-					companyOrder = append(companyOrder, 0)
-					companyMeta[0] = struct{ name, code string }{name: "Umum / Tanpa Perusahaan", code: "DEFAULT"}
-				}
-				key := deptKey{CompanyID: 0, DepartmentID: dept.ID}
-				if _, exists := deptStatsMap[key]; !exists {
-					deptStatsMap[key] = &deptStats{
-						companyID:      0,
-						companyName:    "Umum / Tanpa Perusahaan",
-						companyCode:    "DEFAULT",
-						departmentID:   dept.ID,
-						departmentName: dept.Name,
-					}
-				}
+	// 2) Daftarkan departemen yang belum terdaftar (misal tanpa PT atau PT tidak ada di tabel perusahaan)
+	for _, dept := range allDepts {
+		var deptCID uint
+		if dept.CompanyID != nil && *dept.CompanyID > 0 {
+			deptCID = *dept.CompanyID
+		}
+
+		if filter.CompanyID != nil && *filter.CompanyID > 0 && deptCID != *filter.CompanyID {
+			continue
+		}
+
+		cName := "Umum / Tanpa Perusahaan"
+		cCode := "DEFAULT"
+		if deptCID > 0 {
+			if meta, ok := companyMeta[deptCID]; ok {
+				cName = meta.name
+				cCode = meta.code
+			} else if dept.Company != nil && dept.Company.Name != "" {
+				cName = dept.Company.Name
+				cCode = dept.Company.Code
+				companyMeta[deptCID] = struct{ name, code string }{name: cName, code: cCode}
+			} else {
+				cName = fmt.Sprintf("Perusahaan #%d", deptCID)
+				cCode = "CORP"
+				companyMeta[deptCID] = struct{ name, code string }{name: cName, code: cCode}
 			}
 		}
+
+		if !companySeen[deptCID] {
+			companySeen[deptCID] = true
+			companyOrder = append(companyOrder, deptCID)
+		}
+
+		key := deptKey{CompanyID: deptCID, DepartmentID: dept.ID}
+		if _, exists := deptStatsMap[key]; !exists {
+			deptStatsMap[key] = &deptStats{
+				companyID:      deptCID,
+				companyName:    cName,
+				companyCode:    cCode,
+				departmentID:   dept.ID,
+				departmentName: dept.Name,
+			}
+		}
+	}
+
+	// Fallback jika tidak ada perusahaan/departemen sama sekali, daftarkan grup 0 agar tabel tidak hilang
+	if len(companyOrder) == 0 && (filter.CompanyID == nil || *filter.CompanyID == 0) {
+		companySeen[0] = true
+		companyOrder = append(companyOrder, 0)
 	}
 
 	// 3. Query semua tiket pada rentang bulan ini (kompatibel lintas timezone)
@@ -260,21 +332,38 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 	startOfMonthUTC := time.Date(filter.Year, time.Month(filter.Month), 1, 0, 0, 0, 0, time.UTC)
 	endOfMonthUTC := startOfMonthUTC.AddDate(0, 1, 0)
 
+	logging.AdminReports.Info("Querying monthly tickets for report",
+		"month", filter.Month,
+		"year", filter.Year,
+		"start_local", startOfMonth.Format(time.RFC3339),
+		"end_local", endOfMonth.Format(time.RFC3339),
+		"start_utc", startOfMonthUTC.Format(time.RFC3339),
+		"end_utc", endOfMonthUTC.Format(time.RFC3339),
+	)
+
 	query := config.DB.Model(&models.Ticket{}).
 		Preload("Company").
 		Preload("Department").
 		Preload("Department.Company").
-		Where("((created_at >= ? AND created_at < ?) OR (created_at >= ? AND created_at < ?) OR (EXTRACT(YEAR FROM created_at) = ? AND EXTRACT(MONTH FROM created_at) = ?)) AND deleted_at IS NULL",
-			startOfMonth, endOfMonth, startOfMonthUTC, endOfMonthUTC, filter.Year, filter.Month)
+		Where("(created_at >= ? AND created_at < ?) OR (created_at >= ? AND created_at < ?) OR (EXTRACT(MONTH FROM created_at) = ? AND EXTRACT(YEAR FROM created_at) = ?)",
+			startOfMonth, endOfMonth, startOfMonthUTC, endOfMonthUTC, filter.Month, filter.Year)
 
+	// Filter per PT jika dipilih: sertakan tiket dengan company_id bersangkutan ATAU departemennya berafiliasi dengan PT tsb
 	if filter.CompanyID != nil && *filter.CompanyID > 0 {
-		query = query.Where("company_id = ?", *filter.CompanyID)
+		query = query.Where("(tickets.company_id = ? OR tickets.department_id IN (SELECT id FROM departments WHERE company_id = ?))", *filter.CompanyID, *filter.CompanyID)
 	}
 
 	var tickets []models.Ticket
 	if err := query.Order("created_at ASC").Find(&tickets).Error; err != nil {
+		logging.AdminReports.Error("Failed to execute tickets query for monthly report", "error", err.Error())
 		return nil, err
 	}
+
+	logging.AdminReports.Info("Monthly tickets query finished",
+		"tickets_matched_count", len(tickets),
+		"filter_month", filter.Month,
+		"filter_year", filter.Year,
+	)
 
 	// Ambil rating untuk tiket yang terpilih
 	var ticketIDs []uint
@@ -299,7 +388,7 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		// Resolusi CompanyID dari tiket atau departemen terkait
 		if t.CompanyID != nil && *t.CompanyID > 0 {
 			cID = *t.CompanyID
-			if t.Company != nil {
+			if t.Company != nil && t.Company.Name != "" {
 				cName = t.Company.Name
 				cCode = t.Company.Code
 			} else if meta, ok := companyMeta[cID]; ok {
@@ -308,12 +397,23 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 			}
 		} else if t.Department != nil && t.Department.CompanyID != nil && *t.Department.CompanyID > 0 {
 			cID = *t.Department.CompanyID
-			if t.Department.Company != nil {
+			if t.Department.Company != nil && t.Department.Company.Name != "" {
 				cName = t.Department.Company.Name
 				cCode = t.Department.Company.Code
 			} else if meta, ok := companyMeta[cID]; ok {
 				cName = meta.name
 				cCode = meta.code
+			}
+		} else if t.DepartmentID != nil && *t.DepartmentID > 0 {
+			for _, d := range allDepts {
+				if d.ID == *t.DepartmentID && d.CompanyID != nil && *d.CompanyID > 0 {
+					cID = *d.CompanyID
+					if meta, ok := companyMeta[cID]; ok {
+						cName = meta.name
+						cCode = meta.code
+					}
+					break
+				}
 			}
 		}
 
@@ -325,10 +425,28 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 		dName := "Umum / Tanpa Departemen"
 		if t.DepartmentID != nil && *t.DepartmentID > 0 {
 			dID = *t.DepartmentID
-			if t.Department != nil {
+			if t.Department != nil && t.Department.Name != "" {
 				dName = t.Department.Name
+			} else {
+				for _, d := range allDepts {
+					if d.ID == *t.DepartmentID {
+						dName = d.Name
+						break
+					}
+				}
 			}
 		}
+
+		logging.AdminReports.Debug("Ticket mapped in monthly report",
+			"ticket_id", t.ID,
+			"ticket_number", t.GetTicketNumber(),
+			"status", t.Status,
+			"created_at", t.CreatedAt.Format(time.RFC3339),
+			"resolved_company_id", cID,
+			"resolved_company_name", cName,
+			"resolved_department_id", dID,
+			"resolved_department_name", dName,
+		)
 
 		if !companySeen[cID] {
 			companySeen[cID] = true
@@ -497,6 +615,20 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 
 	report.CompanyList = companyList
 	report.GrandTotal = grandTotal
+
+	logging.AdminReports.Info("GetMonthlyCompanyReport completed",
+		"filter_month", filter.Month,
+		"filter_year", filter.Year,
+		"companies_in_report", len(companyList),
+		"grand_total_tickets", grandTotal.TotalTickets,
+		"open_tickets", grandTotal.OpenTickets,
+		"closed_tickets", grandTotal.ClosedTickets,
+		"first_response_breached", grandTotal.FirstResponseBreached,
+		"resolution_breached", grandTotal.ResolutionBreached,
+		"overall_sla_met_rate", grandTotal.OverallSLAMetRate,
+		"total_rated_count", grandTotal.TotalRatedCount,
+		"overall_avg_rating", grandTotal.OverallAvgRating,
+	)
 
 	return report, nil
 }

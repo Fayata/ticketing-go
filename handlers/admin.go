@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 	"ticketing/models"
 	"ticketing/services"
 	"ticketing/utils"
@@ -1832,12 +1833,35 @@ func (h *AdminHandler) ShowReports(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var companyIDPtr *uint
+	companyIDVal := uint(0)
 	if compStr := strings.TrimSpace(r.URL.Query().Get("company_id")); compStr != "" {
 		if cid, err := strconv.ParseUint(compStr, 10, 64); err == nil && cid > 0 {
 			uCID := uint(cid)
 			companyIDPtr = &uCID
+			companyIDVal = uCID
 		}
 	}
+
+	var adminUserID uint
+	var adminEmail string
+	if u := GetUserFromContext(r); u != nil {
+		if userObj, ok := u.(*models.User); ok && userObj != nil {
+			adminUserID = userObj.ID
+			if userObj.Email != nil {
+				adminEmail = *userObj.Email
+			}
+		}
+	}
+
+	logging.AdminReports.Info("Admin performance report requested",
+		"admin_user_id", adminUserID,
+		"admin_email", adminEmail,
+		"raw_period_query", periodQuery,
+		"filter_month", month,
+		"filter_year", year,
+		"filter_company_id", companyIDVal,
+		"remote_ip", r.RemoteAddr,
+	)
 
 	filter := services.MonthlyReportFilter{
 		Month:     month,
@@ -1847,10 +1871,29 @@ func (h *AdminHandler) ShowReports(w http.ResponseWriter, r *http.Request) {
 
 	reportData, err := h.adminReportService.GetMonthlyCompanyReport(filter)
 	if err != nil {
+		logging.AdminReports.Error("Failed to generate monthly report",
+			"error", err.Error(),
+			"filter_month", month,
+			"filter_year", year,
+			"filter_company_id", companyIDVal,
+		)
 		log.Printf("[Admin] Failed to generate monthly report: %v", err)
 		http.Error(w, "Gagal memuat laporan kinerja", http.StatusInternalServerError)
 		return
 	}
+
+	logging.AdminReports.Info("Admin performance report generated successfully",
+		"period_label", reportData.PeriodLabel,
+		"companies_count", len(reportData.CompanyList),
+		"grand_total_tickets", reportData.GrandTotal.TotalTickets,
+		"open_tickets", reportData.GrandTotal.OpenTickets,
+		"closed_tickets", reportData.GrandTotal.ClosedTickets,
+		"first_response_breached", reportData.GrandTotal.FirstResponseBreached,
+		"resolution_breached", reportData.GrandTotal.ResolutionBreached,
+		"sla_met_rate", reportData.GrandTotal.OverallSLAMetRate,
+		"rated_count", reportData.GrandTotal.TotalRatedCount,
+		"avg_rating", reportData.GrandTotal.OverallAvgRating,
+	)
 
 	data := AddBaseData(r, map[string]interface{}{
 		"title":         "Laporan Kinerja Penanganan Tiket — Ticketing",

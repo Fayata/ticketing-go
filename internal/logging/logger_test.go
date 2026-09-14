@@ -28,6 +28,8 @@ func TestLoggingInitAndCategorizedLogs(t *testing.T) {
 	TicketLifecycle.Info("Ticket created", "ticket_id", 101, "ticket_number", "T26-0001")
 	SLACalculations.Info("SLA deadline calculated", "ticket_id", 101, "hours", 2)
 	NotificationInApp.Info("Notification sent", "user_id", 42, "title", "Test")
+	AdminReports.Info("Performance report generated", "month", 9, "year", 2026)
+	AdminAudit.Info("Admin action audited", "action", "view_reports")
 	SystemLifecycle.Info("Service startup complete", "port", 8080)
 
 	// Verify categories and directories were created
@@ -38,6 +40,7 @@ func TestLoggingInitAndCategorizedLogs(t *testing.T) {
 		filepath.Join(tempDir, "tickets"),
 		filepath.Join(tempDir, "sla"),
 		filepath.Join(tempDir, "notifications"),
+		filepath.Join(tempDir, "admin"),
 		filepath.Join(tempDir, "system"),
 	}
 
@@ -59,6 +62,8 @@ func TestLoggingInitAndCategorizedLogs(t *testing.T) {
 		{"tickets", "lifecycle.json.log", "lifecycle", "Ticket created"},
 		{"auth", "login.json.log", "login", "User logged in"},
 		{"sla", "calculations.json.log", "calculations", "SLA deadline calculated"},
+		{"admin", "reports.json.log", "reports", "Performance report generated"},
+		{"admin", "audit.json.log", "audit", "Admin action audited"},
 	}
 
 	for _, tc := range testCases {

@@ -2,12 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 )
 
 // HealthCheckHandler provides a simple health check endpoint for the admin service.
@@ -23,7 +23,12 @@ func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
 // AuditLogWrapper wraps an http.HandlerFunc to log administrative operations.
 func AuditLogWrapper(action string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[AUDIT] Action: %s, Method: %s, Path: %s, IP: %s", action, r.Method, r.URL.Path, r.RemoteAddr)
+		logging.AdminAudit.Info("Admin operation audited",
+			"action", action,
+			"method", r.Method,
+			"path", r.URL.Path,
+			"remote_addr", r.RemoteAddr,
+		)
 		next.ServeHTTP(w, r)
 	}
 }
