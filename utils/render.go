@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -110,23 +111,13 @@ func InitTemplates() {
 			if arr == nil {
 				return 0
 			}
-			switch v := arr.(type) {
-			case []interface{}:
-				return len(v)
-			case []*models.Ticket:
-				return len(v)
-			case []models.Ticket:
-				return len(v)
-			case []models.TicketReply:
-				return len(v)
-			case []*models.TicketReply:
-				return len(v)
-			case []models.Department:
-				return len(v)
-			case string:
-				return len(v)
+			val := reflect.ValueOf(arr)
+			switch val.Kind() {
+			case reflect.Slice, reflect.Array, reflect.Map, reflect.String, reflect.Chan:
+				return val.Len()
+			default:
+				return 0
 			}
-			return 0
 		},
 
 		"linebreaks": func(val interface{}) template.HTML {
