@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 	"ticketing/models"
 	"ticketing/services"
 	"ticketing/utils"
@@ -177,8 +178,26 @@ func (h *TicketHandler) CreateTicket(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	go func() {
-		log.Printf(" Mengirim email konfirmasi ke: %s", replyToEmail)
-		_ = h.emailService.SendTicketConfirmationWithAttachments(replyToEmail, user.GetFullName(), ticket.Title, ticket.ID, departmentName, ticket.GetPriorityDisplay(), ticket.GetStatusDisplay(), ticket.Description, emailAtts)
+		logging.NotificationEmail.Info("Preparing to send ticket confirmation email",
+			"ticket_id", ticket.ID,
+			"ticket_number", ticket.GetTicketNumber(),
+			"recipient", replyToEmail,
+		)
+		err := h.emailService.SendTicketConfirmationWithAttachments(replyToEmail, user.GetFullName(), ticket.Title, ticket.ID, departmentName, ticket.GetPriorityDisplay(), ticket.GetStatusDisplay(), ticket.Description, emailAtts)
+		if err != nil {
+			logging.NotificationEmail.Error("Failed to send ticket confirmation email",
+				"ticket_id", ticket.ID,
+				"ticket_number", ticket.GetTicketNumber(),
+				"recipient", replyToEmail,
+				"error", err.Error(),
+			)
+		} else {
+			logging.NotificationEmail.Info("Ticket confirmation email sent successfully",
+				"ticket_id", ticket.ID,
+				"ticket_number", ticket.GetTicketNumber(),
+				"recipient", replyToEmail,
+			)
+		}
 	}()
 	log.Printf("Ticket #%d created by user %s", ticket.ID, user.Username)
 	http.Redirect(w, r, config.Path(fmt.Sprintf("/tiket/sukses/%d", ticket.ID)), http.StatusSeeOther)
@@ -413,7 +432,13 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 		}
 		if targetEmail != "" {
 			go func() {
-				_ = h.emailService.SendTicketReplyWithAttachments(targetEmail, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName(), emailAtts)
+				if err := h.emailService.SendTicketReplyWithAttachments(targetEmail, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName(), emailAtts); err != nil {
+					logging.NotificationEmail.Error("Failed to send ticket reply email to creator",
+						"ticket_id", ticket.ID,
+						"recipient", targetEmail,
+						"error", err.Error(),
+					)
+				}
 			}()
 		}
 	} else if ticket.AssignedToID != nil {
@@ -422,7 +447,13 @@ func (h *TicketHandler) AddReply(w http.ResponseWriter, r *http.Request) {
 			staffEmail := assignedStaff.GetEmail()
 			if staffEmail != "" {
 				go func() {
-					_ = h.emailService.SendTicketReplyWithAttachments(staffEmail, assignedStaff.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName(), emailAtts)
+					if err := h.emailService.SendTicketReplyWithAttachments(staffEmail, assignedStaff.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), reply.Message, user.GetFullName(), emailAtts); err != nil {
+						logging.NotificationEmail.Error("Failed to send ticket reply email to assigned staff",
+							"ticket_id", ticket.ID,
+							"recipient", staffEmail,
+							"error", err.Error(),
+						)
+					}
 				}()
 			}
 		}

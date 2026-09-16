@@ -1,0 +1,310 @@
+{{/* [Feature Hidden / Stashed for later release]
+{{define "admin/department_report"}}
+{{template "admin_base" .}}
+{{end}}
+
+{{define "admin/department_report_content"}}
+<div class="reports-container dept-report-container">
+    <!-- Action Bar Atas (Disembunyikan saat Print) -->
+    <div class="card dept-report-action-bar no-print">
+        <div class="dept-action-bar-left">
+            <a href="admin/reports?period={{printf "%04d-%02d" .report.Year .report.Month}}" class="btn-report-back">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Kembali ke Rekapitulasi</span>
+            </a>
+            <div class="dept-report-badge-info">
+                <span class="dept-badge-title">{{.report.DepartmentName}}</span>
+                <span class="dept-badge-sub">{{.report.CompanyName}} &bull; {{.report.PeriodLabel}}</span>
+            </div>
+        </div>
+        <div class="dept-action-bar-right">
+            <button type="button" class="btn-filter-print" id="btnPrintReport">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2m-12 0v4h12v-4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>Cetak PDF / Print</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header Dokumen Cetak Resmi (Muncul Saat Print) -->
+    <div class="print-header">
+        <div class="print-header-top">
+            <h1 class="print-org-title">SISTEM MONITORING TICKETING SUPPORT</h1>
+            <p class="print-report-title">LAPORAN KINERJA STAFF DEPARTEMEN</p>
+        </div>
+        <table class="print-meta-table">
+            <tbody>
+                <tr>
+                    <td class="pm-label">Departemen</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val"><strong>{{.report.DepartmentName}}</strong></td>
+                    <td class="pm-gap"></td>
+                    <td class="pm-label">Periode Laporan</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val"><strong>{{.report.PeriodLabel}}</strong></td>
+                </tr>
+                <tr>
+                    <td class="pm-label">Perusahaan Induk</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val">{{.report.CompanyName}} {{if .report.CompanyCode}}({{.report.CompanyCode}}){{end}}</td>
+                    <td class="pm-gap"></td>
+                    <td class="pm-label">Tanggal Cetak</td>
+                    <td class="pm-sep">:</td>
+                    <td class="pm-val">{{.report.GeneratedAtFormatted}}</td>
+                </tr>
+            </tbody>
+        </table>
+        <hr class="print-divider">
+    </div>
+
+    <!-- Kartu Rekapitulasi Ringkasan Departemen -->
+    <div class="dept-summary-grid">
+        <div class="dept-summary-card">
+            <span class="sum-label">Total Tiket</span>
+            <span class="sum-val">{{.report.Summary.TotalTickets}}</span>
+            <span class="sum-sub">{{.report.DepartmentName}}</span>
+        </div>
+        <div class="dept-summary-card card-open">
+            <span class="sum-label">Tiket Open</span>
+            <span class="sum-val text-amber">{{.report.Summary.OpenTickets}}</span>
+            <span class="sum-sub">Waiting / In Progress</span>
+        </div>
+        <div class="dept-summary-card card-closed">
+            <span class="sum-label">Tiket Selesai</span>
+            <span class="sum-val text-emerald">{{.report.Summary.ClosedTickets}}</span>
+            <span class="sum-sub">Closed</span>
+        </div>
+        <div class="dept-summary-card card-sla">
+            <span class="sum-label">SLA Met Rate</span>
+            <span class="sum-val text-indigo">{{printf "%.1f" .report.Summary.SLAMetRate}}%</span>
+            <span class="sum-sub">Tingkat Kepatuhan SLA</span>
+        </div>
+        <div class="dept-summary-card card-rating">
+            <span class="sum-label">Rating CSAT</span>
+            <span class="sum-val text-yellow">★ {{if gt .report.Summary.RatedCount 0}}{{printf "%.1f" .report.Summary.AvgRating}}{{else}}-{{end}}</span>
+            <span class="sum-sub">{{.report.Summary.RatedCount}} Tiket Dinilai</span>
+        </div>
+    </div>
+
+    <!-- Tabel Rincian Kinerja per Staff -->
+    <div class="card report-table-card">
+        <div class="card-header report-table-header">
+            <div>
+                <h3>Rincian Kinerja Staff — Departemen {{.report.DepartmentName}}</h3>
+                <p class="subtitle">Evaluasi penanganan tiket, waktu respon & penyelesaian SLA, serta kepuasan pelanggan per staff.</p>
+            </div>
+        </div>
+        <div class="report-table-wrapper">
+            <table class="report-data-table staff-report-table">
+                <thead>
+                    <tr>
+                        <th class="col-num text-center">No</th>
+                        <th class="col-entity">Nama Staff / Petugas</th>
+                        <th class="col-username text-center">Username</th>
+                        <th class="col-num text-center">Total Tiket</th>
+                        <th class="col-num text-center">Open</th>
+                        <th class="col-num text-center">Selesai</th>
+                        <th class="col-sla text-center">Respon Lewat SLA</th>
+                        <th class="col-sla text-center">Penyelesaian Lewat SLA</th>
+                        <th class="col-rate text-center">SLA Met (%)</th>
+                        <th class="col-rating text-center">Rating CSAT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{if and (eq (len .report.StaffList) 0) (not .report.UnassignedItem)}}
+                    <tr>
+                        <td colspan="10" class="text-center empty-state-row">
+                            <div class="empty-state-content">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                                    <line x1="12" y1="8" x2="12" y2="12"/>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                </svg>
+                                <span>Belum ada data staff atau tiket untuk departemen ini pada periode {{.report.PeriodLabel}}.</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {{else}}
+                        {{range $idx, $staff := .report.StaffList}}
+                        <tr class="row-staff-data">
+                            <td class="col-num text-center text-muted">{{add $idx 1}}</td>
+                            <td class="col-entity staff-name-cell">
+                                <div class="staff-profile-inline">
+                                    <div class="staff-avatar-circle">
+                                        {{slice $staff.StaffName 0 1}}
+                                    </div>
+                                    <span class="staff-name-text"><strong>{{$staff.StaffName}}</strong></span>
+                                </div>
+                            </td>
+                            <td class="col-username text-center">
+                                <span class="username-badge">@{{$staff.Username}}</span>
+                            </td>
+                            <td class="col-num text-center"><strong>{{$staff.TotalTickets}}</strong></td>
+                            <td class="col-num text-center">
+                                {{if gt $staff.OpenTickets 0}}
+                                    <span class="badge-open">{{$staff.OpenTickets}}</span>
+                                {{else}}
+                                    <span class="text-muted">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-num text-center">
+                                {{if gt $staff.ClosedTickets 0}}
+                                    <span class="badge-closed">{{$staff.ClosedTickets}}</span>
+                                {{else}}
+                                    <span class="text-muted">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-sla text-center">
+                                {{if gt $staff.FirstResponseBreached 0}}
+                                    <span class="badge-breach-response">{{$staff.FirstResponseBreached}}</span>
+                                {{else}}
+                                    <span class="text-success-zero">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-sla text-center">
+                                {{if gt $staff.ResolutionBreached 0}}
+                                    <span class="badge-breach-resolution">{{$staff.ResolutionBreached}}</span>
+                                {{else}}
+                                    <span class="text-success-zero">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-rate text-center">
+                                {{if gt $staff.TotalTickets 0}}
+                                    <span class="sla-rate-text {{if ge $staff.SLAMetRate 90.0}}rate-good{{else if ge $staff.SLAMetRate 75.0}}rate-warning{{else}}rate-danger{{end}}">
+                                        {{printf "%.1f" $staff.SLAMetRate}}%
+                                    </span>
+                                {{else}}
+                                    <span class="text-muted">-</span>
+                                {{end}}
+                            </td>
+                            <td class="col-rating text-center">
+                                {{if gt $staff.RatedCount 0}}
+                                    <span class="rating-stars">★ {{printf "%.1f" $staff.AvgRating}}</span>
+                                    <span class="rating-sub">({{$staff.RatedCount}})</span>
+                                {{else}}
+                                    <span class="text-muted">-</span>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+
+                        {{if .report.UnassignedItem}}
+                        <!-- Baris Tiket Belum Diklaim / Pool Departemen -->
+                        <tr class="row-unassigned-data">
+                            <td class="col-num text-center text-muted">-</td>
+                            <td class="col-entity staff-name-cell">
+                                <div class="staff-profile-inline">
+                                    <div class="staff-avatar-circle avatar-pool">?</div>
+                                    <span class="staff-name-text text-amber"><em>Belum Diklaim (Pool Departemen)</em></span>
+                                </div>
+                            </td>
+                            <td class="col-username text-center text-muted">-</td>
+                            <td class="col-num text-center"><strong>{{.report.UnassignedItem.TotalTickets}}</strong></td>
+                            <td class="col-num text-center">
+                                {{if gt .report.UnassignedItem.OpenTickets 0}}
+                                    <span class="badge-open">{{.report.UnassignedItem.OpenTickets}}</span>
+                                {{else}}
+                                    <span class="text-muted">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-num text-center">
+                                {{if gt .report.UnassignedItem.ClosedTickets 0}}
+                                    <span class="badge-closed">{{.report.UnassignedItem.ClosedTickets}}</span>
+                                {{else}}
+                                    <span class="text-muted">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-sla text-center">
+                                {{if gt .report.UnassignedItem.FirstResponseBreached 0}}
+                                    <span class="badge-breach-response">{{.report.UnassignedItem.FirstResponseBreached}}</span>
+                                {{else}}
+                                    <span class="text-success-zero">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-sla text-center">
+                                {{if gt .report.UnassignedItem.ResolutionBreached 0}}
+                                    <span class="badge-breach-resolution">{{.report.UnassignedItem.ResolutionBreached}}</span>
+                                {{else}}
+                                    <span class="text-success-zero">0</span>
+                                {{end}}
+                            </td>
+                            <td class="col-rate text-center">
+                                {{if gt .report.UnassignedItem.TotalTickets 0}}
+                                    <span class="sla-rate-text {{if ge .report.UnassignedItem.SLAMetRate 90.0}}rate-good{{else if ge .report.UnassignedItem.SLAMetRate 75.0}}rate-warning{{else}}rate-danger{{end}}">
+                                        {{printf "%.1f" .report.UnassignedItem.SLAMetRate}}%
+                                    </span>
+                                {{else}}
+                                    <span class="text-muted">-</span>
+                                {{end}}
+                            </td>
+                            <td class="col-rating text-center">
+                                {{if gt .report.UnassignedItem.RatedCount 0}}
+                                    <span class="rating-stars">★ {{printf "%.1f" .report.UnassignedItem.AvgRating}}</span>
+                                    <span class="rating-sub">({{.report.UnassignedItem.RatedCount}})</span>
+                                {{else}}
+                                    <span class="text-muted">-</span>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+
+                        <!-- Baris Total Departemen -->
+                        <tr class="row-company-subtotal">
+                            <td colspan="3" class="subtotal-label">TOTAL DEPARTEMEN {{.report.DepartmentName}}:</td>
+                            <td class="col-num text-center subtotal-val">{{.report.Summary.TotalTickets}}</td>
+                            <td class="col-num text-center subtotal-val">{{.report.Summary.OpenTickets}}</td>
+                            <td class="col-num text-center subtotal-val">{{.report.Summary.ClosedTickets}}</td>
+                            <td class="col-sla text-center subtotal-val">{{.report.Summary.FirstResponseBreached}}</td>
+                            <td class="col-sla text-center subtotal-val">{{.report.Summary.ResolutionBreached}}</td>
+                            <td class="col-rate text-center subtotal-val">
+                                {{if gt .report.Summary.TotalTickets 0}}
+                                    {{printf "%.1f" .report.Summary.SLAMetRate}}%
+                                {{else}}
+                                    -
+                                {{end}}
+                            </td>
+                            <td class="col-rating text-center subtotal-val">
+                                {{if gt .report.Summary.RatedCount 0}}
+                                    ★ {{printf "%.1f" .report.Summary.AvgRating}} ({{.report.Summary.RatedCount}})
+                                {{else}}
+                                    -
+                                {{end}}
+                            </td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tanda Tangan Cetak Resmi (Hanya Tampil Saat Print) -->
+    <div class="print-signatures">
+        <div class="signature-box">
+            <p class="sig-title">Dibuat Oleh,</p>
+            <div class="sig-space"></div>
+            <p class="sig-name">{{if .user}}{{getFullName .user}}{{else}}Staff Admin{{end}}</p>
+            <p class="sig-role">Support & Operations</p>
+        </div>
+        <div class="signature-box">
+            <p class="sig-title">Mengetahui,</p>
+            <div class="sig-space"></div>
+            <p class="sig-name">______________________</p>
+            <p class="sig-role">Kepala Departemen {{.report.DepartmentName}}</p>
+        </div>
+    </div>
+</div>
+
+{{if .report.AutoPrint}}
+<script>
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            window.print();
+        }, 500);
+    });
+</script>
+{{end}}
+{{end}}
+*/}}

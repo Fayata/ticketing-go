@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"ticketing/config"
+	"ticketing/internal/logging"
 )
 
 type EmailService struct {
@@ -34,6 +35,14 @@ func NewEmailService(cfg *config.Config) *EmailService {
 
 // sendRawMail mengirimkan raw MIME message melalui koneksi SMTP (Port 465 SSL atau 587 STARTTLS).
 func (e *EmailService) sendRawMail(to string, rawMessage []byte) error {
+	if e.cfg == nil || strings.TrimSpace(e.cfg.EmailHost) == "" {
+		logging.NotificationEmail.Warn("SMTP configuration is not set or empty, skipping email delivery",
+			"recipient", to,
+			"email_host", "",
+		)
+		return fmt.Errorf("konfigurasi SMTP belum diisi (EMAIL_HOST kosong)")
+	}
+
 	addr := fmt.Sprintf("%s:%d", e.cfg.EmailHost, e.cfg.EmailPort)
 	host := e.cfg.EmailHost
 
@@ -45,7 +54,15 @@ func (e *EmailService) sendRawMail(to string, rawMessage []byte) error {
 		skipVerify = e.cfg.EmailInsecureSkipVerify
 	}
 
-	log.Printf("[Email] Connecting to %s (Port %d, SkipVerify=%v)", addr, e.cfg.EmailPort, skipVerify)
+	logging.NotificationEmail.Info("Attempting to connect to SMTP server",
+		"recipient", to,
+		"smtp_addr", addr,
+		"smtp_host", host,
+		"smtp_port", e.cfg.EmailPort,
+		"smtp_user", e.cfg.EmailUsername,
+		"email_from", e.cfg.EmailFrom,
+		"skip_verify", skipVerify,
+	)
 
 	// [Security] TLS config — proper certificate verification with optional skip verify for shared hosting
 	tlsConfig := &tls.Config{
@@ -59,70 +76,125 @@ func (e *EmailService) sendRawMail(to string, rawMessage []byte) error {
 		// --- METODE PORT 465 (SMTPS / Implicit SSL) ---
 		conn, err := tls.Dial("tcp", addr, tlsConfig)
 		if err != nil {
-			log.Printf("❌ Gagal connect SSL (Port 465): %v", err)
-			return err
+			logging.NotificationEmail.Error("Failed to connect via SMTPS (Port 465)",
+				"recipient", to,
+				"smtp_addr", addr,
+				"smtp_host", host,
+				"error", err.Error(),
+			)
+			return fmt.Errorf("gagal koneksi SSL port 465: %w", err)
 		}
 
 		client, err = smtp.NewClient(conn, host)
 		if err != nil {
-			log.Printf("❌ Gagal membuat client SMTP: %v", err)
-			return err
+			logging.NotificationEmail.Error("Failed to create SMTP client on SSL connection",
+				"recipient", to,
+				"smtp_host", host,
+				"error", err.Error(),
+			)
+			return fmt.Errorf("gagal membuat SMTP client: %w", err)
 		}
 		defer client.Close()
 
-		log.Println("✅ Terhubung via SMTPS (Port 465)")
+		logging.NotificationEmail.Debug("Connected to SMTP server via SMTPS (Port 465)",
+			"smtp_host", host,
+		)
 
 	} else {
 		// --- METODE PORT 587 (STARTTLS) ---
 		client, err = smtp.Dial(addr)
 		if err != nil {
-			log.Printf("❌ Gagal dial (Port %d): %v", e.cfg.EmailPort, err)
-			return err
+			logging.NotificationEmail.Error("Failed to dial SMTP server (Port 587/STARTTLS)",
+				"recipient", to,
+				"smtp_addr", addr,
+				"smtp_host", host,
+				"smtp_port", e.cfg.EmailPort,
+				"error", err.Error(),
+			)
+			return fmt.Errorf("gagal dial SMTP port %d: %w", e.cfg.EmailPort, err)
 		}
 		defer client.Close()
 
 		// Coba STARTTLS jika didukung
 		if ok, _ := client.Extension("STARTTLS"); ok {
 			if err = client.StartTLS(tlsConfig); err != nil {
-				log.Printf("❌ Gagal STARTTLS: %v", err)
-				return err
+				logging.NotificationEmail.Error("Failed to upgrade SMTP connection with STARTTLS",
+					"recipient", to,
+					"smtp_host", host,
+					"error", err.Error(),
+				)
+				return fmt.Errorf("gagal STARTTLS: %w", err)
 			}
+			logging.NotificationEmail.Debug("Upgraded SMTP connection with STARTTLS",
+				"smtp_host", host,
+			)
 		}
 	}
 
 	// Authenticate
 	auth := smtp.PlainAuth("", e.cfg.EmailUsername, e.cfg.EmailPassword, host)
 	if err = client.Auth(auth); err != nil {
-		log.Printf("❌ Gagal Auth: %v", err)
-		return err
+		logging.NotificationEmail.Error("SMTP Authentication rejected (Check EMAIL_USER and EMAIL_PASSWORD / App Password)",
+			"recipient", to,
+			"smtp_host", host,
+			"smtp_user", e.cfg.EmailUsername,
+			"error", err.Error(),
+		)
+		return fmt.Errorf("autentikasi SMTP ditolak: %w", err)
 	}
 
 	// Kirim Email
 	if err = client.Mail(e.cfg.EmailFrom); err != nil {
-		return err
+		logging.NotificationEmail.Error("SMTP MAIL FROM command rejected",
+			"recipient", to,
+			"email_from", e.cfg.EmailFrom,
+			"error", err.Error(),
+		)
+		return fmt.Errorf("SMTP MAIL FROM error: %w", err)
 	}
 	if err = client.Rcpt(to); err != nil {
-		return err
+		logging.NotificationEmail.Error("SMTP RCPT TO command rejected",
+			"recipient", to,
+			"error", err.Error(),
+		)
+		return fmt.Errorf("SMTP RCPT TO error: %w", err)
 	}
 
 	w, err := client.Data()
 	if err != nil {
-		return err
+		logging.NotificationEmail.Error("SMTP DATA command rejected",
+			"recipient", to,
+			"error", err.Error(),
+		)
+		return fmt.Errorf("SMTP DATA error: %w", err)
 	}
 	_, err = w.Write(rawMessage)
 	if err != nil {
-		return err
+		logging.NotificationEmail.Error("Failed writing email payload to SMTP stream",
+			"recipient", to,
+			"error", err.Error(),
+		)
+		return fmt.Errorf("gagal menulis payload email: %w", err)
 	}
 	err = w.Close()
 	if err != nil {
-		return err
+		logging.NotificationEmail.Error("Failed closing SMTP data stream",
+			"recipient", to,
+			"error", err.Error(),
+		)
+		return fmt.Errorf("gagal menutup data stream SMTP: %w", err)
 	}
 
 	if err = client.Quit(); err != nil {
-		log.Printf("⚠️ Note: Quit error (biasanya aman): %v", err)
+		logging.NotificationEmail.Debug("SMTP Quit non-critical note", "error", err.Error())
 	}
 
-	log.Printf("✅ Email SUKSES terkirim ke %s", to)
+	logging.NotificationEmail.Info("Email sent successfully via SMTP",
+		"recipient", to,
+		"from", e.cfg.EmailFrom,
+		"smtp_host", host,
+		"smtp_port", e.cfg.EmailPort,
+	)
 	return nil
 }
 

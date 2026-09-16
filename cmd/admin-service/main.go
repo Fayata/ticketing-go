@@ -109,6 +109,8 @@ func main() {
 	adminMux.HandleFunc("/api/live", adminHandler.GetLiveDashboardAPI)
 	adminMux.HandleFunc("/search", adminHandler.SearchAdmin)
 	adminMux.HandleFunc("/reports", AuditLogWrapper("Show Performance Report", adminHandler.ShowReports))
+	// [Feature Hidden / Stashed for later release]
+	// adminMux.HandleFunc("/reports/department", AuditLogWrapper("Show Department Staff Report", adminHandler.ShowDepartmentReport))
 	adminMux.HandleFunc("/users", adminHandler.ListUsers)
 	adminMux.HandleFunc("/users/create", ValidateUserCreation(adminHandler.CreateUserForm))
 	adminMux.HandleFunc("/users/toggle/", AuditLogWrapper("Toggle User Status", adminHandler.ToggleUserStatus))

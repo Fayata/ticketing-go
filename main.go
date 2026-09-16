@@ -132,6 +132,8 @@ func main() {
 	mux.HandleFunc("/admin/sla-policies/edit/", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.EditSLAPolicyForm))))
 	mux.HandleFunc("/admin/sla-policies/toggle/", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ToggleSLAPolicyStatus))))
 	mux.HandleFunc("/admin/reports", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ShowReports))))
+	// [Feature Hidden / Stashed for later release]
+	// mux.HandleFunc("/admin/reports/department", middleware.AuthRequired(middleware.EmailRequired(middleware.SuperAdminRequired(adminHandler.ShowDepartmentReport))))
 	mux.HandleFunc("/admin/knowledge-base", middleware.AuthRequired(middleware.EmailRequired(middleware.StaffOrSuperAdminRequired(adminHandler.ListKBAdmin))))
 	mux.HandleFunc("/admin/knowledge-base/categories/create", middleware.AuthRequired(middleware.EmailRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryForm))))
 	mux.HandleFunc("/admin/knowledge-base/categories/create/post", middleware.AuthRequired(middleware.EmailRequired(middleware.StaffOrSuperAdminRequired(adminHandler.CreateKBCategoryPost))))

@@ -113,6 +113,9 @@
                         <th class="col-sla text-center">Penyelesaian Lewat SLA</th>
                         <th class="col-rate text-center">SLA Met (%)</th>
                         <th class="col-rating text-center">Rating CSAT</th>
+                        {{/* [Feature Hidden / Stashed for later release]
+                        <th class="col-action text-center no-print">Aksi</th>
+                        */}}
                     </tr>
                 </thead>
                 <tbody>
@@ -278,4 +281,14 @@
         </div>
     </div>
 </div>
+
+{{if .auto_print}}
+<script>
+    window.addEventListener('load', function () {
+        setTimeout(function () {
+            window.print();
+        }, 500);
+    });
+</script>
+{{end}}
 {{end}}

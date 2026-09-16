@@ -1895,6 +1895,8 @@ func (h *AdminHandler) ShowReports(w http.ResponseWriter, r *http.Request) {
 		"avg_rating", reportData.GrandTotal.OverallAvgRating,
 	)
 
+	autoPrint := r.URL.Query().Get("print") == "1" || strings.ToLower(r.URL.Query().Get("print")) == "true"
+
 	data := AddBaseData(r, map[string]interface{}{
 		"title":         "Laporan Kinerja Penanganan Tiket — Ticketing",
 		"page_title":    "Laporan Kinerja",
@@ -1902,8 +1904,74 @@ func (h *AdminHandler) ShowReports(w http.ResponseWriter, r *http.Request) {
 		"nav_active":    "admin_reports",
 		"template_name": "admin/reports",
 		"report":        reportData,
+		"auto_print":    autoPrint,
 	})
 
 	RenderTemplate(w, "admin/reports", data)
 }
+
+// ShowDepartmentReport menampilkan laporan rincian kinerja seluruh staff pada satu departemen.
+func (h *AdminHandler) ShowDepartmentReport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	deptIDStr := strings.TrimSpace(r.URL.Query().Get("department_id"))
+	if deptIDStr == "" {
+		deptIDStr = strings.TrimSpace(r.URL.Query().Get("id"))
+	}
+	deptID, err := strconv.ParseUint(deptIDStr, 10, 64)
+	if err != nil || deptID == 0 {
+		http.Error(w, "Parameter department_id tidak valid", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
+	month := int(now.Month())
+	year := now.Year()
+
+	periodQuery := strings.TrimSpace(r.URL.Query().Get("period"))
+	if periodQuery != "" {
+		if t, err := time.Parse("2006-01", periodQuery); err == nil {
+			month = int(t.Month())
+			year = t.Year()
+		}
+	} else {
+		if m, err := strconv.Atoi(r.URL.Query().Get("month")); err == nil && m >= 1 && m <= 12 {
+			month = m
+		}
+		if y, err := strconv.Atoi(r.URL.Query().Get("year")); err == nil && y >= 2000 {
+			year = y
+		}
+	}
+
+	autoPrint := r.URL.Query().Get("print") == "1" || strings.ToLower(r.URL.Query().Get("print")) == "true"
+
+	reportData, err := h.adminReportService.GetDepartmentStaffReport(uint(deptID), month, year)
+	if err != nil {
+		logging.AdminReports.Error("Failed to generate department staff report",
+			"department_id", deptID,
+			"month", month,
+			"year", year,
+			"error", err.Error(),
+		)
+		http.Error(w, fmt.Sprintf("Gagal memuat laporan staf departemen: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	reportData.AutoPrint = autoPrint
+
+	data := AddBaseData(r, map[string]interface{}{
+		"title":         fmt.Sprintf("Laporan Kinerja Staff %s — Ticketing", reportData.DepartmentName),
+		"page_title":    "Laporan Kinerja Staff",
+		"page_subtitle": fmt.Sprintf("Rincian Kinerja Staff Departemen %s (%s)", reportData.DepartmentName, reportData.PeriodLabel),
+		"nav_active":    "admin_reports",
+		"template_name": "admin/department_report",
+		"report":        reportData,
+	})
+
+	RenderTemplate(w, "admin/department_report", data)
+}
+
 

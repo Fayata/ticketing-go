@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"ticketing/config"
@@ -85,6 +86,39 @@ type MonthlyReportData struct {
 	SelectedCompanyID      uint
 	SelectedCompanyName    string // misal: "PT Utama (DEFAULT)" atau "Semua Perusahaan"
 	GeneratedAtFormatted   string
+}
+
+// StaffReportItem berisi rincian kinerja satu staff di bawah satu departemen.
+type StaffReportItem struct {
+	StaffID               uint
+	StaffName             string
+	Username              string
+	TotalTickets          int
+	OpenTickets           int
+	ClosedTickets         int
+	FirstResponseBreached int
+	ResolutionBreached    int
+	SLAMetCount           int
+	SLAMetRate            float64
+	AvgRating             float64
+	RatedCount            int
+}
+
+// DepartmentDetailReportData payload lengkap untuk laporan kinerja staff per departemen.
+type DepartmentDetailReportData struct {
+	DepartmentID         uint
+	DepartmentName       string
+	CompanyID            uint
+	CompanyName          string
+	CompanyCode          string
+	PeriodLabel          string
+	Month                int
+	Year                 int
+	Summary              DepartmentReportItem
+	StaffList            []StaffReportItem
+	UnassignedItem       *StaffReportItem
+	GeneratedAtFormatted string
+	AutoPrint            bool
 }
 
 // AdminReportService mengelola pembuatan laporan kinerja bulanan.
@@ -653,3 +687,256 @@ func (s *AdminReportService) GetMonthlyCompanyReport(filter MonthlyReportFilter)
 
 	return report, nil
 }
+
+// GetDepartmentStaffReport mengagregasi data kinerja seluruh staff di satu departemen pada bulan terpilih.
+func (s *AdminReportService) GetDepartmentStaffReport(deptID uint, month int, year int) (*DepartmentDetailReportData, error) {
+	now := time.Now()
+	wibZone := time.FixedZone("WIB", 7*3600)
+
+	if month < 1 || month > 12 {
+		month = int(now.Month())
+	}
+	if year < 2020 {
+		year = now.Year()
+	}
+
+	startMonthWIB := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, wibZone)
+	endMonthWIB := startMonthWIB.AddDate(0, 1, 0)
+
+	startMonthUTC := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	endMonthUTC := startMonthUTC.AddDate(0, 1, 0)
+
+	logging.AdminReports.Info("GetDepartmentStaffReport started",
+		"department_id", deptID,
+		"month", month,
+		"year", year,
+	)
+
+	report := &DepartmentDetailReportData{
+		DepartmentID:         deptID,
+		DepartmentName:       fmt.Sprintf("Departemen #%d", deptID),
+		PeriodLabel:          fmt.Sprintf("%s %d", GetMonthName(month), year),
+		Month:                month,
+		Year:                 year,
+		GeneratedAtFormatted: now.In(wibZone).Format("02 Jan 2006, 15:04") + " WIB",
+	}
+
+	if config.DB == nil {
+		logging.AdminReports.Warn("Database instance is nil, returning empty department report")
+		return report, nil
+	}
+
+	var dept models.Department
+	if err := config.DB.Preload("Company").First(&dept, deptID).Error; err != nil {
+		logging.AdminReports.Error("Department not found", "department_id", deptID, "error", err.Error())
+		return nil, fmt.Errorf("departemen dengan ID %d tidak ditemukan: %w", deptID, err)
+	}
+
+	report.DepartmentName = dept.Name
+	if dept.Company != nil {
+		report.CompanyID = dept.Company.ID
+		report.CompanyName = dept.Company.Name
+		report.CompanyCode = dept.Company.Code
+	} else if dept.CompanyID != nil {
+		report.CompanyID = *dept.CompanyID
+		var comp models.Company
+		if err := config.DB.First(&comp, *dept.CompanyID).Error; err == nil {
+			report.CompanyName = comp.Name
+			report.CompanyCode = comp.Code
+		} else {
+			report.CompanyName = fmt.Sprintf("Perusahaan #%d", *dept.CompanyID)
+		}
+	} else {
+		report.CompanyName = "Umum / Tanpa Perusahaan"
+	}
+
+	// 1. Ambil seluruh staff yang terdaftar di departemen ini
+	var staffUsers []models.User
+	config.DB.Where("department_id = ? AND is_staff = ?", deptID, true).
+		Order("first_name ASC, username ASC").
+		Find(&staffUsers)
+
+	staffMap := make(map[uint]*StaffReportItem)
+	var staffList []*StaffReportItem
+	staffRatingScores := make(map[*StaffReportItem]int)
+
+	for _, u := range staffUsers {
+		name := u.Username
+		if u.FirstName != "" || u.LastName != "" {
+			name = strings.TrimSpace(u.FirstName + " " + u.LastName)
+		}
+		item := &StaffReportItem{
+			StaffID:   u.ID,
+			StaffName: name,
+			Username:  u.Username,
+		}
+		staffMap[u.ID] = item
+		staffList = append(staffList, item)
+	}
+
+	unassignedItem := &StaffReportItem{
+		StaffID:   0,
+		StaffName: "Belum Diklaim / Pool Departemen",
+		Username:  "-",
+	}
+
+	// 2. Ambil tiket untuk departemen ini pada bulan terpilih
+	var tickets []models.Ticket
+	config.DB.Preload("AssignedTo").
+		Where("department_id = ?", deptID).
+		Where("((created_at >= ? AND created_at < ?) OR (created_at >= ? AND created_at < ?) OR (EXTRACT(MONTH FROM created_at) = ? AND EXTRACT(YEAR FROM created_at) = ?))",
+			startMonthWIB, endMonthWIB, startMonthUTC, endMonthUTC, month, year).
+		Order("created_at ASC").
+		Find(&tickets)
+
+	// 3. Ambil rating untuk tiket
+	var ticketIDs []uint
+	for _, t := range tickets {
+		ticketIDs = append(ticketIDs, t.ID)
+	}
+	ratingMap := make(map[uint]int)
+	if len(ticketIDs) > 0 {
+		var ratings []models.TicketRating
+		config.DB.Where("ticket_id IN ?", ticketIDs).Find(&ratings)
+		for _, r := range ratings {
+			ratingMap[r.TicketID] = r.Rating
+		}
+	}
+
+	// 4. Agregasi metrik per staff & summary departemen
+	var deptSummary DepartmentReportItem
+	deptSummary.DepartmentID = deptID
+	deptSummary.DepartmentName = dept.Name
+	var deptRatingScoreTotal int
+
+	for _, t := range tickets {
+		var target *StaffReportItem
+		if t.AssignedToID != nil && *t.AssignedToID > 0 {
+			if s, ok := staffMap[*t.AssignedToID]; ok {
+				target = s
+			} else {
+				// Staff luar atau mantan staff
+				name := fmt.Sprintf("User #%d", *t.AssignedToID)
+				username := fmt.Sprintf("user_%d", *t.AssignedToID)
+				if t.AssignedTo != nil {
+					username = t.AssignedTo.Username
+					if t.AssignedTo.FirstName != "" || t.AssignedTo.LastName != "" {
+						name = strings.TrimSpace(t.AssignedTo.FirstName + " " + t.AssignedTo.LastName)
+					} else {
+						name = t.AssignedTo.Username
+					}
+				}
+				item := &StaffReportItem{
+					StaffID:   *t.AssignedToID,
+					StaffName: name,
+					Username:  username,
+				}
+				staffMap[*t.AssignedToID] = item
+				staffList = append(staffList, item)
+				target = item
+			}
+		} else {
+			target = unassignedItem
+		}
+
+		target.TotalTickets++
+		deptSummary.TotalTickets++
+
+		if t.Status == models.StatusClosed {
+			target.ClosedTickets++
+			deptSummary.ClosedTickets++
+		} else {
+			target.OpenTickets++
+			deptSummary.OpenTickets++
+		}
+
+		isRespBreach := false
+		if t.FirstResponseMet != nil && !*t.FirstResponseMet {
+			isRespBreach = true
+		} else if t.FirstResponseAt == nil && t.FirstResponseDeadline != nil && now.After(*t.FirstResponseDeadline) {
+			isRespBreach = true
+		}
+		if isRespBreach {
+			target.FirstResponseBreached++
+			deptSummary.FirstResponseBreached++
+		}
+
+		isResBreach := false
+		if t.ResolutionDeadline != nil {
+			if t.Status == models.StatusClosed && t.UpdatedAt.After(*t.ResolutionDeadline) {
+				isResBreach = true
+			} else if t.Status != models.StatusClosed && now.After(*t.ResolutionDeadline) {
+				isResBreach = true
+			}
+		}
+		if isResBreach {
+			target.ResolutionBreached++
+			deptSummary.ResolutionBreached++
+		}
+
+		if !isRespBreach && !isResBreach {
+			target.SLAMetCount++
+			deptSummary.SLAMetCount++
+		}
+
+		if score, ok := ratingMap[t.ID]; ok && score > 0 {
+			target.RatedCount++
+			staffRatingScores[target] += score
+
+			deptSummary.RatedCount++
+			deptRatingScoreTotal += score
+		}
+	}
+
+	// 5. Hitung SLA Met Rate dan Avg Rating
+	for _, s := range staffList {
+		if s.TotalTickets > 0 {
+			s.SLAMetRate = math.Round((float64(s.SLAMetCount)/float64(s.TotalTickets)*100)*10) / 10
+		}
+		if s.RatedCount > 0 {
+			s.AvgRating = math.Round((float64(staffRatingScores[s])/float64(s.RatedCount))*10) / 10
+		}
+	}
+	if unassignedItem.TotalTickets > 0 {
+		unassignedItem.SLAMetRate = math.Round((float64(unassignedItem.SLAMetCount)/float64(unassignedItem.TotalTickets)*100)*10) / 10
+		if unassignedItem.RatedCount > 0 {
+			unassignedItem.AvgRating = math.Round((float64(staffRatingScores[unassignedItem])/float64(unassignedItem.RatedCount))*10) / 10
+		}
+		report.UnassignedItem = unassignedItem
+	}
+
+	if deptSummary.TotalTickets > 0 {
+		deptSummary.SLAMetRate = math.Round((float64(deptSummary.SLAMetCount)/float64(deptSummary.TotalTickets)*100)*10) / 10
+	}
+	if deptSummary.RatedCount > 0 {
+		deptSummary.AvgRating = math.Round((float64(deptRatingScoreTotal)/float64(deptSummary.RatedCount))*10) / 10
+	}
+
+	// Urutkan staff berdasarkan total tiket terbanyak, lalu nama
+	sort.Slice(staffList, func(i, j int) bool {
+		if staffList[i].TotalTickets != staffList[j].TotalTickets {
+			return staffList[i].TotalTickets > staffList[j].TotalTickets
+		}
+		return staffList[i].StaffName < staffList[j].StaffName
+	})
+
+	var resultStaffList []StaffReportItem
+	for _, s := range staffList {
+		resultStaffList = append(resultStaffList, *s)
+	}
+
+	report.Summary = deptSummary
+	report.StaffList = resultStaffList
+
+	logging.AdminReports.Info("GetDepartmentStaffReport completed",
+		"department_id", deptID,
+		"staff_count", len(resultStaffList),
+		"has_unassigned", report.UnassignedItem != nil,
+		"total_tickets", deptSummary.TotalTickets,
+		"open_tickets", deptSummary.OpenTickets,
+		"closed_tickets", deptSummary.ClosedTickets,
+	)
+
+	return report, nil
+}
+

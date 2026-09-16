@@ -276,3 +276,120 @@ func TestAdminReportService_GetMonthlyCompanyReport(t *testing.T) {
 		t.Errorf("Expected 2 departments under company, got %d", len(compReport.Departments))
 	}
 }
+
+func TestAdminReportService_GetDepartmentStaffReport(t *testing.T) {
+	testDB, cleanup := setupReportTestDB(t)
+	if testDB == nil {
+		return
+	}
+	defer cleanup()
+
+	company := models.Company{
+		Name:     "PT Digital Nusantara",
+		Code:     "PDN",
+		IsActive: true,
+	}
+	testDB.Create(&company)
+
+	dept := models.Department{
+		Name:      "Technical Support",
+		CompanyID: &company.ID,
+	}
+	testDB.Create(&dept)
+
+	emailStr := "john@test.local"
+	staffUser := models.User{
+		Username:     "john_tech",
+		FirstName:    "John",
+		LastName:     "Doe",
+		Email:        &emailStr,
+		Password:     "hashed",
+		DepartmentID: &dept.ID,
+		IsStaff:      true,
+		IsActive:     true,
+	}
+	testDB.Create(&staffUser)
+
+	now := time.Now()
+	testMonth := int(now.Month())
+	testYear := now.Year()
+	baseDate := time.Date(testYear, time.Month(testMonth), 10, 8, 0, 0, 0, now.Location())
+	trueVal := true
+	futureDeadline := now.Add(24 * time.Hour)
+
+	// Ticket 1: Assigned to John Doe, Closed, SLA Met, Rating 5
+	t1 := models.Ticket{
+		Title:              "Server Down",
+		Description:        "Server utama crash",
+		Status:             models.StatusClosed,
+		Priority:           models.PriorityHigh,
+		CompanyID:          &company.ID,
+		DepartmentID:       &dept.ID,
+		AssignedToID:       &staffUser.ID,
+		FirstResponseMet:   &trueVal,
+		ResolutionDeadline: &futureDeadline,
+		CreatedAt:          baseDate,
+		UpdatedAt:          baseDate.Add(2 * time.Hour),
+	}
+	testDB.Create(&t1)
+	testDB.Create(&models.TicketRating{TicketID: t1.ID, Rating: 5})
+
+	// Ticket 2: Unassigned (Pool), Open (Waiting)
+	t2 := models.Ticket{
+		Title:        "Email Issue",
+		Description:  "Tidak bisa kirim email",
+		Status:       models.StatusWaiting,
+		Priority:     models.PriorityMedium,
+		CompanyID:    &company.ID,
+		DepartmentID: &dept.ID,
+		AssignedToID: nil,
+		CreatedAt:    baseDate,
+		UpdatedAt:    baseDate,
+	}
+	testDB.Create(&t2)
+
+	svc := NewAdminReportService()
+	report, err := svc.GetDepartmentStaffReport(dept.ID, testMonth, testYear)
+	if err != nil {
+		t.Fatalf("GetDepartmentStaffReport failed: %v", err)
+	}
+
+	if report.DepartmentName != "Technical Support" {
+		t.Errorf("Expected DepartmentName 'Technical Support', got %q", report.DepartmentName)
+	}
+	if report.CompanyName != "PT Digital Nusantara" {
+		t.Errorf("Expected CompanyName 'PT Digital Nusantara', got %q", report.CompanyName)
+	}
+	if report.Summary.TotalTickets != 2 {
+		t.Errorf("Expected TotalTickets = 2, got %d", report.Summary.TotalTickets)
+	}
+	if report.Summary.OpenTickets != 1 {
+		t.Errorf("Expected OpenTickets = 1, got %d", report.Summary.OpenTickets)
+	}
+	if report.Summary.ClosedTickets != 1 {
+		t.Errorf("Expected ClosedTickets = 1, got %d", report.Summary.ClosedTickets)
+	}
+
+	// Cek staff list
+	if len(report.StaffList) != 1 {
+		t.Fatalf("Expected 1 staff member in StaffList, got %d", len(report.StaffList))
+	}
+	staff := report.StaffList[0]
+	if staff.StaffName != "John Doe" {
+		t.Errorf("Expected StaffName 'John Doe', got %q", staff.StaffName)
+	}
+	if staff.TotalTickets != 1 || staff.ClosedTickets != 1 {
+		t.Errorf("Expected John Doe to have 1 closed ticket, got total %d, closed %d", staff.TotalTickets, staff.ClosedTickets)
+	}
+	if staff.AvgRating != 5.0 {
+		t.Errorf("Expected John Doe AvgRating = 5.0, got %.1f", staff.AvgRating)
+	}
+
+	// Cek unassigned item
+	if report.UnassignedItem == nil {
+		t.Fatalf("Expected UnassignedItem to be non-nil")
+	}
+	if report.UnassignedItem.TotalTickets != 1 || report.UnassignedItem.OpenTickets != 1 {
+		t.Errorf("Expected UnassignedItem to have 1 open ticket, got total %d, open %d", report.UnassignedItem.TotalTickets, report.UnassignedItem.OpenTickets)
+	}
+}

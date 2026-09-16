@@ -192,6 +192,10 @@
                 {{template "admin/search_results_content" .}}
                 {{else if eq .template_name "admin/reports"}}
                 {{template "admin/reports_content" .}}
+                {{/* [Feature Hidden / Stashed for later release]
+                {{else if eq .template_name "admin/department_report"}}
+                {{template "admin/department_report_content" .}}
+                */}}
                 {{else}}
                 {{template "admin/users_list_content" .}}
                 {{end}}

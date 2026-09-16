@@ -743,7 +743,13 @@ func (h *DepartmentHandler) DepartmentReply(w http.ResponseWriter, r *http.Reque
 			target = ticket.CreatedBy.GetEmail()
 		}
 		if target != "" {
-			_ = h.emailService.SendTicketReplyWithAttachments(target, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), message, user.GetFullName(), emailAtts)
+			if err := h.emailService.SendTicketReplyWithAttachments(target, ticket.CreatedBy.GetFullName(), ticket.Title, ticket.ID, ticket.GetStatusDisplay(), message, user.GetFullName(), emailAtts); err != nil {
+				logging.NotificationEmail.Error("Failed to deliver staff reply email notification",
+					"ticket_id", ticket.ID,
+					"recipient", target,
+					"error", err.Error(),
+				)
+			}
 		}
 	}()
 
