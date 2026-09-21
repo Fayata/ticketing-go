@@ -163,10 +163,14 @@
 .admin-kpi-slate .admin-kpi-icon { color: var(--ad-slate-500); }
 
 .admin-kpi-trend {
+	position: absolute;
+	top: 14px;
+	right: 16px;
 	font-size: 11px;
 	font-weight: 700;
 	border-radius: 20px;
 	padding: 2px 8px;
+	z-index: 1;
 }
 .admin-kpi-trend.up { color: var(--ad-green-700); background: var(--ad-green-50); }
 .admin-kpi-trend.down { color: #dc2626; background: #fef2f2; }
