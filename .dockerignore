@@ -1,8 +1,0 @@
-.git
-.agents
-bin/
-logs/
-*.exe
-*.log
-log_app.txt
-graphify-out/

@@ -4,22 +4,27 @@ FROM golang:1.25-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy go mod, sum, and vendor directory
+# Copy go mod and sum files
 COPY go.mod go.sum ./
-COPY vendor/ ./vendor/
+
+# Download dependencies
+RUN go mod download
 
 # Copy source code
 COPY . .
 
-# Build all service binaries using vendored dependencies and embedded tzdata
-RUN go build -mod=vendor -tags timetzdata -o /bin/gateway ./cmd/gateway && \
-    go build -mod=vendor -tags timetzdata -o /bin/auth-service ./cmd/auth-service && \
-    go build -mod=vendor -tags timetzdata -o /bin/ticket-service ./cmd/ticket-service && \
-    go build -mod=vendor -tags timetzdata -o /bin/notification-service ./cmd/notification-service && \
-    go build -mod=vendor -tags timetzdata -o /bin/admin-service ./cmd/admin-service
+# Build all service binaries
+RUN go build -o /bin/gateway ./cmd/gateway && \
+    go build -o /bin/auth-service ./cmd/auth-service && \
+    go build -o /bin/ticket-service ./cmd/ticket-service && \
+    go build -o /bin/notification-service ./cmd/notification-service && \
+    go build -o /bin/admin-service ./cmd/admin-service
 
 # Stage 2: Runtime
 FROM alpine:3.20
+
+# Install tzdata for timezone support
+RUN apk add --no-cache tzdata
 
 # Set working directory
 WORKDIR /app
@@ -43,4 +48,4 @@ ENV SERVICE_NAME=${SERVICE_NAME}
 EXPOSE 8080
 
 # Command to run the selected service
-CMD sh -c "/bin/${SERVICE_NAME}"
+CMD sh -c "/bin/${SERVICE_NAME}"
