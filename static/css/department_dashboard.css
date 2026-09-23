@@ -1316,15 +1316,189 @@
     color: #6b7280;
 }
 
-/* Dark mode: paksa table admin yang masih inline-style agar tidak putih */
-:root[data-theme="dark"] .card-header p { color: #9ca3af !important; }
-:root[data-theme="dark"] .card table thead { background-color: #020617 !important; }
-:root[data-theme="dark"] .card table thead th { border-bottom-color: #1f2937 !important; color: #9ca3af !important; }
-:root[data-theme="dark"] .card table tbody tr { border-bottom-color: #1f2937 !important; }
-:root[data-theme="dark"] .card table td { color: #e5e7eb !important; }
-:root[data-theme="dark"] .card table td span[style*=\"background:#eff6ff\"] { background: #0b1220 !important; color: #bfdbfe !important; border-color: #1d4ed8 !important; }
-:root[data-theme="dark"] .card table td span[style*=\"color:#6b7280\"] { color: #9ca3af !important; }
-:root[data-theme="dark"] .card table td span[style*=\"color:#111827\"] { color: #e5e7eb !important; }
+/* ========== Dark Mode: Admin Cards, Tables, Filter Bars & Badges ========== */
+:root[data-theme="dark"] .card {
+    background-color: #0f172a !important;
+    border-color: #1e293b !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+:root[data-theme="dark"] .card-header {
+    background-color: #0f172a !important;
+    border-bottom-color: #1e293b !important;
+}
+:root[data-theme="dark"] .card-header h2,
+:root[data-theme="dark"] .card-header h3 {
+    color: #f8fafc !important;
+}
+:root[data-theme="dark"] .card-header p,
+:root[data-theme="dark"] .card-header .subtitle {
+    color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .card-body {
+    background-color: #0f172a !important;
+    color: #cbd5e1 !important;
+}
+
+/* Filter bar & controls inside card */
+:root[data-theme="dark"] .card > div[style*="border-bottom"],
+:root[data-theme="dark"] .card div[style*="border-bottom: 1px solid"],
+:root[data-theme="dark"] .card div[style*="border-bottom:1px solid"] {
+    border-bottom-color: #1e293b !important;
+}
+
+/* Tables inside card */
+:root[data-theme="dark"] .card table {
+    color: #cbd5e1 !important;
+}
+:root[data-theme="dark"] .card table thead,
+:root[data-theme="dark"] .card table thead[style*="background-color"] {
+    background-color: #1e293b !important;
+}
+:root[data-theme="dark"] .card table thead th,
+:root[data-theme="dark"] .card table thead th[style*="border-bottom"] {
+    background-color: #1e293b !important;
+    border-bottom-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .card table tbody tr,
+:root[data-theme="dark"] .card table tbody tr[style*="border-bottom"] {
+    background-color: transparent !important;
+    border-bottom-color: #1e293b !important;
+}
+:root[data-theme="dark"] .card table tbody tr:hover {
+    background-color: rgba(30, 41, 59, 0.5) !important;
+}
+:root[data-theme="dark"] .card table td {
+    color: #cbd5e1 !important;
+}
+:root[data-theme="dark"] .card table td strong {
+    color: #f8fafc !important;
+}
+
+/* Badges and pills in table */
+:root[data-theme="dark"] .status-badge.open {
+    background: rgba(148, 163, 184, 0.12) !important;
+    color: #94a3b8 !important;
+    border-color: rgba(148, 163, 184, 0.25) !important;
+}
+:root[data-theme="dark"] .status-badge.in-progress,
+:root[data-theme="dark"] .status-badge.resolved {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+:root[data-theme="dark"] .status-badge.closed {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Custom inline badge spans inside admin tables */
+:root[data-theme="dark"] .card table td span[style*="background:#eff6ff"],
+:root[data-theme="dark"] .card table td span[style*="background: #eff6ff"],
+:root[data-theme="dark"] .card table td span[style*="background:#eff6ff;"] {
+    background: rgba(30, 64, 175, 0.2) !important;
+    color: #93c5fd !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+:root[data-theme="dark"] .card table td span[style*="background:#f0fdf4"],
+:root[data-theme="dark"] .card table td span[style*="background: #f0fdf4"],
+:root[data-theme="dark"] .card table td span[style*="background:#f0fdf4;"] {
+    background: rgba(22, 101, 52, 0.2) !important;
+    color: #86efac !important;
+    border-color: rgba(34, 197, 94, 0.3) !important;
+}
+:root[data-theme="dark"] .card table td span[style*="color:#6b7280"],
+:root[data-theme="dark"] .card table td span[style*="color: #6b7280"] {
+    color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .card table td span[style*="color:#374151"],
+:root[data-theme="dark"] .card table td span[style*="color: #374151"] {
+    color: #cbd5e1 !important;
+}
+:root[data-theme="dark"] .card table td span[style*="color:#111827"],
+:root[data-theme="dark"] .card table td strong[style*="color:#111827"] {
+    color: #f8fafc !important;
+}
+
+/* Alert notifications inside card */
+:root[data-theme="dark"] .card div[style*="background-color: #ecfdf5"],
+:root[data-theme="dark"] .card div[style*="background-color:#ecfdf5"] {
+    background-color: rgba(6, 95, 70, 0.25) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    color: #6ee7b7 !important;
+}
+:root[data-theme="dark"] .card div[style*="background-color: #fef2f2"],
+:root[data-theme="dark"] .card div[style*="background-color:#fef2f2"] {
+    background-color: rgba(153, 27, 27, 0.25) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #fca5a5 !important;
+}
+
+/* Action links inside card table */
+:root[data-theme="dark"] .card table td a:not(.btn-primary):not(.status-badge) {
+    color: #60a5fa;
+}
+:root[data-theme="dark"] .card table td a:hover {
+    color: #93c5fd;
+}
+:root[data-theme="dark"] .card table td a[style*="color:#dc2626"],
+:root[data-theme="dark"] .card table td button[style*="color:#dc2626"] {
+    color: #f87171 !important;
+}
+
+/* Additional inline element overrides in admin lists */
+:root[data-theme="dark"] .card table td span[style*="background:#f3f4f6"],
+:root[data-theme="dark"] .card table td span[style*="background: #f3f4f6"] {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+}
+:root[data-theme="dark"] .status-badge[style*="background:#ecfdf3"] {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+}
+:root[data-theme="dark"] .status-badge[style*="background:#f1f5f9"] {
+    background: rgba(148, 163, 184, 0.12) !important;
+    color: #94a3b8 !important;
+    border-color: rgba(148, 163, 184, 0.25) !important;
+}
+:root[data-theme="dark"] .status-badge[style*="background:#fee2e2"] {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+:root[data-theme="dark"] .card table td span[style*="color:#92400e"] {
+    color: #fbbf24 !important;
+}
+:root[data-theme="dark"] .card table td span[style*="color:#16a34a"] {
+    color: #4ade80 !important;
+}
+:root[data-theme="dark"] .card table td a[style*="color:#2563eb"],
+:root[data-theme="dark"] .card table td a[style*="color: #2563eb"] {
+    color: #60a5fa !important;
+}
+:root[data-theme="dark"] .card table td a[style*="color:#059669"],
+:root[data-theme="dark"] .card table td a[style*="color: #059669"] {
+    color: #34d399 !important;
+}
+:root[data-theme="dark"] .card table td[style*="color: #9ca3af"],
+:root[data-theme="dark"] .card table td[style*="color:#9ca3af"] {
+    color: #94a3b8 !important;
+}
+
+/* Header search form */
+:root[data-theme="dark"] .search-form {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+:root[data-theme="dark"] .search-form input {
+    color: #f8fafc !important;
+}
+:root[data-theme="dark"] .search-form input::placeholder {
+    color: #94a3b8 !important;
+}
+
 .dept-sidebar, .dept-sidebar a, .dept-sidebar span, .dept-sidebar h1, .dept-sidebar svg, .dept-nav-item, :root[data-theme='dark'] .dept-nav-item { color: var(--sidebar-text-color) !important; }
 
 /* ── SLA Breach Card ──────────────────────────────────────────── */

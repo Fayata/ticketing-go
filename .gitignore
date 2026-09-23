@@ -36,6 +36,7 @@ PROJECT.md
 TEST_INFRA.md
 ORIGINAL_REQUEST.md
 graphify-out/
+vendor/
 
 # One-off / Temporary Scripts & Orphan Artifacts
 *.py

@@ -170,3 +170,41 @@
     color: #059669;
     font-weight: 600;
 }
+
+/* Dark mode badges & pills */
+[data-theme="dark"] .sla-badge-scope.global {
+    background: rgba(109, 40, 217, 0.2);
+    color: #c4b5fd;
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="dark"] .sla-badge-scope.company {
+    background: rgba(29, 78, 216, 0.2);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .sla-badge-scope.dept {
+    background: rgba(15, 118, 110, 0.2);
+    color: #5eead4;
+    border-color: rgba(20, 184, 166, 0.3);
+}
+
+[data-theme="dark"] .sla-priority-pill.high {
+    background: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .sla-priority-pill.med {
+    background: rgba(217, 119, 6, 0.2);
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .sla-priority-pill.low {
+    background: rgba(71, 85, 105, 0.2);
+    color: #cbd5e1;
+    border-color: rgba(100, 116, 139, 0.3);
+}
+

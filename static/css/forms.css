@@ -192,25 +192,47 @@
 :root[data-theme="dark"] .form-container h2 {
     color: #f1f5f9;
 }
+:root[data-theme="dark"] .form-header p {
+    color: #94a3b8;
+}
 :root[data-theme="dark"] .form-group label {
     color: #cbd5e1;
 }
+:root[data-theme="dark"] .form-group small {
+    color: #94a3b8 !important;
+}
 :root[data-theme="dark"] .form-input,
 :root[data-theme="dark"] .form-select,
-:root[data-theme="dark"] .form-textarea {
+:root[data-theme="dark"] .form-textarea,
+:root[data-theme="dark"] .form-group input[type="text"],
+:root[data-theme="dark"] .form-group input[type="email"],
+:root[data-theme="dark"] .form-group select,
+:root[data-theme="dark"] .form-group textarea {
     background-color: #1e293b;
     border-color: #334155;
     color: #f1f5f9;
 }
 :root[data-theme="dark"] .form-input:focus,
 :root[data-theme="dark"] .form-select:focus,
-:root[data-theme="dark"] .form-textarea:focus {
+:root[data-theme="dark"] .form-textarea:focus,
+:root[data-theme="dark"] .form-group input[type="text"]:focus,
+:root[data-theme="dark"] .form-group input[type="email"]:focus,
+:root[data-theme="dark"] .form-group select:focus,
+:root[data-theme="dark"] .form-group textarea:focus {
     border-color: #10b981;
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+:root[data-theme="dark"] .form-actions {
+    border-top-color: #1e293b;
 }
 :root[data-theme="dark"] .btn-cancel {
     background-color: #1e293b;
     border-color: #334155;
     color: #cbd5e1;
 }
+:root[data-theme="dark"] .btn-cancel:hover {
+    background-color: #334155;
+    color: #f8fafc;
+}
+
 

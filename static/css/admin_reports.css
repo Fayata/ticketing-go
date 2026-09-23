@@ -1,5 +1,25 @@
 /* Admin Monthly Performance Reports Styles */
 
+:root {
+    --bg-card: #ffffff;
+    --border-color: #e5e7eb;
+    --text-color: #111827;
+    --text-muted: #6b7280;
+    --bg-main: #ffffff;
+    --table-header-bg: #f9fafb;
+    --table-hover-bg: rgba(0, 0, 0, 0.02);
+}
+
+:root[data-theme="dark"] {
+    --bg-card: #0f172a;
+    --border-color: #1e293b;
+    --text-color: #f8fafc;
+    --text-muted: #94a3b8;
+    --bg-main: #0b1220;
+    --table-header-bg: #1e293b;
+    --table-hover-bg: rgba(30, 41, 59, 0.5);
+}
+
 .reports-container {
     display: flex;
     flex-direction: column;
@@ -23,6 +43,7 @@
     padding: 1.25rem 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
+
 
 .report-filter-form {
     display: flex;
